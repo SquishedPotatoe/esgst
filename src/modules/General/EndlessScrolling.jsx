@@ -258,80 +258,19 @@ class GeneralEndlessScrolling extends Module {
 		this.es_activate(es);
 
 		if (window.location.href.includes('happy-holidays')) {
-			const boxList = document.querySelector(".giveaway_box_list");
-			var holidayBoxes = new MutationObserver(function () {
-				$('.giveaway_box').each(function () {
-					var elem = $(this);
-					var background_default = 'repeating-linear-gradient(45deg, rgba(232, 234, 237, 0.95), rgba(232, 234, 237, 0.95) 15px, rgba(239, 241, 245, 0.95) 15px, rgba(239, 241, 245, 0.95) 30px)';
-					var color_default = 'transparent';
-					// Dimensions
-					var base_width = parseInt(elem.data('base-width'));
-					var base_height = parseInt(elem.data('base-height'));
-					var base_depth = parseInt(elem.data('base-depth'));
-					var cover_height = parseInt(elem.data('cover-height'));
-					// Base
-					var base_front = giveaway_box_validate_background_image(elem.data('base-front')) ? 'url(' + elem.data('base-front') + ')' : background_default;
-					var base_back = giveaway_box_validate_background_image(elem.data('base-back')) ? 'url(' + elem.data('base-back') + ')' : background_default;
-					var base_left = giveaway_box_validate_background_image(elem.data('base-left')) ? 'url(' + elem.data('base-left') + ')' : background_default;
-					var base_right = giveaway_box_validate_background_image(elem.data('base-right')) ? 'url(' + elem.data('base-right') + ')' : background_default;
-					var base_bottom = giveaway_box_validate_background_image(elem.data('base-bottom')) ? 'url(' + elem.data('base-bottom') + ')' : background_default;
-					// Cover
-					var cover_front = giveaway_box_validate_background_image(elem.data('cover-front')) ? 'url(' + elem.data('cover-front') + ')' : background_default;
-					var cover_back = giveaway_box_validate_background_image(elem.data('cover-back')) ? 'url(' + elem.data('cover-back') + ')' : background_default;
-					var cover_left = giveaway_box_validate_background_image(elem.data('cover-left')) ? 'url(' + elem.data('cover-left') + ')' : background_default;
-					var cover_right = giveaway_box_validate_background_image(elem.data('cover-right')) ? 'url(' + elem.data('cover-right') + ')' : background_default;
-					var cover_top = giveaway_box_validate_background_image(elem.data('cover-top')) ? 'url(' + elem.data('cover-top') + ')' : background_default;
-
-					elem.find('.giveaway_box_cover > .front').css({ 'background-image': 'linear-gradient(rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.13) 100%)' + (giveaway_box_validate_background_image(elem.data('cover-front')) ? ', url(' + elem.data('cover-front') + ')' : (giveaway_box_validate_background_color(elem.data('cover-front')) ? '' : ', ' + background_default)) });
-					elem.find('.giveaway_box_cover > .front').css({ 'background-color': giveaway_box_validate_background_color(elem.data('cover-front')) ? elem.data('cover-front') : color_default });
-					elem.find('.giveaway_box_cover > .front').css({ 'width': (base_width + 10) + 'px', 'height': (cover_height) + 'px', 'transform': 'translateY(-' + Math.round((base_height / 2) - (cover_height / 2) + 2) + 'px) translateZ(' + (Math.round(base_depth / 2) + 5) + 'px)' });
-
-					elem.find('.giveaway_box_cover > .back').css({ 'background-image': 'linear-gradient(rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.13) 100%)' + (giveaway_box_validate_background_image(elem.data('cover-back')) ? ', url(' + elem.data('cover-back') + ')' : (giveaway_box_validate_background_color(elem.data('cover-back')) ? '' : ', ' + background_default)) });
-					elem.find('.giveaway_box_cover > .back').css({ 'background-color': giveaway_box_validate_background_color(elem.data('cover-back')) ? elem.data('cover-back') : color_default });
-					elem.find('.giveaway_box_cover > .back').css({ 'width': (base_width + 10) + 'px', 'height': (cover_height) + 'px', 'transform': 'translateY(-' + Math.round((base_height / 2) - (cover_height / 2) + 2) + 'px) translateZ(-' + (Math.round(base_depth / 2) + 5) + 'px) rotateX(180deg) rotateZ(-180deg)' });
-
-					elem.find('.giveaway_box_cover > .left').css({ 'background-image': 'linear-gradient(rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.13) 100%)' + (giveaway_box_validate_background_image(elem.data('cover-left')) ? ', url(' + elem.data('cover-left') + ')' : (giveaway_box_validate_background_color(elem.data('cover-left')) ? '' : ', ' + background_default)) });
-					elem.find('.giveaway_box_cover > .left').css({ 'background-color': giveaway_box_validate_background_color(elem.data('cover-left')) ? elem.data('cover-left') : color_default });
-					elem.find('.giveaway_box_cover > .left').css({ 'width': (base_depth + 10) + 'px', 'height': (cover_height) + 'px', 'transform': 'translateY(-' + Math.round((base_height / 2) - (cover_height / 2) + 2) + 'px) translateX(-' + (Math.round(base_width / 2) + 5) + 'px) rotateY(-90deg)' });
-
-					elem.find('.giveaway_box_cover > .right').css({ 'background-image': 'linear-gradient(rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.13) 100%)' + (giveaway_box_validate_background_image(elem.data('cover-right')) ? ', url(' + elem.data('cover-right') + ')' : (giveaway_box_validate_background_color(elem.data('cover-right')) ? '' : ', ' + background_default)) });
-					elem.find('.giveaway_box_cover > .right').css({ 'background-color': giveaway_box_validate_background_color(elem.data('cover-right')) ? elem.data('cover-right') : color_default });
-					elem.find('.giveaway_box_cover > .right').css({ 'width': (base_depth + 10) + 'px', 'height': (cover_height) + 'px', 'transform': 'translateY(-' + Math.round((base_height / 2) - (cover_height / 2) + 2) + 'px) translateX(' + (Math.round(base_width / 2) + 5) + 'px) rotateY(90deg)' });
-
-					elem.find('.giveaway_box_cover > .top').css({ 'background-image': giveaway_box_validate_background_image(elem.data('cover-top')) ? 'url(' + elem.data('cover-top') + ')' : (giveaway_box_validate_background_color(elem.data('cover-top')) ? '' : background_default) });
-					elem.find('.giveaway_box_cover > .top').css({ 'background-color': giveaway_box_validate_background_color(elem.data('cover-top')) ? elem.data('cover-top') : color_default });
-					elem.find('.giveaway_box_cover > .top').css({ 'width': (base_width + 10) + 'px', 'height': (base_depth + 10) + 'px', 'transform': 'translateY(-' + (Math.round(base_height / 2) + 2) + 'px) rotateX(90deg)' });
-
-					elem.find('.giveaway_box_base > .front').css({ 'background-image': 'linear-gradient(rgba(0, 0, 0, 0) ' + Math.round((cover_height + 9)) + 'px, rgba(0, 0, 0, 0.18) 100%)' + (giveaway_box_validate_background_image(elem.data('base-front')) ? ', url(' + elem.data('base-front') + ')' : (giveaway_box_validate_background_color(elem.data('base-front')) ? '' : ', ' + background_default)) });
-					elem.find('.giveaway_box_base > .front').css({ 'background-color': giveaway_box_validate_background_color(elem.data('base-front')) ? elem.data('base-front') : color_default });
-					elem.find('.giveaway_box_base > .front').css({ 'width': base_width + 'px', 'height': base_height + 'px', 'transform': 'translateZ(' + Math.round(base_depth / 2) + 'px)' });
-
-					elem.find('.giveaway_box_base > .back').css({ 'background-image': 'linear-gradient(rgba(0, 0, 0, 0) ' + Math.round((cover_height + 9)) + 'px, rgba(0, 0, 0, 0.18) 100%)' + (giveaway_box_validate_background_image(elem.data('base-back')) ? ', url(' + elem.data('base-back') + ')' : (giveaway_box_validate_background_color(elem.data('base-back')) ? '' : ', ' + background_default)) });
-					elem.find('.giveaway_box_base > .back').css({ 'background-color': giveaway_box_validate_background_color(elem.data('base-back')) ? elem.data('base-back') : color_default });
-					elem.find('.giveaway_box_base > .back').css({ 'width': base_width + 'px', 'height': base_height + 'px', 'transform': 'translateZ(-' + Math.round(base_depth / 2) + 'px) rotateX(180deg) rotateZ(-180deg)' });
-
-					elem.find('.giveaway_box_base > .left').css({ 'background-image': 'linear-gradient(rgba(0, 0, 0, 0) ' + Math.round((cover_height + 9)) + 'px, rgba(0, 0, 0, 0.18) 100%)' + (giveaway_box_validate_background_image(elem.data('base-left')) ? ', url(' + elem.data('base-left') + ')' : (giveaway_box_validate_background_color(elem.data('base-left')) ? '' : ', ' + background_default)) });
-					elem.find('.giveaway_box_base > .left').css({ 'background-color': giveaway_box_validate_background_color(elem.data('base-left')) ? elem.data('base-left') : color_default });
-					elem.find('.giveaway_box_base > .left').css({ 'width': base_depth + 'px', 'height': base_height + 'px', 'transform': 'translateX(-' + Math.round(base_width / 2) + 'px) rotateY(-90deg)' });
-
-					elem.find('.giveaway_box_base > .right').css({ 'background-image': 'linear-gradient(rgba(0, 0, 0, 0) ' + Math.round((cover_height + 9)) + 'px, rgba(0, 0, 0, 0.18) 100%)' + (giveaway_box_validate_background_image(elem.data('base-right')) ? ', url(' + elem.data('base-right') + ')' : (giveaway_box_validate_background_color(elem.data('base-right')) ? '' : ', ' + background_default)) });
-					elem.find('.giveaway_box_base > .right').css({ 'background-color': giveaway_box_validate_background_color(elem.data('base-right')) ? elem.data('base-right') : color_default });
-					elem.find('.giveaway_box_base > .right').css({ 'width': base_depth + 'px', 'height': base_height + 'px', 'transform': 'translateX(' + Math.round(base_width / 2) + 'px) rotateY(90deg)' });
-
-					elem.find('.giveaway_box_base > .bottom').css({ 'background-image': 'linear-gradient(rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.18))' + (giveaway_box_validate_background_image(elem.data('base-bottom')) ? ', url(' + elem.data('base-bottom') + ')' : (giveaway_box_validate_background_color(elem.data('base-bottom')) ? '' : ', ' + background_default)) });
-					elem.find('.giveaway_box_base > .bottom').css({ 'background-color': giveaway_box_validate_background_color(elem.data('base-bottom')) ? elem.data('base-bottom') : color_default });
-					elem.find('.giveaway_box_base > .bottom').css({ 'width': base_width + 'px', 'height': base_depth + 'px', 'transform': 'translateY(' + Math.round(base_height / 2) + 'px) rotateX(90deg)' });
-
-					elem.find('.giveaway_box_shadow > div').css({ 'width': base_width + 'px', 'height': base_depth + 'px', 'transform': 'translateY(' + Math.round(base_height / 2) + 'px) rotateX(-90deg)' });
-				});
-				function giveaway_box_validate_background_color(val) {
-					return val.match(/^rgba\(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]),([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]),([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]),(1(\.[0]{1,2})?|(0)(\.[0-9]{1,2})?)\)$/i);
-				}
-				function giveaway_box_validate_background_image(val) {
-					return val.match(/^(http|https):\/\/i\.imgur\.com\/([A-Za-z0-9]{5,8})\.(jpeg|jpg|png|gif)$/i);
-				}
-			});
-			holidayBoxes.observe(boxList, { childList: true });
+			DOM.insert(
+				document.head,
+				'beforeend',
+				<script>
+					{`
+					  const boxList = document.querySelector(".giveaway_box_list");
+					  var holidayBoxes = new MutationObserver(function() {
+						giveaway_box_redraw();
+					  });
+					  holidayBoxes.observe(boxList, { childList: true });
+					`}
+				</script>
+			);
 		}
 	}
 
