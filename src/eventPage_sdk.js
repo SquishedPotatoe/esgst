@@ -53,11 +53,11 @@ const loadStorage = () => handle_storage(TYPE_GET, null).then((result) => (stora
 
 function initializeOnDOMReady() {
 	load();
-	document.removeEventListener('DOMContentLoaded', initializeOnDOMReady);
+	window.document.removeEventListener('DOMContentLoaded', initializeOnDOMReady);
 }
 
-if (document.readyState === 'loading') {
-	document.addEventListener('DOMContentLoaded', initializeOnDOMReady);
+if (window.document.readyState === 'loading') {
+	window.document.addEventListener('DOMContentLoaded', initializeOnDOMReady);
 } else {
 	load();
 }
