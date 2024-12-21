@@ -118,7 +118,7 @@ class TradesTradeFilters extends Filters {
 					features: {
 						tf_m_f: {
 							name: 'Fix filter bar at the top of the page.',
-							sg: true,
+							st: true,
 						},
 						tf_m_b: {
 							name: 'Hide basic filters.',
@@ -262,10 +262,10 @@ class TradesTradeFilters extends Filters {
 
 	async tf_initUrls(obj) {
 		obj.popup.getScrollable(
-			<div className="table esgst-text-left">
+			<div className="table is_trades esgst-text-left">
 				<div className="header">
-					<div className="column_flex">Summary</div>
-					<div className="column_small text_center">Comments</div>
+					<div className="header_summary">Summary</div>
+					<div className="header_comments">Comments</div>
 				</div>
 				<div className="table__rows" ref={(ref) => (obj.trades = ref)} />
 			</div>
@@ -326,27 +326,41 @@ class TradesTradeFilters extends Filters {
 									},
 									{
 										attributes: {
-											class: 'column_flex',
+											class: 'row_trade_name',
 										},
 										type: 'div',
 										children: [
 											{
-												type: 'h3',
+												type: 'h2',
 												children: [
 													{
 														attributes: {
 															href: `/trade/${obj.ids[obj.index]}/`,
 														},
-														text:
-															breadcrumbs[0].firstElementChild.nextElementSibling.nextElementSibling
-																.firstElementChild.textContent,
+														text: breadcrumbs[0].firstElementChild.nextElementSibling.nextElementSibling
+															.firstElementChild.textContent,
 														type: 'a',
 													},
 												],
 											},
+										],
+									},
+									{
+										attributes: {
+											class: 'row_trade_creator_user',
+										},
+										type: 'div',
+										children: [
 											{
 												type: 'p',
 												children: [
+													{
+														attributes: {
+															class: 'row_expanded',
+														},
+														text: ' ',
+														type: 'span',
+													},
 													{
 														context: responseHtml.querySelector(`.comment_outer [data-timestamp]`),
 													},
@@ -375,7 +389,7 @@ class TradesTradeFilters extends Filters {
 									},
 									{
 										attributes: {
-											class: 'column_small text_center',
+											class: 'row_trade_comments',
 										},
 										type: 'div',
 										children: [

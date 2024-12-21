@@ -19,10 +19,10 @@ class TradesTradeBumper extends Module {
 					<li>
 						Adds a button (<i className="fa fa-chevron-circle-up"></i>) to the main page heading of
 						your{' '}
-						<a href="https://www.steamtrades.com/trades/search?user=your-steam-id">
+						<a href={`https://www.steamtrades.com/trades/search?user=${Settings.get('steamId')}`}>
 							created trades
-						</a>{' '}
-						page that allows you to bump all of your open trades at once.
+						</a>
+						{' '} page that allows you to bump all of your open trades at once.
 					</li>
 				</ul>
 			),

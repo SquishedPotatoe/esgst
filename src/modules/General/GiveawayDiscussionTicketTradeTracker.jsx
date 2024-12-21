@@ -188,8 +188,8 @@ class GeneralGiveawayDiscussionTicketTradeTracker extends Module {
 					: '.giveaway__heading__name'
 			}, ${
 				endless
-					? `.esgst-es-page-${endless} .column_flex h3 a, .esgst-es-page-${endless}.column_flex h3 a`
-					: '.column_flex h3 a'
+					? `.esgst-es-page-${endless} .row_trade_name h2 a, .esgst-es-page-${endless}.row_trade_name h2 a`
+					: '.row_trade_name h2 a'
 			}`
 		);
 		if (!matches.length) return;

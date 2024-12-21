@@ -67,6 +67,8 @@ class Filters extends Module {
 	}
 
 	updateSingleCounter(count = 1) {
+		if (!this.singleCounter) 
+			return;
 		const newCount = parseInt(this.singleCounter.textContent) + count;
 		this.singleCounter.textContent = newCount;
 		if (newCount > 0) {

@@ -335,6 +335,9 @@ class SettingsModule {
 				url: Shared.esgst.settingsUrl,
 			},
 		]).insert(Container, 'afterbegin');
+		if (Shared.esgst.st) {
+			heading.nodes.outer?.classList.remove('esgst-fmph');
+		}
 		for (const item of items) {
 			const button = Button.create(item.options).insert(heading.nodes.outer, 'beforeend');
 			if (item.ref) {
@@ -598,21 +601,11 @@ class SettingsModule {
 			title: (
 				<fragment>
 					This feature is only available in the extension version of ESGST. Please upgrade to the
-					extension to use it. Below are the links for it:
+					extension to use it. Visit the instructions in the readme on how to install the extension.
 					<br />
 					<br />
-					<a href="https://chrome.google.com/webstore/detail/esgst/ibedmjbicclcdfmghnkfldnplocgihna">
-						https://chrome.google.com/webstore/detail/esgst/ibedmjbicclcdfmghnkfldnplocgihna
-					</a>
-					<br />
-					<br />
-					<a href="https://addons.mozilla.org/en-US/firefox/addon/esgst/">
-						https://addons.mozilla.org/en-US/firefox/addon/esgst/
-					</a>
-					<br />
-					<br />
-					<a href="http://addons.palemoon.org/addon/esgst/">
-						http://addons.palemoon.org/addon/esgst/
+					<a href="https://github.com/SquishedPotatoe/esgst#installation">
+						https://github.com/SquishedPotatoe/esgst#installation
 					</a>
 					<br />
 					<br />

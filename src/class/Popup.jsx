@@ -155,7 +155,7 @@ class Popup {
 		Scope.setCurrent(this.id);
 		this.isOpen = true;
 		let n =
-			999 +
+			1000 +
 			document.querySelectorAll(
 				`.esgst-popup-layer:not(.esgst-hidden), .esgst-popout:not(.esgst-hidden)`
 			).length;

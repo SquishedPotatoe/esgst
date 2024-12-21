@@ -1040,6 +1040,7 @@ class GiveawaysGiveawayExtractor extends Module {
 			ge.cache[ge.cacheId].jigidiLinks = Array.from(ge.cache[ge.cacheId].jigidiLinks);
 			await common.setValue('geCache', JSON.stringify(ge.cache));
 		}
+		$('.esgst-gv-icons [data-draggable-id]').removeClass('featured__column');
 	}
 
 	extractJigidiId(url) {

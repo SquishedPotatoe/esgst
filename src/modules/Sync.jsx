@@ -433,7 +433,7 @@ async function sync(syncer) {
 			if (Settings.get('lastPageHiddenGames') === 0) {
 				const doContinue = await Shared.common.createConfirmationAsync(
 					<fragment>
-						<div className="notification notification--warning esgst-sync-warning">
+						<div className="notification yellow notification--warning esgst-sync-warning">
 							WARNING: Syncing your hidden games may take a long time depending on the amount of games.
 						</div>
 						<br />
@@ -475,7 +475,7 @@ async function sync(syncer) {
 			if (Settings.get('lastPagewhitelisted') === 0 || Settings.get('lastPageblacklisted') === 0) {
 				const doContinue = await Shared.common.createConfirmationAsync(
 					<fragment>
-						<div className="notification notification--warning esgst-sync-warning">
+						<div className="notification yellow notification--warning esgst-sync-warning">
 							WARNING: Syncing your whitelist or blacklist may take a long time depending on the amount of users.
 						</div>
 						<br />

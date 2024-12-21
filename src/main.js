@@ -193,8 +193,8 @@ import { runSilentSync } from './modules/Sync';
 			esgst.headerSize = 39;
 			esgst.footerSize = 44;
 		} else {
-			esgst.headerSize = Settings.get('fh') ? 231 : 454;
-			esgst.footerSize = Settings.get('ff') ? 44 : 64;
+			esgst.headerSize = document.querySelector('header').classList.contains('small') ? 88 : 284;
+			esgst.footerSize = Settings.get('ff') ? 44 : 245;
 		}
 		esgst.mainPageHeadingSize = 45;
 		esgst.pageTop = Settings.get('fh') ? esgst.headerSize : 0;

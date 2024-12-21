@@ -480,7 +480,8 @@ class DiscussionsDiscussionFilters extends Filters {
 									{usernameLink.textContent}
 								</a>
 							</p>
-							<div className="table__column--width-small text-center">
+						</div>
+						<div className="table__column--width-small text-center">
 								<a
 									className="table__column__secondary-link"
 									href={`/discussion/${obj.ids[obj.index]}/`}
@@ -488,7 +489,6 @@ class DiscussionsDiscussionFilters extends Filters {
 									{breadcrumbs[1].textContent.match(/(.+) Comments?/)[1]}
 								</a>
 							</div>
-						</div>
 					</div>
 				</div>
 			</div>

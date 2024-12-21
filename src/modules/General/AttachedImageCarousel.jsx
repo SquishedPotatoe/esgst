@@ -108,7 +108,7 @@ class GeneralAttachedImageCarousel extends Module {
 			},
 		]);
 		carousel.style.zIndex =
-			999 +
+			1000 +
 			document.querySelectorAll(`.esgst-popup:not(.esgst-hidden), .esgst-popout:not(.esgst-hidden)`)
 				.length;
 		carousel.addEventListener('click', this.aic_removeCarousel.bind(this));

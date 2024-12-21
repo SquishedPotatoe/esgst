@@ -279,12 +279,12 @@ class CommentsCommentTracker extends Module {
 		for (i = 0, n = matches.length; i < n; ++i) {
 			match = matches[i];
 			countLink = match.querySelector(
-				`.table__column__secondary-link[href*="/discussion/"], .table__column--width-small.text-center, .column_small.text_center`
+				`.table__column__secondary-link[href*="/discussion/"], .table__column--width-small.text-center, .row_trade_comments`
 			);
 			if (countLink) {
 				count = parseInt(countLink.textContent.replace(/,/g, ''));
 				heading = match.querySelector(
-					`.homepage_table_column_heading, .table__column__heading, .column_flex h3 a`
+					`.homepage_table_column_heading, .table__column__heading, .row_trade_name h2 a`
 				);
 				if (!heading) {
 					continue;
@@ -528,7 +528,7 @@ class CommentsCommentTracker extends Module {
 											}
 										} else {
 											if (comment.id) {
-												Tabs.open(`https://www.steamgifts.com/go/comment/${comment.id}`);
+												Tabs.open(`https://www.steamtrades.com/go/comment/${comment.id}`);
 											} else {
 												Tabs.open(`https://www.steamgifts.com/discussion/${comment.code}/`);
 											}
@@ -580,7 +580,7 @@ class CommentsCommentTracker extends Module {
 							}
 						} else {
 							if (unread.id) {
-								Tabs.open(`https://www.steamgifts.com/go/comment/${unread.id}`);
+								Tabs.open(`https://www.steamtrades.com/go/comment/${unread.id}`);
 							} else {
 								Tabs.open(`https://www.steamgifts.com/discussion/${unread.code}/`);
 							}
@@ -950,6 +950,8 @@ class CommentsCommentTracker extends Module {
 		discussion,
 		name
 	) {
+		if (context.querySelector('.esgst-ct-count'))
+		  return;
 		let panel;
 		DOM.insert(
 			context,
@@ -1083,7 +1085,7 @@ class CommentsCommentTracker extends Module {
 				titles: ['Subscribe', 'Subscribing...', 'Unsubscribe', 'Unsubscribing...'],
 			});
 		}
-		if (Settings.get('ct') && (this.esgst.giveawaysPath || this.esgst.discussionsPath)) {
+		if (Settings.get('ct') && (this.esgst.giveawaysPath || this.esgst.discussionsPath || this.esgst.st)) {
 			if (Settings.get('ct_s')) {
 				if (diff > 0) {
 					obj.diffContainer.classList.remove('esgst-hidden');

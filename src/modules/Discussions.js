@@ -225,14 +225,19 @@ class Discussions extends Module {
 					discussion.saved.hidden
 				) {
 					discussion.outerWrap.classList.add('esgst-hidden');
-					discussion.outerWrap.setAttribute('data-esgst-not-filterable', 'df');
+					discussion.outerWrap.setAttribute('data-esgst-not-filterable', 'tf');
 					if (Settings.get('tf_s_s')) {
 						Shared.esgst.modules.tradesTradeFilters.updateSingleCounter();
 					}
 					return;
 				}
-				discussion.createdContainer = discussion.info.firstElementChild;
+				discussion.info = discussion.headingColumn.nextElementSibling;
+				discussion.createdContainer = discussion.info.firstElementChild.firstElementChild.nextElementSibling;
 				discussion.reputationElement = discussion.info.querySelector('.reputation');
+
+				if (!discussion.reputationElement) {
+					break;
+				}
 				discussion.positiveReputationElement = discussion.reputationElement.querySelector(
 					'.is_positive'
 				);
@@ -242,6 +247,9 @@ class Discussions extends Module {
 				discussion.positiveReputation = parseInt(
 					discussion.positiveReputationElement.textContent.replace(/[^\d]/g, '')
 				);
+				if (!discussion.negativeReputationElement) {
+					break;
+				}
 				discussion.negativeReputation = parseInt(
 					discussion.negativeReputationElement.textContent.replace(/[^\d]/g, '')
 				);
@@ -270,8 +278,9 @@ class Discussions extends Module {
 		discussion.authors = [discussion.author.toLowerCase()];
 		discussion.created = discussion.author === Settings.get('username');
 		discussion.poll = discussion.outerWrap.querySelector('.fa-align-left');
-		discussion.commentsColumn =
-			discussion.headingColumn.nextElementSibling || discussion.headingColumn.children[1];
+		discussion.commentsColumn = this.esgst.st
+			? discussion.headingColumn.nextElementSibling.nextElementSibling
+			: discussion.headingColumn.nextElementSibling || discussion.headingColumn.children[1];
 		if (discussion.commentsColumn) {
 			discussion.comments = parseInt(
 				discussion.commentsColumn.firstElementChild.textContent.replace(/,/g, '')
@@ -289,9 +298,24 @@ class Discussions extends Module {
 			}
 		}
 		discussion.lastPost = discussion.outerWrap.querySelector(
-			`.table__column--last-comment, .column_last_update`
+			`.table__column--last-comment, .row_trade_update_user`
 		);
-		if (discussion.lastPost && discussion.lastPost.firstElementChild) {
+		if (discussion.lastPost && discussion.lastPost.firstElementChild && this.esgst.st) {
+			discussion.lastPostTime = discussion.lastPost.firstElementChild.firstElementChild.nextElementSibling;
+			discussion.lastPostAuthor = discussion.lastPostTime.parentNode.nextElementSibling.firstElementChild;
+			discussion.lastPostCode = discussion.lastPostAuthor.nextElementSibling.nextElementSibling;
+
+			if (discussion.lastPostCode && discussion.lastPostCode.getAttribute('href').match(/\/comment\/(.+)/)) {
+				discussion.lastPostCode = discussion.lastPostCode.getAttribute('href').match(/\/comment\/(.+)/)[1];
+				discussion.wasLastPostBump = false;
+			} else {
+				discussion.lastPostCode = null;
+				discussion.wasLastPostBump = true;
+			}
+			discussion.lastPostAuthor = discussion.lastPostAuthor.textContent;
+			discussion.lastPostTimestamp = discussion.lastPostTime.getAttribute('data-timestamp');
+			discussion.lastPostTime = discussion.lastPostTime.textContent;
+		} else if (discussion.lastPost && discussion.lastPost.firstElementChild) {
 			discussion.lastPostTime = discussion.lastPost.firstElementChild.firstElementChild;
 			discussion.lastPostAuthor = discussion.lastPostTime.nextElementSibling;
 			discussion.lastPostCode = discussion.lastPostAuthor.lastElementChild
@@ -299,15 +323,10 @@ class Discussions extends Module {
 				.match(/\/comment\/(.+)/);
 			if (discussion.lastPostCode) {
 				discussion.lastPostCode = discussion.lastPostCode[1];
-				discussion.wasLastPostBump = false;
-			} else {
-				discussion.lastPostCode = null;
-				discussion.wasLastPostBump = true;
 			}
 			discussion.lastPostAuthor = discussion.lastPostAuthor.firstElementChild.textContent;
-			discussion.lastPostTime = discussion.lastPostTime.firstElementChild;
 			discussion.lastPostTimestamp = discussion.lastPostTime.getAttribute('data-timestamp');
-			discussion.lastPostTime = discussion.lastPostTime.textContent;
+			discussion.lastPostTime = discussion.lastPostTime.firstElementChild.textContent;
 		}
 		discussion.id = discussion.code;
 		discussion.name = discussion.title;
