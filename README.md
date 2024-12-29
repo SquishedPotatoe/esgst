@@ -1,4 +1,4 @@
-# Enhanced SteamGifts & SteamTrades (ESGST)
+# Enhanced SteamGifts & SteamTrades (ESGST Potatoe edition)
 
 An extension / userscript that adds some cool features to SteamGifts and SteamTrades.
 
