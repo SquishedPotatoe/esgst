@@ -200,7 +200,7 @@ function addStyle() {
 		margin-bottom: 0;
 	}
 
-	.form__saving-button--gray, .form__saving-button.is-disabled {
+	.form__saving-button--gray {
 		background-image: linear-gradient(#dadde4 0%, #c8ccd7 50%, #b2b7c2 100%);
 		border-color: #bcc1cc #9da4b2 #7e8797 #a5adbc;
 		color: #5d636f;
@@ -2464,18 +2464,18 @@ function addStyle() {
 	.esgst-popup .esgst-df-button + .esgst-idb-button {
 		display: inline-block !important;
 	}
-  
+
 	.fanatical_container, .bundle_container {
 		font-size: 12px;
 		text-align: left;
 	}
-  
+
 	.esgst-fmph .page_heading_btn_container {
 		z-index: 1000;
 	}
-   
-	.page_heading.esgst-fmph +* + .esgst-fmph {
-	z-index: 997;
+
+	.esgst-fmph .page_heading_btn_dropdown.is_selected + .dropdown .dropdown_btn {
+		padding: 4px 15px;
 	}
 
 	.esgst-popup-description.esgst-text-left select, .esgst-popup-description.esgst-text-left input, .esgst-popup select, .esgst-auto-sync, .esgst-cfh-popout input, .esgst-switch-input {
@@ -2484,7 +2484,7 @@ function addStyle() {
 		font: inherit;
 		line-height: 1.5em;
 	}
-   
+
 	header.large ~ .esgst-popup-layer .esgst-popup .esgst-button i, header.small ~ .esgst-popup-layer .esgst-popup .esgst-button i {
 		margin-right: 3px;
 		vertical-align: baseline;
@@ -2498,7 +2498,7 @@ function addStyle() {
 	header ~ .esgst-popup-layer .esgst-popup .page_heading .esgst-button-container > .page_heading_btn.esgst-button i:nth-of-type(2), header ~ .esgst-popup-layer .esgst-popup .page_heading .esgst-button-container > .page_heading_btn.esgst-button i:nth-of-type(2) {
 		margin-left: 3px !important;
 	}
-	
+
 	.esgst-gv-box .esgst-gv-icons .esgst-button-container [data-draggable-id] {
 		line-height: 16px;
 		font-size: 12px;
@@ -2671,7 +2671,7 @@ function addStyle() {
 		padding: 2px !important;
 	}
 
-	.esgst-gv-icons .esgst-gp-button {
+	.esgst-gv-icons .esgst-gp-button, .esgst-elgb-button > .form__saving-button {
 		background-color: #fff;
 	}
 

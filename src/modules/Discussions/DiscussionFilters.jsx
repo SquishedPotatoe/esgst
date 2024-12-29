@@ -494,7 +494,7 @@ class DiscussionsDiscussionFilters extends Filters {
 			</div>
 		);
 		await endless_load(obj.discussions);
-		if (!this.esgst.giveawaysPath && !this.esgst.discussionsPath) {
+		if (!this.esgst.giveawaysPath && !this.esgst.discussionsPath && !this.esgst.commentsPath) {
 			if (Settings.get('gdttt')) {
 				await this.esgst.modules.commentsCommentTracker.ct_addDiscussionPanels(
 					obj.discussions,
