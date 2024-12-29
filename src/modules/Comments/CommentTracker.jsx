@@ -955,7 +955,7 @@ class CommentsCommentTracker extends Module {
 		let panel;
 		DOM.insert(
 			context,
-			this.esgst.giveawaysPath && !Settings.get('oadd') ? 'afterend' : 'beforeend',
+			(this.esgst.giveawaysPath || this.esgst.commentsPath) && !Settings.get('oadd') ? 'afterend' : 'beforeend',
 			<span ref={(ref) => (panel = ref)}>
 				<span className="esgst-ct-count esgst-hidden" title={Shared.common.getFeatureTooltip('ct')}>
 					{`(+${diff})`}
@@ -1085,7 +1085,7 @@ class CommentsCommentTracker extends Module {
 				titles: ['Subscribe', 'Subscribing...', 'Unsubscribe', 'Unsubscribing...'],
 			});
 		}
-		if (Settings.get('ct') && (this.esgst.giveawaysPath || this.esgst.discussionsPath || this.esgst.st)) {
+		if (Settings.get('ct') && (this.esgst.giveawaysPath || this.esgst.discussionsPath || this.esgst.commentsPath || this.esgst.tradesPath)) {
 			if (Settings.get('ct_s')) {
 				if (diff > 0) {
 					obj.diffContainer.classList.remove('esgst-hidden');

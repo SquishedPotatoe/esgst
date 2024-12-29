@@ -24,7 +24,7 @@ class DiscussionsReversedActiveDiscussions extends Module {
 	}
 
 	async init() {
-		if (!(this.esgst.giveawaysPath || this.esgst.discussionPath || this.esgst.giveawayPath || this.esgst.activeDiscussions) || Settings.get('oadd')) {
+		if (!(this.esgst.giveawaysPath || this.esgst.commentsPath || this.esgst.activeDiscussions) || Settings.get('oadd')) {
 			return;
 		}
 		Shared.esgst.activeDiscussions.insertBefore(

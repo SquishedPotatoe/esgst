@@ -27,16 +27,13 @@ class DiscussionsRefreshActiveDiscussionsButton extends Module {
 	}
 
 	init() {
-		if (!(this.esgst.giveawaysPath || this.esgst.discussionPath || this.esgst.giveawayPath || this.esgst.activeDiscussions) || (Settings.get('oadd') || Settings.get('adots'))) {
+		if (!this.esgst.commentsPath || Settings.get('oadd') || Settings.get('adots')) {
 			return;
 		}
 		this.radb_addButtons();
 	}
 
 	radb_addButtons() {
-		if (this.radb_buttonsAdded) return;
-		this.radb_buttonsAdded = true;
-
 		let elements, i;
 		elements = this.esgst.activeDiscussions.querySelectorAll(
 			`.block_header, .esgst-heading-button`

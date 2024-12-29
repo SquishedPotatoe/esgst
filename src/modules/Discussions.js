@@ -113,9 +113,20 @@ class Discussions extends Module {
 			if (!discussion) continue;
 			discussions.push(discussion);
 		}
+		if (discussions && (this.esgst.commentsPath && !Settings.get('oadd')) &&
+			Settings.get('adots') &&
+			Settings.get('adots_index') === 1) {
+			if (Settings.get('idb')) {
+				await this.esgst.modules.discussionsImprovedDiscussionBookmarks.addButtons(discussions);
+			}
+			if (Settings.get('df')) {
+				this.esgst.modules.discussionsDiscussionFilters.df_addButtons(discussions);
+			}
+		}
 		if (context === document && main && this.esgst.discussionPath) {
+			let matchPath = window.location.pathname.match(/^\/discussion\/(.+?)\//);
 			let discussion = {
-				code: window.location.pathname.match(/^\/discussion\/(.+?)\//)[1],
+				code: matchPath ? matchPath[1] : null,
 				heading: document.getElementsByClassName('page__heading__breadcrumbs')[0],
 				headingContainer: document.getElementsByClassName('page__heading')[0],
 				menu: false,
@@ -125,12 +136,11 @@ class Discussions extends Module {
 			discussion.id = discussion.code;
 			discussion.container = discussion.headingContainer;
 			discussion.tagContext = discussion.container.querySelector(`[href*="/discussion/"]`);
-			discussion.name = discussion.tagContext.textContent.trim();
+			discussion.name = discussion.tagContext?.textContent?.trim() ?? null;
 			discussion.tagPosition = 'afterend';
 			discussion.saved = this.esgst.discussions[discussion.code];
-			discussion.title = discussion.heading.getElementsByTagName('H1')[0].textContent.trim();
-			discussion.category =
-				discussion.heading.firstElementChild.nextElementSibling.nextElementSibling.textContent;
+			discussion.title = discussion.heading?.getElementsByTagName('H1')[0]?.textContent.trim() ?? null;
+			discussion.category = discussion.heading?.firstElementChild?.nextElementSibling?.nextElementSibling?.textContent ?? null;
 			discussion.type = 'discussion';
 			discussions.push(discussion);
 		}
@@ -269,7 +279,7 @@ class Discussions extends Module {
 					discussion.avatar.getAttribute('href') || discussion.avatar.dataset.href
 				).match(/\/user\/(.+)/)[1];
 			} else {
-				discussion.author = discussion.createdContainer.nextElementSibling.textContent;
+				discussion.author = discussion.createdContainer.nextElementSibling?.textContent ?? null;
 			}
 		}
 		if (!discussion.author) {
@@ -286,7 +296,7 @@ class Discussions extends Module {
 				discussion.commentsColumn.firstElementChild.textContent.replace(/,/g, '')
 			);
 			if (
-				this.esgst.giveawaysPath &&
+				(this.esgst.giveawaysPath || this.esgst.commentsPath) &&
 				Settings.get('adots') &&
 				Settings.get('adots_index') === 1 &&
 				Settings.get('ns')

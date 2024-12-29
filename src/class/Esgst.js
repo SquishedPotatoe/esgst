@@ -558,7 +558,7 @@ class Esgst {
 			/steamgifts.com($|\/$|\/giveaways(?!.*\/(new|wishlist|created|entered|won)))/
 		);
 		this.giveawayCommentsPath = window.location.pathname.match(
-			/^\/giveaway\/(?!.+\/(entries|winners|groups|region-restrictions))/
+			/^\/giveaway\/(?!.+\/(entries|winners|groups|region-restrictions|stats))/
 		);
 		this.discussionsTicketsPath = window.location.pathname.match(
 			/^\/(discussions|support\/tickets)/
@@ -590,7 +590,7 @@ class Esgst {
 		this.wonPath = window.location.pathname.match(/^\/giveaways\/won/);
 		this.enteredPath = window.location.pathname.match(/^\/giveaways\/entered/);
 		this.commentsPath = window.location.pathname.match(
-			/^\/(giveaway\/(?!.*\/(entries|winners|groups|region-restrictions))|discussion\/|support\/ticket\/|trade\/)/
+			/^\/(giveaway\/(?!.*\/(entries|winners|groups|region-restrictions|stats))|discussion\/|support\/ticket\/|trade\/)/
 		);
 		this.aboutPath = window.location.pathname.match(/^\/(about|legal)/);
 		this.whitelistPath = window.location.pathname.match(/^\/account\/manage\/whitelist/);

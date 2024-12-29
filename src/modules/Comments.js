@@ -66,7 +66,7 @@ class Comments extends Module {
 				);
 				count = breadcrumbs[1] || breadcrumbs[0];
 				if (count) {
-					count = parseInt(count.firstElementChild.textContent.replace(/,/g, '').match(/\d+/)[0]);
+					count = parseInt(count.firstElementChild.textContent.replace(/,/g, '').match(/\d+/)?.[0]);
 				} else {
 					count = 0;
 				}

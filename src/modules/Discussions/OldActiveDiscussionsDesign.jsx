@@ -44,7 +44,7 @@ class DiscussionsOldActiveDiscussionsDesign extends Module {
 	}
 
 	async init() {
-		if (!(this.esgst.giveawaysPath || this.esgst.discussionPath || this.esgst.giveawayPath || !this.esgst.activeDiscussions)) {
+		if (!(this.esgst.giveawaysPath || this.esgst.commentsPath || this.esgst.activeDiscussions)) {
 			return;
 		}
 		await this.oadd_load();

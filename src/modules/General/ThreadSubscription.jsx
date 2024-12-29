@@ -137,7 +137,7 @@ class GeneralThreadSubscription extends Module {
 		const code = match[2];
 
 		const context = document.querySelector('.page__heading, .page_heading');
-		const name = context.querySelector('h1').textContent.trim();
+		const name = context.querySelector('h1') ? context.querySelector('h1').textContent.trim() : null;
 
 		const heading = Shared.esgst.mainPageHeading.querySelector(
 			'.page__heading__breadcrumbs, .page_heading_breadcrumbs'

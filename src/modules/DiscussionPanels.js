@@ -12,10 +12,15 @@ class DiscussionPanels extends Module {
 
 	init() {
 		if (
-			(Settings.get('ct') && (this.esgst.giveawaysPath || this.esgst.discussionsPath)) ||
+			(Settings.get('ct') && 
+				(this.esgst.giveawaysPath ||
+					this.esgst.discussionsPath ||
+					this.esgst.commentsPath ||
+					this.esgst.tradesPath)) ||
 			(Settings.get('gdttt') &&
 				(this.esgst.giveawaysPath ||
 					this.esgst.discussionsPath ||
+					this.esgst.commentsPath ||
 					this.esgst.discussionsTicketsTradesPath))
 		) {
 			this.esgst.endlessFeatures.push(

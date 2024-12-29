@@ -117,8 +117,7 @@ class DiscussionsImprovedDiscussionBookmarks extends Module {
 				continue;
 			}
 
-			const context =
-				main && Shared.esgst.discussionPath ? discussion.heading : discussion.outerWrap;
+			const context = discussion.outerWrap;
 
 			let index = 0;
 
