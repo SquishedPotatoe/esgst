@@ -211,8 +211,8 @@ class GeneralThreadSubscription extends Module {
 								item.type === 'forum'
 									? `https://www.steamgifts.com/discussions${item.code ? `/${item.code}` : ''}`
 									: item.type === 'discussions'
-									? `https://www.steamgifts.com/discussion/${item.code}/`
-									: `https://www.steamtrades.com/trade/${item.code}/`
+									? `https://www.steamgifts.com/discussion/${item.code}/search?page=last`
+									: `https://www.steamtrades.com/trade/${item.code}/search?page=last`
 							}
 						>
 							{item.type === 'forum' ? this.forumCategories[item.code] : item.name}
