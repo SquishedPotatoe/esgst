@@ -2,10 +2,14 @@ import { Module } from '../../class/Module';
 import { common } from '../Common';
 import { Settings } from '../../class/Settings';
 import { DOM } from '../../class/DOM';
+import dateFns_parse from 'date-fns/parse';
+import dateFns_isValid from 'date-fns/isValid';
 
 const createElements = common.createElements.bind(common),
 	getFeatureTooltip = common.getFeatureTooltip.bind(common),
-	sortContent = common.sortContent.bind(common);
+	sortContent = common.sortContent.bind(common),
+	dateRegex = /\b(?:\d{4}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}[-/]\d{1,2}[-/]\d{2,4}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2},?\s*\d{0,4}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*,?\s*\d{0,4}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}|\d{4}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*'\d{2})\b/i;
+  
 class GeneralTableSorter extends Module {
 	constructor() {
 		super();
@@ -169,11 +173,57 @@ class GeneralTableSorter extends Module {
 		}
 	}
 
+	ts_handleDate(dateString) {
+		if (typeof dateString !== 'string') return null;
+		const cleanedDate = dateString.replace(/(\d+)(st|nd|rd|th)|,/gi, '$1').replace(/\s+/g, ' ').trim();
+		const formats = [
+			'MMM d yyyy', 'MMMM d yyyy',
+			'd MMM yyyy', 'd MMMM yyyy',
+			'yyyy MMM d', 'yyyy MMMM d',
+			'yyyy-MM-dd',
+			'MM/dd/yyyy', 'dd/MM/yyyy',
+			'MMM d', 'd MMM', 'MMMM d', 'd MMMM',
+			'MMMM yyyy', 'MMM yyyy'
+		];
+		for (const fmt of formats) {
+			const parsed = dateFns_parse(cleanedDate, fmt, new Date());
+			if (dateFns_isValid(parsed)) {
+				if (!parsed.getFullYear()) parsed.setFullYear(new Date().getFullYear());
+				return parsed;
+			}
+		}
+		return null;
+	}
+
+	ts_getDateSubstring(value, regex, threshold = 0.7) {
+		const match = value.match(regex);
+		if (!match) return null;
+		const matchedStr = match[0];
+		const ratio = matchedStr.length / value.length;
+		return ratio >= threshold ? matchedStr : null;
+	}
+
+	ts_parseMiscValue(value, element) {
+		let numericMatch = value.match(/^[+-]?\d{1,3}(,\d{3})*(\.\d+)?(?!\w)/);
+		if (numericMatch) {
+			element.value = parseFloat(numericMatch[0].replace(/,/g, ''));
+			if (isNaN(element.value)) element.value = 0;
+			return true;
+		}
+		if (/^(from\s*)?[-+]?[A-Z]{0,3}[$€£¥₹]\d[\d,\.]*$/i.test(value)) {
+			let cleaned = value.replace(/^from\s*/i, '').replace(/^[+]/, '').replace(/[A-Z]{0,3}[$€£¥₹]/i, '').replace(/,/g, '').trim();
+			element.value = parseFloat(cleaned);
+			if (isNaN(element.value)) element.value = 0;
+			return true;
+		}
+	}
+
 	ts_getArray(columnName, i, table) {
-		let array, column, element, j, match, n, row, rows, value;
+		let array, column, element, j, n, row, rows, value;
 		array = [];
 		rows = table.querySelectorAll(`.table__row-outer-wrap, .row_outer_wrap, tbody tr`);
 		let isNumeric = false;
+		const now = Date.now();
 		for (j = 0, n = rows.length; j < n; ++j) {
 			row = rows[j];
 			column = row.querySelectorAll(
@@ -211,7 +261,7 @@ class GeneralTableSorter extends Module {
 						case 'Last Update':
 							try {
 								element.value = value.match(/Online|Open/)
-									? Date.now()
+									? now
 									: parseInt(
 											column.querySelector(`[data-timestamp]`).getAttribute('data-timestamp')
 									  ) * 1e3;
@@ -229,24 +279,20 @@ class GeneralTableSorter extends Module {
 						case `Winner(s)`:
 							element.value = value;
 							break;
-						default:
-							if (value.match(/\d+\.\d+/)) {
-								element.value = parseFloat(value.replace(/[,$]/g, ''));
-								if (isNaN(element.value)) {
-									element.value = value;
-								} else {
-									isNumeric = true;
-								}
+						default: {
+							if (!value || value === '―' || value === '-') {
+								element.value = '';
 							} else {
-								match = value.replace(/,/g, '').match(/\d+/);
-								if (match) {
-									element.value = parseFloat(match[0]);
-									isNumeric = true;
+								const dateSubstring = this.ts_getDateSubstring(value, dateRegex, 0.7);
+								if (dateSubstring) {
+									const parsedDate = this.ts_handleDate(dateSubstring);
+									isNumeric = parsedDate ? (element.value = parsedDate.getTime(), true) : this.ts_parseMiscValue(value, element);
 								} else {
-									element.value = value;
+									isNumeric = this.ts_parseMiscValue(value, element);
 								}
 							}
 							break;
+						}
 					}
 				}
 			} else {
