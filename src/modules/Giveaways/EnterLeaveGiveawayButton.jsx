@@ -510,6 +510,21 @@ class GiveawaysEnterLeaveGiveawayButton extends Module {
 		}
 		let description = null;
 		let responseHtml = null;
+		if (
+			!(
+				Settings.get('elgb_c') ||
+				Settings.get('elgb_f') ||
+				Settings.get('elgb_r') ||
+				Settings.get('elgb_r_d') ||
+				Settings.get('elgb_fp')
+			) ||
+			( 
+				Settings.get('elgb_f') &&
+				Settings.get('elgb_filters') === '.*'
+			)
+		) {
+			return;
+		}
 		responseHtml = (await FetchRequest.get(giveaway.url, { doNotQueue: true })).html;
 		if (mainCallback && !responseHtml.getElementsByClassName('featured__outer-wrap--giveaway')[0]) {
 			mainCallback(true);
@@ -542,16 +557,14 @@ class GiveawaysEnterLeaveGiveawayButton extends Module {
 					LocalStorage.set('elgbCache', JSON.stringify(this.esgst.elgbCache));
 					if (Settings.get('elgb_f')) {
 						let text = description.textContent.replace(/[^a-zA-Z]/g, '').toLowerCase();
-						if (
-							text.match(new RegExp(`^(${this.processFilters(Settings.get('elgb_filters'))})$`))
-						) {
+						if (text.match(new RegExp(`^(${Settings.get('elgb_filters')})$`))) {
 							description = null;
 						}
 					}
 				}
 			} else if (Settings.get('elgb_f')) {
 				let text = description.textContent.replace(/[^a-zA-Z]/g, '').toLowerCase();
-				if (text.match(new RegExp(`^(${this.processFilters(Settings.get('elgb_filters'))})$`))) {
+				if (text.match(new RegExp(`^(${Settings.get('elgb_filters')})$`))) {
 					description = null;
 				}
 			}
@@ -688,10 +701,6 @@ class GiveawaysEnterLeaveGiveawayButton extends Module {
 				}
 			});
 		}
-	}
-
-	processFilters(filters) {
-		return filters.replace(/(^|\|)\.*(\*|\+)\.*($|\|)/g, '').replace(/\|$/, '');
 	}
 
 	async elgb_enterGiveaway(giveaway, main, popup, source, callback) {
