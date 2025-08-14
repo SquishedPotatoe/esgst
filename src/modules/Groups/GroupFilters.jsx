@@ -165,7 +165,7 @@ class GroupsGroupFilters extends Filters {
 					dependencies: ['gs', 'gs_sent'],
 					description: () => (
 						<ul>
-							<li>Allows you to filter groups by the number of gifts that have been sent.</li>
+							<li>Allows you to filter groups by the number of gifts that you have sent.</li>
 						</ul>
 					),
 					name: 'Sent',
@@ -175,7 +175,7 @@ class GroupsGroupFilters extends Filters {
 					dependencies: ['gs', 'gs_sent'],
 					description: () => (
 						<ul>
-							<li>Allows you to filter groups by the dollar value of gifts that have been sent.</li>
+							<li>Allows you to filter groups by the dollar value of gifts that you have sent.</li>
 						</ul>
 					),
 					name: 'Sent Value',
@@ -185,7 +185,7 @@ class GroupsGroupFilters extends Filters {
 					dependencies: ['gs', 'gs_received'],
 					description: () => (
 						<ul>
-							<li>Allows you to filter groups by the number of gifts that have been sent.</li>
+							<li>Allows you to filter groups by the number of gifts that you have received.</li>
 						</ul>
 					),
 					name: 'Received',
@@ -195,7 +195,7 @@ class GroupsGroupFilters extends Filters {
 					dependencies: ['gs', 'gs_received'],
 					description: () => (
 						<ul>
-							<li>Allows you to filter groups by the dollar value of gifts that have been sent.</li>
+							<li>Allows you to filter groups by the dollar value of gifts that you have received.</li>
 						</ul>
 					),
 					name: 'Received Value',
@@ -205,7 +205,7 @@ class GroupsGroupFilters extends Filters {
 					dependencies: ['gs', 'gs_giftDifference'],
 					description: () => (
 						<ul>
-							<li>Allows you to filter groups by the number of gifts that have been sent.</li>
+							<li>Allows you to filter groups on the difference between gifts you have sent and gifts you have receieved.</li>
 						</ul>
 					),
 					name: 'Gift Difference',
@@ -215,7 +215,7 @@ class GroupsGroupFilters extends Filters {
 					dependencies: ['gs', 'gs_valueDifference'],
 					description: () => (
 						<ul>
-							<li>Allows you to filter groups by the dollar value of gifts that have been sent.</li>
+							<li>Allows you to filter groups based on the dollar difference between the value of gifts you have sent and the value of gifts you have received.</li>
 						</ul>
 					),
 					name: 'Value Difference',
