@@ -577,7 +577,8 @@ async function sync(syncer) {
 				element = elements[i];
 				heading = element.getElementsByClassName('table__column__heading')[0];
 				code = heading.getAttribute('href').match(/\/group\/(.+?)\/(.+)/)[1];
-				name = heading.textContent;
+				const avatarElement = element.querySelector('a[href*="/group/"]');
+				name = heading.textContent.trim() || (avatarElement && avatarElement.getAttribute('href').split('/').pop());
 				let j;
 				for (
 					j = syncer.savedGroups.length - 1;
@@ -585,11 +586,16 @@ async function sync(syncer) {
 					--j
 				) {}
 				if (j >= 0 && syncer.savedGroups[j].steamId) {
+					const steamId = syncer.savedGroups[j].steamId;
 					syncer.groups[code] = {
 						member: true,
 					};
-					syncer.newGroups[syncer.savedGroups[j].steamId] = name;
-				} else {
+					if (!syncer.savedGroups[j].name || !syncer.savedGroups[j].name.trim()) {
+						syncer.savedGroups[j].name = name;
+					}
+					syncer.newGroups[syncer.savedGroups[j].steamId] = syncer.savedGroups[j].name;
+				}
+				else {
 					let avatar, steamId;
 					avatar = element
 						.getElementsByClassName('table_image_avatar')[0]

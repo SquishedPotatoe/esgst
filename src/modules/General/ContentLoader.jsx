@@ -806,7 +806,7 @@ class GeneralContentLoader extends Module {
 						: null;
 					const heading = element.querySelector('.table__column__heading');
 					const code = heading.getAttribute('href').match(/group\/(.+?)\//)[1];
-					const name = heading.textContent;
+					const name = heading.textContent || (imageElement.href.replace('/group/', '').split('/').pop().replace(/[-_]+/g, ' ') || '');
 
 					groups.push(code);
 					groupsToSave[code] = { avatar, code, name };
@@ -989,6 +989,11 @@ class GeneralContentLoader extends Module {
 
 	async fetchInfo(targetObj, triggerObj, context) {
 		const response = await FetchRequest.get(targetObj.url);
+		const heading = response.html.querySelector('.featured__heading__medium');
+		if (heading.textContent.trim() === '') {
+			const groupName = response.html.querySelector('head script[type="text/javascript"]').textContent.match(/var baseUrl = "([^"]+)";/)[1].split('/').pop();
+			heading.textContent = groupName ? groupName.replace(/[-_]+/g, ' ') : '';
+		}
 
 		context.innerHTML = '';
 
