@@ -2400,39 +2400,22 @@ class Filters extends Module {
 					? tableRow
 					: item.outerWrap;
 
-			if (unfilter) {
+			if (!outerWrap.getAttribute('data-esgst-not-filterable')) {
+				outerWrap.classList.remove('esgst-hidden');
+			}
+			if (
+				obj.id === 'cf' &&
+				outerWrap.parentElement &&
+				!outerWrap.parentElement.getAttribute('data-esgst-not-filterable')
+			) {
+				outerWrap.parentElement.classList.remove('esgst-hidden');
+			}
+			if (unfilter || this.filters_filterItem(obj.filters, item, obj.rules)) {
 				if (
-					outerWrap.classList.contains('esgst-hidden') &&
-					!outerWrap.getAttribute('data-esgst-not-filterable')
-				) {
-					outerWrap.classList.remove('esgst-hidden');
-				}
-				if (
-					obj.id === 'cf' &&
-					outerWrap.parentElement.classList.contains('esgst-hidden') &&
-					!outerWrap.parentElement.getAttribute('data-esgst-not-filterable')
-				) {
-					outerWrap.parentElement.classList.remove('esgst-hidden');
-				}
-			} else if (this.filters_filterItem(obj.filters, item, obj.rules)) {
-				if (
-					outerWrap.classList.contains('esgst-hidden') &&
-					!outerWrap.getAttribute('data-esgst-not-filterable')
-				) {
-					outerWrap.classList.remove('esgst-hidden');
-				}
-				if (
-					obj.id === 'cf' &&
-					outerWrap.parentElement.classList.contains('esgst-hidden') &&
-					!outerWrap.parentElement.getAttribute('data-esgst-not-filterable')
-				) {
-					outerWrap.parentElement.classList.remove('esgst-hidden');
-				}
-				if (
-					!outerWrap.classList.contains('esgst-hidden') &&
-					!outerWrap.parentElement.classList.contains('esgst-hidden') &&
 					item.points &&
-					!item.entered
+					!item.entered &&
+					!outerWrap.classList.contains('esgst-hidden') &&
+					!outerWrap.parentElement.classList.contains('esgst-hidden')
 				) {
 					pointsCount += item.points;
 				}

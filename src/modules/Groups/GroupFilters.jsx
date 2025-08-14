@@ -141,6 +141,86 @@ class GroupsGroupFilters extends Filters {
 					name: 'Winners',
 					sg: true,
 				},
+				gpf_giftsSent: {
+					dependencies: ['gs', 'gs_giftsSent'],
+					description: () => (
+						<ul>
+							<li>Allows you to filter groups by the number of gifts that have been sent.</li>
+						</ul>
+					),
+					name: 'Gifts Sent',
+					sg: true,
+				},
+				gpf_giftsSentValue: {
+					dependencies: ['gs', 'gs_giftsSent'],
+					description: () => (
+						<ul>
+							<li>Allows you to filter groups by the dollar value of gifts that have been sent.</li>
+						</ul>
+					),
+					name: 'Gifts Sent Value',
+					sg: true,
+				},
+				gpf_sent: {
+					dependencies: ['gs', 'gs_sent'],
+					description: () => (
+						<ul>
+							<li>Allows you to filter groups by the number of gifts that have been sent.</li>
+						</ul>
+					),
+					name: 'Sent',
+					sg: true,
+				},
+				gpf_sentValue: {
+					dependencies: ['gs', 'gs_sent'],
+					description: () => (
+						<ul>
+							<li>Allows you to filter groups by the dollar value of gifts that have been sent.</li>
+						</ul>
+					),
+					name: 'Sent Value',
+					sg: true,
+				},
+				gpf_received: {
+					dependencies: ['gs', 'gs_received'],
+					description: () => (
+						<ul>
+							<li>Allows you to filter groups by the number of gifts that have been sent.</li>
+						</ul>
+					),
+					name: 'Received',
+					sg: true,
+				},
+				gpf_receivedValue: {
+					dependencies: ['gs', 'gs_received'],
+					description: () => (
+						<ul>
+							<li>Allows you to filter groups by the dollar value of gifts that have been sent.</li>
+						</ul>
+					),
+					name: 'Received Value',
+					sg: true,
+				},
+				gpf_giftDifference: {
+					dependencies: ['gs', 'gs_giftDifference'],
+					description: () => (
+						<ul>
+							<li>Allows you to filter groups by the number of gifts that have been sent.</li>
+						</ul>
+					),
+					name: 'Gift Difference',
+					sg: true,
+				},
+				gpf_valueDifference: {
+					dependencies: ['gs', 'gs_valueDifference'],
+					description: () => (
+						<ul>
+							<li>Allows you to filter groups by the dollar value of gifts that have been sent.</li>
+						</ul>
+					),
+					name: 'Value Difference',
+					sg: true,
+				},
 				gpf_giveaways: {
 					dependencies: ['gs', 'gs_giveaways'],
 					description: () => (
@@ -278,6 +358,46 @@ class GroupsGroupFilters extends Filters {
 				check: Settings.get('gs') && Settings.get('gs_winners'),
 				name: 'Winners',
 				type: 'integer',
+			},
+			giftsSent: {
+				check: Settings.get('gs') && Settings.get('gs_giftsSent'),
+				name: 'Gifts Sent',
+				type: 'integer',
+			},
+			giftsSentValue: {
+				check: Settings.get('gs') && Settings.get('gs_giftsSent'),
+				name: 'Gifts Sent Value',
+				type: 'double',
+			},
+			sent: {
+				check: Settings.get('gs') && Settings.get('gs_sent'),
+				name: 'Sent',
+				type: 'double',
+			},
+			sentValue: {
+				check: Settings.get('gs') && Settings.get('gs_sent'),
+				name: 'Sent Value',
+				type: 'double',
+			},
+			received: {
+				check: Settings.get('gs') && Settings.get('gs_received'),
+				name: 'Received',
+				type: 'double',
+			},
+			receivedValue: {
+				check: Settings.get('gs') && Settings.get('gs_received'),
+				name: 'Received Value',
+				type: 'double',
+			},
+			giftDifference: {
+				check: Settings.get('gs') && Settings.get('gs_giftDifference'),
+				name: 'Gift Difference',
+				type: 'double',
+			},
+			valueDifference: {
+				check: Settings.get('gs') && Settings.get('gs_valueDifference'),
+				name: 'Value Difference',
+				type: 'double',
 			},
 			creationDate: {
 				check: Settings.get('gs') && Settings.get('gs_creationDate'),
