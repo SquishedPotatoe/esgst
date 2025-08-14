@@ -13,11 +13,12 @@ class GiveawaysStickiedGiveawayGroups extends Module {
 			description: () => (
 				<ul>
 					<li>
-						Adds a button (<i className="fa fa-thumb-stack"></i> if the group is stickied and{' '}
-						<i className="fa fa-thumb-stack esgst-faded"></i> if it is not) next to each group in
+						Adds a button (<i className="fa fa-thumb-tack"></i> if the group is stickied and{' '}
+						<i className="fa fa-thumb-tack esgst-faded"></i> if it is not) next to each group in
 						the <a href="https://www.steamgifts.com/giveaways/new">new giveaway</a>/
 						<a href="https://www.steamgifts.com/account/steam/groups">groups</a> pages that allows
-						you to sticky the group so that it appears at the top of the group list for quick use.
+						you to sticky the group so that it appears at the top of the group list when creating 
+						a giveaway for quick use.
 					</li>
 				</ul>
 			),
