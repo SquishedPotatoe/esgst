@@ -1100,11 +1100,17 @@ class GamesGameCategories extends Module {
 							item.releaseDate = parseInt(item.releaseDate) * 1e3;
 						}
 					} else if (id === 'genres') {
-						item.genres = category.textContent
-							.toLowerCase()
-							.trim()
-							.replace(/\s{2,}/g, `, `)
-							.split(/,\s/);
+						// If the category has children, it means that each genre/user-defined tag is shown as a separate category.
+						if (category.children.length) {
+							item.genres = Array.from(category.children)
+								.map(link => link.title.trim().toLowerCase());
+						} else {// If the category has no children, it means that all genres/user-defined tags are shown in a single category.
+							item.genres = category.textContent
+								.toLowerCase()
+								.trim()
+								.replace(/\s{2,}/g, `, `)
+								.split(/,\s*/);
+						}
 					} else if (id === 'rating') {
 						item.rating = parseInt(category.title.match(/(\d+)%/)[1]);
 						item.ratingQuantity = parseInt(
