@@ -216,6 +216,8 @@ class GeneralTableSorter extends Module {
 			if (isNaN(element.value)) element.value = 0;
 			return true;
 		}
+		element.value = value.replace(/[^\x00-\x7F]/gu, '').trimStart() || value;
+		return false;
 	}
 
 	ts_getArray(columnName, i, table) {
