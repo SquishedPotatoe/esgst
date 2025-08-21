@@ -1100,11 +1100,10 @@ class GamesGameCategories extends Module {
 							item.releaseDate = parseInt(item.releaseDate) * 1e3;
 						}
 					} else if (id === 'genres') {
-						// If the category has children, it means that each genre/user-defined tag is shown as a separate category.
 						if (category.children.length) {
 							item.genres = Array.from(category.children)
 								.map(link => link.title.trim().toLowerCase());
-						} else {// If the category has no children, it means that all genres/user-defined tags are shown in a single category.
+						} else {
 							item.genres = category.textContent
 								.toLowerCase()
 								.trim()
