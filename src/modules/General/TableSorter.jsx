@@ -204,7 +204,7 @@ class GeneralTableSorter extends Module {
 	}
 
 	ts_parseMiscValue(value, element) {
-		let numericMatch = value.match(/^[+-]?\d{1,3}(,\d{3})*(\.\d+)?(?!\w)/);
+		let numericMatch = value.match(/^[+-]?\d{1,3}(,\d{3})*(?:\.\d+)?(?!\w)|^[+-]?\d+(\.\d+)?(?!\w)/);
 		if (numericMatch) {
 			element.value = parseFloat(numericMatch[0].replace(/,/g, ''));
 			if (isNaN(element.value)) element.value = 0;
