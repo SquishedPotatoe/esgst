@@ -14,7 +14,7 @@ class GenerateZip {
 	constructor(options) {
 		this.options = options || {};
 		this.outputPath = this.options.outputPath || 'build';
-		this.zipName = this.options.zipName || 'esgst-build.zip';
+		this.zipName = this.options.zipName || 'chrome-mv3.zip';
 		this.files = this.options.files || [];
 	}
 
@@ -183,7 +183,7 @@ module.exports = (env = {}) => {
 			// --- JSZip plugin ---
 			new GenerateZip({
 				outputPath: path.resolve(__dirname, 'dist'),
-				zipName: 'esgst-build.zip',
+				zipName: 'chrome-mv3.zip',
 				files: [
 					path.join(outputDir, 'esgst.js'),
 					path.join(outputDir, 'eventPage.js'),

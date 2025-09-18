@@ -241,7 +241,7 @@ function isNewerVersion(a, b) {
 	return false;
 }
 
-async function checkRemoteVersionSW({ ignoreLastNotified = false, manual = false} = {}) {
+async function checkRemoteVersionSW({ ignoreLastNotified = false, manual = false } = {}) {
 	try {
 		const manifest = chrome.runtime.getManifest();
 		const currentVersion = manifest.version;
@@ -773,7 +773,7 @@ async function syncSteamTabs(request = {}) {
 
 				const shouldRestore = currentTab?.url && isSteamTab(currentTab.url);
 				if (shouldRestore) {
-					try { await chrome.tabs.update(currentTab.id, { active: true });}
+					try { await chrome.tabs.update(currentTab.id, { active: true }); }
 					catch (e) { console.warn('[SW] Failed to restore previous SG/ST tab', currentTab.id, e); }
 				}
 
