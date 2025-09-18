@@ -1,5 +1,0 @@
-build/*
-dist/*
-!.eslintrc.js
-!.eslintrc.typed.js
-!.lintstagedrc.js

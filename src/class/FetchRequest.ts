@@ -1,4 +1,3 @@
-import { browser } from '../browser';
 import { Utils } from '../lib/jsUtils';
 import { DOM } from './DOM';
 import { Lock } from './Lock';
@@ -32,10 +31,6 @@ export class FetchRequest {
 	static readonly DEFAULT_HEADERS = {
 		'Content-Type': 'application/x-www-form-urlencoded',
 	};
-	static readonly REQUIRED_HEADERS = {
-		'Esgst-Version': '',
-		From: 'esgst.extension@gmail.com',
-	};
 
 	static delete(url: string, options: Partial<FetchOptions> = {}): Promise<FetchResponse> {
 		return FetchRequest.send(url, { ...options, method: 'DELETE' });
@@ -58,16 +53,20 @@ export class FetchRequest {
 	}
 
 	static async send(url: string, options: FetchOptions): Promise<FetchResponse> {
-		if (!FetchRequest.REQUIRED_HEADERS['Esgst-Version']) {
-			FetchRequest.REQUIRED_HEADERS['Esgst-Version'] = Shared.esgst.currentVersion;
-		}
-
 		let response = null;
 		let lock = null;
+		if (typeof url === 'object' && url.path) {
+			url = url.path;
+		} else if (typeof url !== 'string') {
+			url = String(url);
+		}
 
 		url = url
 			.replace(/^\//, `https://${window.location.hostname}/`)
 			.replace(/^https?:/, Shared.esgst.locationHref.match(/^http:/) ? 'http:' : 'https:');
+		if (url.match(/steamgifts\.com\/group\/[^/]+$/)) {
+			url += '/';
+		}
 		if (options.pathParams) {
 			url = FetchRequest.addPathParams(url, options.pathParams);
 		}
@@ -77,7 +76,6 @@ export class FetchRequest {
 		options.headers = {
 			...FetchRequest.DEFAULT_HEADERS,
 			...options.headers,
-			...FetchRequest.REQUIRED_HEADERS,
 		};
 
 		try {
@@ -87,10 +85,13 @@ export class FetchRequest {
 					threshold: typeof options.queue === 'number' ? options.queue : 1000,
 				});
 			} else if (isInternal && !options.doNotQueue) {
-				await browser.runtime.sendMessage({
+				const res = await chrome.runtime.sendMessage({
 					action: 'queue_request',
 					key: 'sg',
 				});
+				if (!res?.success) {
+					throw new Error(`queue_request failed: ${res?.error || 'unknown error'}`);
+				}
 			} else if (
 				url.match(/^https?:\/\/store.steampowered.com/) &&
 				Settings.get('limitSteamStore')
@@ -175,9 +176,7 @@ export class FetchRequest {
 	}
 
 	static async sendExternal(url: string, options: FetchOptions): Promise<FetchResponse> {
-		const manipulateCookies =
-			(await Shared.common.getBrowserInfo()).name === 'Firefox' &&
-			Settings.get('manipulateCookies');
+		const manipulateCookies = Settings.get('manipulateCookies');
 
 		const messageOptions = {
 			action: 'fetch',
@@ -188,7 +187,7 @@ export class FetchRequest {
 			timeout: options.timeout,
 			url,
 		};
-		let response = await browser.runtime.sendMessage(messageOptions);
+		let response = await chrome.runtime.sendMessage(messageOptions);
 		if (typeof response === 'string') {
 			response = JSON.parse(response);
 		}
@@ -206,25 +205,11 @@ export class FetchRequest {
 	}
 
 	static async getFetchObj(options: FetchOptions) {
-		let fetchObj = null;
-		let fetchOptions = FetchRequest.getFetchOptions(options);
-		let abortController = null;
-
-		if (
-			(await Shared.common.getBrowserInfo()).name === 'Firefox' &&
-			'wrappedJSObject' in window &&
-			window.wrappedJSObject
-		) {
-			fetchObj = XPCNativeWrapper(window.wrappedJSObject.fetch);
-			window.wrappedJSObject.fetchOptions = cloneInto(fetchOptions, window);
-			fetchOptions = XPCNativeWrapper(window.wrappedJSObject.fetchOptions);
-			abortController = new (XPCNativeWrapper(window.wrappedJSObject.AbortController))();
-		} else {
-			fetchObj = window.fetch;
-			abortController = new AbortController();
-		}
-
-		return { fetchObj, fetchOptions, abortController };
+		return {
+			fetchObj: window.fetch,
+			fetchOptions: FetchRequest.getFetchOptions(options),
+			abortController: new AbortController()
+		};
 	}
 
 	static getFetchOptions(options: FetchOptions, manipulateCookies = false): RequestInit {

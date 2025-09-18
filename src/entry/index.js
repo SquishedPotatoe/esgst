@@ -1,3 +1,9 @@
 import '../dependencies';
-import '../browser-webext';
 import '../main';
+
+window.addEventListener('beforeunload', () => {
+  try {
+    chrome.runtime.sendMessage({ action: 'flush' });
+  } catch (err) {
+  }
+});

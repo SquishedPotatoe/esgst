@@ -1,5 +1,4 @@
 import { Utils } from '../lib/jsUtils';
-import { browser } from '../browser';
 
 class I18N {
 	getMessage(messageName, substitutions) {
@@ -10,7 +9,7 @@ class I18N {
 				messageName += '_other';
 			}
 		}
-		return browser.i18n.getMessage(messageName, substitutions);
+		return chrome.i18n.getMessage(messageName, substitutions);
 	}
 }
 

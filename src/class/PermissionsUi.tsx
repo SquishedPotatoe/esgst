@@ -1,4 +1,3 @@
-import { browser } from '../browser';
 import { PageHeading } from '../components/PageHeading';
 import { DOM } from './DOM';
 import { permissions } from './Permissions';
@@ -6,10 +5,11 @@ import { Popup } from './Popup';
 
 class _PermissionsUi {
 	check = async (keys: string[]): Promise<boolean> => {
-		if (!browser.runtime.getURL) {
+		if (!chrome.runtime.getURL) {
 			return true;
 		}
-		if (await permissions.contains([keys])) {
+		const hasPermission = await permissions.contains([keys]);
+		if (hasPermission) {
 			return true;
 		}
 		return new Promise((resolve) => {
@@ -26,7 +26,7 @@ class _PermissionsUi {
 					<h3>
 						In order to perform this action, you need to grant some permissions to the extension. Go{' '}
 						<a
-							href={`${browser.runtime.getURL('permissions.html')}?keys=${keys.join(',')}`}
+							href={`${chrome.runtime.getURL('permissions.html')}?keys=${keys.join(',')}`}
 							target="_blank"
 						>
 							here
@@ -36,7 +36,10 @@ class _PermissionsUi {
 					<p>When you are done, close this popup to continue.</p>
 				</fragment>
 			);
-			popup.onClose = async () => resolve(await permissions.contains([keys]));
+			popup.onClose = async () => {
+				const afterClose = await permissions.contains([keys]);
+				resolve(afterClose);
+			};
 			popup.open();
 		});
 	};

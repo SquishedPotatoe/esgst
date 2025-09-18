@@ -2,8 +2,5 @@
 	"chrome": {
 		"extensionId": "dkciiebgeneepfhdcemdekocfbjkghoj",
 		"extensionKey": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2gn8myidK+y+Wd21Zz5LogFU8X5N+98exe/fg34tqjbCdIGQXXniyXkav+iw6OuPg3Rj03Smn62yEWmsB2md0eCVVYS2D4pIEr74TkcOJNeTgSnQQMaCuz64YqejiV03+8APREYgS82MMcXF+uTvhhsAqEWVb3ZM8I3Zd10Q18bkPDTHjSQ+Wlzo+CaCnS3aWtQ72wA5DQCk9uGfbPViGP0a7KDYrk23uFUMRmHiWLXf2DAMTWwqyaZCNV7pm/xFWV8Mf6lregt0vdauTwxvY1GxXwlBEiTdLhqUXLNW8FkqzhOoJ8YhZRol6yCGGI3ALZIYaXlXxhnaf51aHrEGfQIDAQAB"
-	},
-	"firefox": {
-		"extensionId": "ESGST@potatoe.edition"
 	}
 }

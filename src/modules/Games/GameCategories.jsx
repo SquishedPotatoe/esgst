@@ -1231,10 +1231,7 @@ class GamesGameCategories extends Module {
 	async gc_fakeBundle(id) {
 		const bundleId = id.replace(/^SteamBundle/, '');
 		const response = await FetchRequest.get(
-			`https://store.steampowered.com/bundle/${bundleId}?cc=us&l=english`,
-			{
-				headers: { ['Esgst-Cookie']: `birthtime=0; mature_content=1; ` },
-			}
+			`https://store.steampowered.com/bundle/${bundleId}?cc=us&l=english`
 		);
 		return {
 			[id]: {
@@ -1540,10 +1537,7 @@ class GamesGameCategories extends Module {
 					categories.removed = 1;
 				} else {
 					let response = await FetchRequest.get(
-						`https://store.steampowered.com/${type.slice(0, -1)}/${id}?cc=us&l=english`,
-						{
-							headers: { ['Esgst-Cookie']: `birthtime=0; mature_content=1; ` },
-						}
+						`https://store.steampowered.com/${type.slice(0, -1)}/${id}?cc=us&l=english`
 					);
 					let responseHtml = response.html;
 					if (response.url.match(id)) {

@@ -4,7 +4,6 @@ import { generalCustomHeaderFooterLinks } from '../modules/General/CustomHeaderF
 import { Settings } from './Settings';
 import { Shared } from './Shared';
 import { LocalStorage } from './LocalStorage';
-import { browser } from '../browser';
 
 class PersistentStorage {
 	constructor() {
@@ -41,7 +40,7 @@ class PersistentStorage {
 		const toDelete = [];
 		const toSet = {};
 
-		const manifest = await browser.runtime.getManifest();
+		const manifest = await chrome.runtime.getManifest();
 		if (Object.keys(storage).length === 0) {
 			Shared.esgst.isFirstRun = true;
 			Shared.esgst.currentVersion = manifest.version;

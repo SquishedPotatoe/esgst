@@ -2,7 +2,6 @@
 
 // that will append styles to page in runtime
 import './assets/styles';
-import { browser } from './browser';
 import { esgst } from './class/Esgst';
 import { FetchRequest } from './class/FetchRequest';
 import { Logger } from './class/Logger';
@@ -40,39 +39,30 @@ import { runSilentSync } from './modules/Sync';
 		esgst.markdownParser.setMarkupEscaped(true);
 		esgst.name = esgst.sg ? 'sg' : 'st';
 
-		browser.runtime.onMessage.addListener((message) => {
-			message = JSON.parse(message);
+		chrome.runtime.onMessage.addListener((message) => {
 			switch (message.action) {
-				case 'notify-tds':
+				case 'update-tds':
 					Shared.esgst.modules.generalThreadSubscription.updateItems(message.values);
 					break;
-				case 'storageChanged':
-					Shared.common.getChanges(message.values.changes, message.values.areaName);
+				case 'showUpdatePopup':
+					Shared.common.showUpdatePopup(message.currentVersion, message.latestVersion);
 					break;
-				case 'update':
-					common.createConfirmation(
-						`Hi! A new version of ESGST (${message.values.version}) is available. Do you want to force an update now? If you choose to force an update, ESGST will stop working in any SteamGifts/SteamTrades tab that is open, along with any operation that you might be performing (such as syncing, checking something etc), so you will have to refresh them. If you choose not to force an update, your browser will automatically update the extension when you are not using it (for example, when you restart the browser).`,
-						() => {
-							browser.runtime.sendMessage({ action: 'reload' }).then(() => {});
-						},
-						() => {}
-					);
+				case 'showUpToDatePopup':
+					Shared.common.showUpToDatePopup(message.currentVersion, message.latestVersion);
+					break;
+				case 'showChangeLog':
+					Shared.common.showChangeLog(message.currentVersion, message.latestVersion);
 					break;
 			}
 		});
 
-		// set default values or correct values
-		await browser.runtime.sendMessage({
-			action: 'register_tab',
-			url: window.location.href,
-		});
 		/**
 		 * @property {object} esgst.storage.Emojis
 		 * @property {object} esgst.storage.filterPresets
 		 * @property {object} esgst.storage.dfPresets
 		 */
-		esgst.storage = await browser.storage.local.get(null);
-		browser.storage.onChanged.addListener(Shared.common.getChanges.bind(Shared.common));
+		esgst.storage = await chrome.storage.local.get(null);
+		chrome.storage.onChanged.addListener(Shared.common.getChanges.bind(Shared.common));
 
 		esgst.features = common.getFeatures();
 		[esgst.featuresById, esgst.featuresAncestors] = common.getFeaturesById();
@@ -86,7 +76,12 @@ import { runSilentSync } from './modules/Sync';
 		esgst.games = JSON.parse(esgst.storage.games);
 		esgst.giveaways = JSON.parse(esgst.storage.giveaways);
 		esgst.groups = JSON.parse(esgst.storage.groups);
-		esgst.requestLog = JSON.parse(esgst.storage.requestLog);
+		esgst.requestLog = await chrome.runtime.sendMessage({ action: 'get_request_log' });
+		if (esgst.requestLog.success) {
+			esgst.requestLog = esgst.requestLog.log;
+		} else {
+			console.error('Failed to retrieve request log');
+		}
 		esgst.rerolls = JSON.parse(esgst.storage.rerolls);
 		esgst.settings = JSON.parse(esgst.storage.settings);
 		esgst.tickets = JSON.parse(esgst.storage.tickets);

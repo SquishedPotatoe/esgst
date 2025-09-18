@@ -1,35 +1,23 @@
 {
-	"env": {
-		"test": {
-			"plugins": ["istanbul"]
-		}
-	},
-	"plugins": [
-		"@babel/proposal-class-properties",
-		[
-			"@babel/plugin-transform-runtime",
-			{
-				"regenerator": true
-			}
-		]
-	],
-	"presets": [
-		[
-			"@babel/preset-react",
-			{
-				"pragma": "DOM.element",
-				"pragmaFrag": "DOM.fragment"
-			}
-		],
-		"@babel/typescript",
-		[
-			"@babel/preset-env",
-			{
-				"targets": "defaults, Firefox 56, not IE 11",
-				"exclude": ["es.promise"],
-				"useBuiltIns": "usage",
-				"corejs": 3
-			}
-		]
-	]
+  "presets": [
+    [
+      "@babel/preset-env",
+      {
+        "targets": { "chrome": "140" },
+        "bugfixes": true,
+        "modules": false,
+        "useBuiltIns": false
+      }
+    ],
+    [
+      "@babel/preset-react",
+      {
+        "runtime": "classic",
+        "pragma": "DOM.element",
+        "pragmaFrag": "DOM.fragment"
+      }
+    ],
+    "@babel/preset-typescript"
+  ],
+  "plugins": []
 }

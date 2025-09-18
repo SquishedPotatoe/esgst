@@ -1,4 +1,3 @@
-import { browser } from '../browser';
 import { Button } from '../components/Button';
 import { PageHeading } from '../components/PageHeading';
 import { DOM } from './DOM';
@@ -558,7 +557,7 @@ class _SettingsWizard {
 			runOp: () => Shared.common.lockAndSaveSettings(this.settingsToSave),
 		},
 		{
-			doShow: () => browser.runtime.getURL && this.permissionsToGrant.size > 0,
+			doShow: () => chrome.runtime.getURL && this.permissionsToGrant.size > 0,
 			isConfirmStep: true,
 			title: 'Required permissions',
 			description: () => (
@@ -566,7 +565,7 @@ class _SettingsWizard {
 					Some of the features you enabled require permissions in order to work. Go{' '}
 					<a
 						className="esgst-bold table__column__secondary-link"
-						href={`${browser.runtime.getURL('permissions.html')}?keys=${Array.from(
+						href={`${chrome.runtime.getURL('permissions.html')}?keys=${Array.from(
 							this.permissionsToGrant
 						).join(',')}`}
 						target="_blank"

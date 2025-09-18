@@ -1,6 +1,5 @@
 import dateFns_format from 'date-fns/format';
 import dateFns_isSameWeek from 'date-fns/isSameWeek';
-import { browser } from '../browser';
 import { DOM } from '../class/DOM';
 import { EventDispatcher } from '../class/EventDispatcher';
 import { FetchRequest } from '../class/FetchRequest';
@@ -865,13 +864,12 @@ class Common extends Module {
 						description: () => (
 							<ul>
 								<li>
-									When a browser session is restored, you have to activate a tab so that it can be
+									When a browser session is restored, you have to activate a tab so that ESGST can be
 									loaded. With this option enabled, ESGST automatically activates the first SG/ST
-									tab open so that the extension can be injected immediately.
+									tab open so that the extension can be loaded immediately.
 								</li>
 							</ul>
 						),
-						extensionOnly: true,
 						name: 'Activate the first SG/ST tab if a browser session was restored.',
 						sg: true,
 						st: true,
@@ -880,34 +878,12 @@ class Common extends Module {
 						description: () => (
 							<ul>
 								<li>
-									You should enable this option if you use a single Firefox container for the common
-									sites requested by ESGST that require you to be logged in (SteamGifts,
-									SteamTrades, Steam, SGTools, etc...) or if you block third-party cookies. With it
-									enabled, ESGST will read your cookies and modify request headers to make sure that
-									requests are sent using the cookies from the current container you are on.
-								</li>
-								<li>
-									For example: you are only logged in on SteamGifts and Steam in the personal
-									container. With this option disabled, when you try to sync your owned games on
-									ESGST it will fail because it will use the default cookies (where you are not
-									logged in). With this option enabled, the sync will succeed because the container
-									cookies will be used instead (where you are logged in).
-								</li>
-								<li>
-									If you are concerned about what exactly is done, you can check out the source code
-									of the eventPage.js file, where the process occurs. Basically what happens is: the
-									ID of your current container is retrieved from the tab that initiated the request
-									and used to retrieve the cookies from that container (using the cookies API), then
-									ESGST sends the request with a custom header "Esgst-Cookie" and the request is
-									intercepted by the webRequest API, where the custom header is renamed to "Cookie"
-									so that the cookies can be sent with the request. This is not a pretty solution,
-									but it does the job until a better and more permanent solution comes along.
+									 Used by Game Categories to set the temporary cookies "birthtime=0" and "mature_content=1" to bypass Steam's age verification so that the content can be retrieved correctly.
 								</li>
 							</ul>
 						),
-						extensionOnly: true,
 						name:
-							'Allow ESGST to read your cookies and modify request headers when using Firefox containers or when blocking third-party cookies.',
+							'Allow ESGST to read your cookies.',
 						sg: true,
 						st: true,
 						permissions: ['cookies'],
@@ -970,10 +946,43 @@ class Common extends Module {
 						st: true,
 					},
 					notifyNewVersion: {
+						description: () => (		
+							<fragment>
+							<ul>
+									<li>
+										ESGST will check for updates every 7 days (default) and will notify you when a new version is available.
+										<br></br><br></br>
+										or you can click the "Check now" button to manually check for updates.
+									</li>
+								</ul>
+								<div className="esgst-button-group">
+									<div
+										id="manualCheck"
+										className="esgst-button form__saving-button"
+										style={{ cursor: 'pointer' }}
+									>
+										<i className="fa fa-check-circle"></i> Check now
+									</div>
+								</div>
+							</fragment>
+
+						),
 						name: 'Notify when a new ESGST version is available.',
-						extensionOnly: true,
 						sg: true,
 						st: true,
+						inputItems: [
+							{
+								id: 'updateCheckInterval',
+								prefix: 'Check for updates every ',
+								suffix: ' days (default is 7)',
+								attributes: {
+									type: 'number',
+									min: '1',
+									step: '1',
+								},
+							},
+						],
+						permissions: ['github'],
 					},
 					makeSectionsCollapsible: {
 						description: () => (
@@ -1222,32 +1231,56 @@ class Common extends Module {
 		]);
 	}
 
-	async checkNewVersion() {
-		if (Shared.esgst.isFirstRun) {
-			// noinspection JSIgnoredPromiseFromCall
-			this.setSetting('dismissedOptions', this.esgst.toDismiss);
+async checkNewVersion() {
+  if (Shared.esgst.isFirstRun) {
+    // noinspection JSIgnoredPromiseFromCall
+    this.setSetting('dismissedOptions', this.esgst.toDismiss);
 
-			const popup = new Popup({
-				addScrollable: true,
-				icon: 'fa-smile-o',
-				isTemp: true,
-				title: (
-					<fragment>
-						<i className="fa fa-circle-o-notch fa-spin"></i> Hi! ESGST is retrieving your avatar,
-						username and Steam ID. This will not take long...
-					</fragment>
-				),
-			});
-			popup.open();
+    const popup = new Popup({
+      addScrollable: true,
+      icon: 'fa-smile-o',
+      isTemp: true,
+      title: (
+        <fragment>
+          <i className="fa fa-circle-o-notch fa-spin"></i> Hi! ESGST is retrieving your avatar,
+          username and Steam ID. This will not take long...
+        </fragment>
+      ),
+    });
+    popup.open();
 
-			await this.checkSync(true);
+    await this.checkSync(true);
 
-			popup.close();
+    popup.close();
 
-			SettingsWizard.run();
+    SettingsWizard.run();
 
-			Shared.esgst.isFirstRun = false;
-		} else if (Shared.esgst.isUpdate && Settings.get('showChangelog')) {
+    Shared.esgst.isFirstRun = false;
+  } 
+
+  // Manual check button
+  document.body.addEventListener('click', async e => {
+    const btn = e.target.closest('#manualCheck');
+    if (!btn) return;
+
+    const originalHTML = btn.innerHTML;
+    btn.innerHTML = `<i class="fa fa-circle-o-notch fa-spin"></i> Checking...`;
+    btn.disabled = true;
+
+    try {
+      await chrome.runtime.sendMessage({ action: 'manualCheckVersion' });
+      console.log('[Settings] Manual update check triggered');
+    } catch (err) {
+      console.error('Failed to trigger manual update check', err);
+    } finally {
+      btn.innerHTML = originalHTML;
+      btn.disabled = false;
+    }
+  });
+}
+
+	async showChangeLog(currentVersion, latestVersion) {
+		if (Shared.esgst.isUpdate && (Settings.get('showChangelog'))) {
 			const hasPermission = await permissions.contains([['github']]);
 
 			if (!hasPermission) {
@@ -1257,20 +1290,20 @@ class Common extends Module {
 					isTemp: true,
 					title: (
 						<fragment>
-							ESGST has updated from v{Shared.esgst.previousVersion} to v
-							{Shared.esgst.currentVersion}! Please go to{' '}
-							<a href="https://github.com/SquishedPotatoe/esgst/-/releases">
-								https://github.com/SquishedPotatoe/esgst/-/releases
+							ESGST has updated from v{Shared.esgst.previousVersion} to v{Shared.esgst.currentVersion}! Please go to{' '}
+							<a
+								href={`https://github.com/SquishedPotatoe/esgst/releases/tag/Mv3-v${Shared.esgst.currentVersion}`}
+								target="_blank"
+							>
+								this release page
 							</a>{' '}
-							to view the changelog. If you want the changelog to be automatically retrieved from
-							GitHub and shown in this popup when updating, then go to the settings menu and grant
-							permission to "github.com"
+							to view the changelog. If you want the changelog automatically retrieved from GitHub,
+							grant permission to "github.com" in settings.
 						</fragment>
 					),
 				}).open();
 
 				Shared.esgst.isUpdate = false;
-
 				return;
 			}
 
@@ -1278,46 +1311,25 @@ class Common extends Module {
 				addScrollable: true,
 				icon: 'fa-circle-o-notch fa-spin',
 				isTemp: true,
-				title: `ESGST has updated from v${Shared.esgst.previousVersion} to v${Shared.esgst.currentVersion}! Please wait while the changelog is retrieved from GitHub.`,
+				title: `ESGST has updated from v${Shared.esgst.previousVersion} to v${Shared.esgst.currentVersion}! Retrieving changelog...`,
 			});
 			popup.open();
 
 			try {
-				let changelog = '';
+				// Request the service worker to fetch the changelog
+				const changelogResponse = await new Promise((resolve) => {
+					chrome.runtime.sendMessage({
+						action: 'fetchChangelog',
+						previousVersion: Shared.esgst.previousVersion,
+						currentVersion: Shared.esgst.currentVersion
+					}, resolve);
+				});
 
-				const refsResponse = await FetchRequest.get(
-					'https://api.github.com/repos/SquishedPotatoe/esgst/git/matching-refs/tags'
-				);
-
-				if (!refsResponse || !refsResponse.json) {
-					return;
+				if (!changelogResponse?.success || !changelogResponse.changelog) {
+					throw new Error(changelogResponse?.error || 'Empty changelog');
 				}
 
-				const refs = refsResponse.json;
-				refs.reverse();
-
-				let currentIndex = refs.findIndex(
-					(ref) => ref.ref === `refs/tags/v${Shared.esgst.currentVersion}`
-				);
-				const previousIndex = refs.findIndex(
-					(ref) => ref.ref === `refs/tags/v${Shared.esgst.previousVersion}`
-				);
-				if (currentIndex > -1 && previousIndex > -1) {
-					while (currentIndex < previousIndex) {
-						const version = refs[currentIndex].ref.split('/tags/')[1];
-						const releaseResponse = await FetchRequest.get(
-							`https://api.github.com/repos/SquishedPotatoe/esgst/releases/tags/${version}`
-						);
-						if (releaseResponse && releaseResponse.json) {
-							changelog = `${changelog}## ${version}\n\n${releaseResponse.json.body.replace(
-								/#(\d+)/g,
-								'[$1](https://github.com/SquishedPotatoe/esgst/issues/$1)'
-							)}\n\n`;
-						}
-
-						currentIndex += 1;
-					}
-				}
+				const changelog = changelogResponse.changelog;
 
 				popup.setIcon('fa-star');
 				popup.setTitle(
@@ -1326,16 +1338,20 @@ class Common extends Module {
 				popup.getScrollable(
 					<div className="markdown">{await this.parseMarkdown(popup.scrollable, changelog)}</div>
 				);
+
 			} catch (e) {
 				Logger.warning(e.message);
 
 				popup.setIcon('fa-times');
 				popup.setTitle(
 					<fragment>
-						ESGST has updated from v{Shared.esgst.previousVersion} to v{Shared.esgst.currentVersion}
-						! An error occurred when retrieving the changelog from GitHub, please go to{' '}
-						<a href="https://github.com/SquishedPotatoe/esgst/releases">
-							https://github.com/SquishedPotatoe/esgst/releases
+						ESGST has updated from v{Shared.esgst.previousVersion} to v{Shared.esgst.currentVersion}!
+						An error occurred when retrieving the changelog from GitHub. Please go to{' '}
+						<a
+							href={`https://github.com/SquishedPotatoe/esgst/releases/tag/Mv3-v${Shared.esgst.currentVersion}`}
+							target="_blank"
+						>
+							this release page
 						</a>{' '}
 						to view it.
 					</fragment>
@@ -1344,6 +1360,63 @@ class Common extends Module {
 
 			Shared.esgst.isUpdate = false;
 		}
+	}
+
+
+	showUpdatePopup(currentVersion, latestVersion) {
+		// Remove any existing update bars
+		document.querySelectorAll('.esgst-update-bar').forEach(el => el.remove());
+
+		const bar = (
+			<fragment>
+				<div className="esgst-notification-bar notification notification--info esgst-update-bar">
+					<i className="fa fa-info-circle"></i>
+					<span>
+						{`A new ESGST version is available: `}
+						<strong>{latestVersion}</strong>
+						{` (you have ${currentVersion}).`}
+					</span>
+					<a
+						href="https://github.com/SquishedPotatoe/esgst/releases/tag/Mv3-v${latestVersion}"
+						target="_blank"
+						className="esgst-update-link"
+					>
+						{' View Release'}
+					</a>
+					<button className="esgst-button form__saving-button esgst-update-dismiss">
+						<i className="fa fa-times"></i>
+						<span> close</span>
+					</button>
+				</div>
+			</fragment>
+		);
+
+		DOM.insert(document.body, 'afterbegin', bar);
+
+		const closeBtn = document.querySelector('.esgst-update-dismiss');
+		if (closeBtn) {
+			closeBtn.addEventListener('click', () => {
+				closeBtn.closest('.esgst-update-bar')?.remove();
+				chrome.runtime.sendMessage({
+					action: 'dismissUpdateNotification',
+					version: latestVersion,
+				});
+			});
+		}
+	}
+
+	showUpToDatePopup(currentVersion, latestVersion) {
+		new Popup({
+			addScrollable: true,
+			icon: 'fa-bell',
+			isTemp: true,
+			title: (
+				<fragment>
+					You are already running the latest version of ESGST.<br />
+					Latest version: <b>{latestVersion}</b> (you have {currentVersion}).
+				</fragment>
+			),
+		}).open();
 	}
 
 	async parseMarkdown(context, string) {
@@ -1496,19 +1569,40 @@ class Common extends Module {
 
 	async lockAndSaveSettings(settingsObj) {
 		const lock = new Lock('settings');
-		await lock.lock();
-		const settings = JSON.parse(this.getValue('settings', '{}'));
-		for (const key in settingsObj) {
-			if (settingsObj[key] === null) {
-				if (Utils.isSet(settings[key])) {
-					delete settings[key];
-				}
-			} else {
-				settings[key] = settingsObj[key];
+
+		try {
+			await lock.lock();
+			if (!lock.isLocked) {
+				console.warn('[lockAndSaveSettings] Could not acquire lock, aborting save.');
+				return false;
 			}
+
+			const storageValues = await chrome.storage.local.get('settings');
+			let settings = {};
+			if (storageValues.settings) {
+				try {
+					settings = JSON.parse(storageValues.settings);
+				} catch {
+					settings = {};
+				}
+			}
+
+			for (const key in settingsObj) {
+				if (settingsObj[key] === null) {
+					if (settings[key] !== undefined) delete settings[key];
+				} else {
+					settings[key] = settingsObj[key];
+				}
+			}
+
+			await chrome.storage.local.set({ settings: JSON.stringify(settings) });
+			return true;
+
+		} catch (err) {
+			throw err;
+		} finally {
+			await lock.unlock();
 		}
-		await this.setValue('settings', JSON.stringify(settings));
-		await lock.unlock();
 	}
 
 	async setSetting() {
@@ -1596,7 +1690,7 @@ class Common extends Module {
 	}
 
 	getFeatureNumber(queryId) {
-		let n = browser.runtime.getURL ? 2 : 1;
+		let n = chrome.runtime.getURL ? 2 : 1;
 		for (let type in this.esgst.features) {
 			if (this.esgst.features.hasOwnProperty(type)) {
 				let i = 1;
@@ -5553,22 +5647,36 @@ class Common extends Module {
 		}
 	}
 
-	setDatePickerDate(target, date) {
+	injectDatepickerScript(callback) {
+		if (document.getElementById('script-datepicker')) {
+			callback?.();
+			return;
+		}
 		const script = document.createElement('script');
-		script.textContent = `
-			function setDatePickerDate() {
-				const input = document.querySelector('input[name="${target}"]');
-				const actualInput = input.previousElementSibling;
+		script.id = 'script-datepicker';
+		script.src = chrome.runtime.getURL('lib/script-datepicker.js');
+		script.onload = () => {
+			console.log('[Datepicker] Injected script loaded');
+			callback?.();
+			script.remove();
+		};
+		document.documentElement.appendChild(script);
+	}
 
-				const datepicker = actualInput && actualInput.classList.contains('hasDatepicker') ? actualInput : input;
-
-				$(datepicker).datetimepicker("setDate", new Date(${date.getTime()}));
-			}
-
-			setDatePickerDate();
-		`;
-		document.body.appendChild(script);
-		script.remove();
+	setDatePickerDate(target, date) {
+		this.injectDatepickerScript(() => {
+			const dispatchEvent = () => {
+				document.dispatchEvent(
+					new CustomEvent('setDatepickerDate', {
+						detail: { target, timestamp: date.getTime() }
+					})
+				);
+			};
+			dispatchEvent();
+			setTimeout(() => {
+				dispatchEvent();
+			}, 50);
+		});
 	}
 
 	testPath(name, namespace, path) {
@@ -5597,40 +5705,37 @@ class Common extends Module {
 		return Shared.esgst.currentPaths.indexOf(nameOrNames) > -1;
 	}
 
-	getBrowserInfo() {
-		return new Promise((resolve) =>
-			browser.runtime
-				.sendMessage({
-					action: 'getBrowserInfo',
-				})
-				.then((result) => resolve(JSON.parse(result)))
-		);
+	async getTds() {
+		const response = await chrome.runtime.sendMessage({ action: 'get-tds' });
+		if (response && response.success) {
+			return response.values;
+		}
+		return [];
 	}
 
-	getTds() {
-		return new Promise((resolve) =>
-			browser.runtime
-				.sendMessage({
-					action: 'get-tds',
-				})
-				.then((data) => resolve(JSON.parse(data)))
-		);
-	}
+	async notifyTds(subscribedItems) {
+		if (!subscribedItems.length) return;
 
-	notifyTds(data) {
-		return new Promise((resolve) =>
-			browser.runtime
-				.sendMessage({
-					action: 'notify-tds',
-					data: JSON.stringify(data),
-				})
-				.then(() => resolve())
-		);
+		const itemsForSW = subscribedItems
+			.filter(item => item.diff > 0)
+			.map(item => ({
+				code: item.code,
+				codes: item.codes,
+				name: item.name,
+				count: item.count,
+				diff: item.diff,
+				type: item.type,
+			}));
+
+		await chrome.runtime.sendMessage({
+			action: 'notify-tds',
+			values: { subscribedItems, itemsForSW },
+		});
 	}
 
 	do_lock(lock) {
 		return new Promise((resolve) =>
-			browser.runtime
+			chrome.runtime
 				.sendMessage({
 					action: 'do_lock',
 					lock: JSON.stringify(lock),
@@ -5641,7 +5746,7 @@ class Common extends Module {
 
 	updateLock(lock) {
 		return new Promise((resolve) =>
-			browser.runtime
+			chrome.runtime
 				.sendMessage({
 					action: 'update_lock',
 					lock: JSON.stringify(lock),
@@ -5652,7 +5757,7 @@ class Common extends Module {
 
 	do_unlock(lock) {
 		return new Promise((resolve) =>
-			browser.runtime
+			chrome.runtime
 				.sendMessage({
 					action: 'do_unlock',
 					lock: JSON.stringify(lock),
@@ -5663,7 +5768,7 @@ class Common extends Module {
 
 	setValues(values) {
 		return new Promise((resolve) =>
-			browser.storage.local.set(values).then(() => {
+			chrome.storage.local.set(values).then(() => {
 				for (const key in values) {
 					if (values.hasOwnProperty(key)) {
 						this.esgst.storage[key] = values[key];
@@ -5699,7 +5804,7 @@ class Common extends Module {
 
 	delValues(keys) {
 		return new Promise((resolve) =>
-			browser.storage.local.remove(keys).then(() => {
+			chrome.storage.local.remove(keys).then(() => {
 				keys.forEach((key) => delete this.esgst.storage[key]);
 				resolve();
 			})
@@ -5998,7 +6103,7 @@ class Common extends Module {
 			'atinner',
 			<fragment>
 				<p>
-					<em>Last updated {currentDate.toLocaleString()}</em>
+					<em>Last updated {this.getTimestamp(new Date(), false, true)}</em>
 					<br />
 					<em>
 						Remember that this does not include the requests you make while browsing SteamGifts, so
@@ -6028,7 +6133,7 @@ class Common extends Module {
 					icon: 'fa fa-fw fa-github icon-grey grey',
 					name: 'GitHub',
 					openInNewTab: true,
-					url: 'https://github.com/SquishedPotatoe/esgst',
+					url: 'https://github.com/SquishedPotatoe/esgst/tree/Mv3',
 				},
 				{
 					description: 'Report bugs and / or make suggestions.',
@@ -6062,7 +6167,7 @@ class Common extends Module {
 					icon: 'fa fa-fw fa-file-text-o icon-yellow yellow',
 					name: 'Changelog',
 					openInNewTab: true,
-					url: 'https://github.com/SquishedPotatoe/esgst/releases',
+					url: 'https://github.com/SquishedPotatoe/esgst/releases?q=Mv3',
 				},
 				{
 					description: 'Help make ESGST better!',

@@ -1,4 +1,3 @@
-import { browser } from '../browser';
 import { DOM } from '../class/DOM';
 import { Logger } from '../class/Logger';
 import { permissions } from '../class/Permissions';
@@ -368,26 +367,46 @@ class SettingsModule {
 				name: 'Save Changes',
 				onClick: async () => {
 					try {
+						await Shared.common.lockAndSaveSettings(this.toSave);
+						const adareqlimChanged = Object.keys(this.toSave).some((key) =>
+							key.startsWith('customAdaReqLim')
+						);
+						if (adareqlimChanged) {
+							await chrome.runtime.sendMessage({
+								action: 'update_adareqlim',
+							});
+						}
+						this.toSave = {};
+
+						new Popup({
+							icon: 'fa-check',
+							isTemp: true,
+							title: 'Settings saved!',
+						}).open();
+
 						const missingPermissions = [];
-						const requiredPermissions = new Set(Object.values(this.requiredPermissions).flat());
+						const requiredPermissions = new Set(
+							Object.values(this.requiredPermissions).flat()
+						);
 						for (const permissionKey of requiredPermissions) {
 							if (!(await permissions.contains([[permissionKey]]))) {
 								missingPermissions.push(permissionKey);
 							}
 						}
-						if (browser.runtime.getURL && missingPermissions.length > 0) {
+
+						if (chrome.runtime.getURL && missingPermissions.length > 0) {
+							const granted = await permissions.request(missingPermissions);
+							console.log('[SAVE BUTTON] Permissions request result:', granted);
 							const permissionsPopup = new Popup({
 								addScrollable: true,
 								icon: 'fa-exclamation',
 								isTemp: true,
 								title: (
 									<fragment>
-										Some of the features you enabled require permissions in order to work. Go{' '}
+										Some features you enabled require permissions to work. Go{' '}
 										<a
 											className="esgst-bold table__column__secondary-link"
-											href={`${browser.runtime.getURL(
-												'permissions.html'
-											)}?keys=${missingPermissions.join(',')}`}
+											href={`${chrome.runtime.getURL('permissions.html')}?keys=${missingPermissions.join(',')}`}
 											target="_blank"
 										>
 											here
@@ -399,21 +418,6 @@ class SettingsModule {
 							permissionsPopup.open();
 							this.requiredPermissions = {};
 						}
-						await Shared.common.lockAndSaveSettings(this.toSave);
-						const adareqlimChanged = Object.keys(this.toSave).some((key) =>
-							key.startsWith('customAdaReqLim')
-						);
-						if (adareqlimChanged) {
-							await browser.runtime.sendMessage({
-								action: 'update_adareqlim',
-							});
-						}
-						this.toSave = {};
-						new Popup({
-							icon: 'fa-check',
-							isTemp: true,
-							title: 'Settings saved!',
-						}).open();
 					} catch (err) {
 						Logger.error(err.message);
 					}
@@ -444,7 +448,7 @@ class SettingsModule {
 			}
 		}
 		i = 1;
-		if (browser.runtime.getURL) {
+		if (chrome.runtime.getURL) {
 			const permissionsSection = this.createMenuSection(
 				SMMenu,
 				null,
@@ -453,7 +457,7 @@ class SettingsModule {
 				'permissions'
 			);
 			permissionsSection.lastElementChild.innerHTML = `
-				Go <a class="esgst-bold table__column__secondary-link" href="${browser.runtime.getURL(
+				Go <a class="esgst-bold table__column__secondary-link" href="${chrome.runtime.getURL(
 					'permissions.html'
 				)}" target="_blank">here</a> to grant / deny permissions.
 			`;
@@ -593,41 +597,6 @@ class SettingsModule {
 		}
 	}
 
-	showExtensionOnlyPopup() {
-		new Popup({
-			addScrollable: true,
-			icon: 'fa-exclamation',
-			isTemp: true,
-			title: (
-				<fragment>
-					This feature is only available in the extension version of ESGST. Please upgrade to the
-					extension to use it. Visit the instructions in the readme on how to install the extension.
-					<br />
-					<br />
-					<a href="https://github.com/SquishedPotatoe/esgst#installation">
-						https://github.com/SquishedPotatoe/esgst#installation
-					</a>
-					<br />
-					<br />
-					To transfer your data from the userscript to the extension, backup your data in the backup
-					menu of the userscript, then disable the userscript, install the extension and restore
-					your data in the restore menu of the extension. Below are the links to the backup/restore
-					pages:
-					<br />
-					<br />
-					<a href="https://www.steamgifts.com/account/settings/profile?esgst=backup">
-						https://www.steamgifts.com/account/settings/profile?esgst=backup
-					</a>
-					<br />
-					<br />
-					<a href="https://www.steamgifts.com/account/settings/profile?esgst=restore">
-						https://www.steamgifts.com/account/settings/profile?esgst=restore
-					</a>
-				</fragment>
-			),
-		}).open();
-	}
-
 	loadFeatureDetails(id, numberPath, offset, event) {
 		if (!offset) {
 			offset = 0;
@@ -701,11 +670,6 @@ class SettingsModule {
 			);
 			feature.sgFeatureSwitch = sgSwitch;
 			sgSwitch.onEnabled = () => {
-				if (feature.extensionOnly && browser.gm) {
-					sgSwitch.disable(true);
-					this.showExtensionOnlyPopup();
-					return;
-				}
 				if (feature.conflicts) {
 					for (const conflictId of feature.conflicts) {
 						const setting = Settings.getFull(`${conflictId}_sg`);
@@ -764,11 +728,6 @@ class SettingsModule {
 			);
 			feature.stFeatureSwitch = stSwitch;
 			stSwitch.onEnabled = () => {
-				if (feature.extensionOnly && browser.gm) {
-					stSwitch.disable(true);
-					this.showExtensionOnlyPopup();
-					return;
-				}
 				if (feature.conflicts) {
 					for (const conflictId of feature.conflicts) {
 						const setting = Settings.getFull(`${conflictId}_st`);
@@ -1606,11 +1565,6 @@ class SettingsModule {
 			);
 			feature.sgSwitch = sgSwitch;
 			sgSwitch.onEnabled = () => {
-				if (feature.extensionOnly && browser.gm) {
-					sgSwitch.disable(true);
-					this.showExtensionOnlyPopup();
-					return;
-				}
 				if (feature.conflicts) {
 					for (const conflictId of feature.conflicts) {
 						const setting = Settings.getFull(`${conflictId}_sg`);
@@ -1686,11 +1640,6 @@ class SettingsModule {
 			const stSwitch = new ToggleSwitch(stContext, null, true, `[ST]`, false, true, null, value);
 			feature.stSwitch = stSwitch;
 			stSwitch.onEnabled = () => {
-				if (feature.extensionOnly && browser.gm) {
-					stSwitch.disable(true);
-					this.showExtensionOnlyPopup();
-					return;
-				}
 				if (feature.conflicts) {
 					for (const conflictId of feature.conflicts) {
 						const setting = Settings.getFull(`${conflictId}_st`);

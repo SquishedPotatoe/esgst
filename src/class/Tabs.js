@@ -1,8 +1,6 @@
-import { browser } from '../browser';
-
 class _Tabs {
 	open(url) {
-		return browser.runtime.sendMessage({
+		return chrome.runtime.sendMessage({
 			action: 'open_tab',
 			url,
 		});

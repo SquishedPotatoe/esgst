@@ -155,6 +155,7 @@ class GiveawaysGiveawayExtractor extends Module {
 	}
 
 	updateCache = async (giveaway) => {
+		if (!this.ge || !this.ge.cacheId) return;
 		this.ge.cache = JSON.parse(common.getValue('geCache', '{}'));
 		if (giveaway.code in this.ge.cache[this.ge.cacheId].giveaways) {
 			const cacheGiveaway = this.ge.cache[this.ge.cacheId].giveaways[giveaway.code];

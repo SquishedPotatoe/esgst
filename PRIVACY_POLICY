@@ -22,7 +22,6 @@ Every feature offered by ESGST is disabled by default, so you have to opt-in to 
 
 With the add-on installed, a button with the title "ESGST" is added to the header of every SteamGifts and SteamTrades page, making it very transparent that the add-on is installed and enabled.
 
-ESGST does not set cookies for internal use, but it does manipulate them in two occasions:
+ESGST does not set cookies for internal use, but it does manipulate them on one occasion:
 
-* If you use Firefox containers, you can opt-in to allowing the add-on to manipulate your cookies when making requests. Since external requests made by ESGST happen in the background page and the background page's context is not the same as the content script's context, they use different cookies. With this option enabled, whenever the add-on has to make an external request it temporarily backs up your default cookies, then retrieves the cookies from whatever container you are using, then sets those cookies as default, then makes the request, and then restores your default cookies.
 * If you opt-in to using the feature Game Categories, whenever a request is made to a game page in the Steam store (coming from that feature only), the add-on will set the temporary cookies "birthtime=0" and "mature_content=1" to bypass Steam's age verification so that the content can be retrieved correctly.

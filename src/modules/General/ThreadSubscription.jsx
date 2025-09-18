@@ -156,6 +156,7 @@ class GeneralThreadSubscription extends Module {
 	}
 
 	async dismissItem(event, item) {
+		console.log('[TDS] dismissItem', item);
 		item.diff = 0;
 
 		if (item.type === 'forum') {
@@ -169,6 +170,7 @@ class GeneralThreadSubscription extends Module {
 		event.target.remove();
 
 		await Shared.common.notifyTds(this.subscribedItems);
+		console.log('[TDS] dismissItem complete, notifying subscribers');
 	}
 
 	async unsubscribeItem(element, item) {
@@ -263,6 +265,7 @@ class GeneralThreadSubscription extends Module {
 	}
 
 	updateItems(items) {
+		console.log('[TDS] updateItems called, count:', items.length);
 		this.subscribedItems = items;
 
 		this.updateButton();
@@ -288,11 +291,12 @@ class GeneralThreadSubscription extends Module {
 		await this.lock?.update();
 
 		const oldDiff = this.subscribedItems
-			.filter((item) => item.diff)
-			.reduce((sum, currentItem) => sum + currentItem.diff, 0);
+			.filter(item => item.diff)
+			.reduce((sum, item) => sum + item.diff, 0);
 
 		this.subscribedItems = [];
 
+		// ---------------- Discussions ----------------
 		for (const code in Shared.esgst.discussions) {
 			const discussion = Shared.esgst.discussions[code];
 
@@ -308,6 +312,7 @@ class GeneralThreadSubscription extends Module {
 			}
 		}
 
+		// ---------------- Trades ----------------
 		for (const code in Shared.esgst.trades) {
 			const trade = Shared.esgst.trades[code];
 
@@ -323,19 +328,20 @@ class GeneralThreadSubscription extends Module {
 			}
 		}
 
+		// ---------------- Fetch counts ----------------
 		for (const item of this.subscribedItems) {
-			const response = await FetchRequest.get(
-				item.type === 'discussions'
-					? `https://www.steamgifts.com/discussion/${item.code}/`
-					: `https://www.steamtrades.com/trade/${item.code}/`
-			);
+			const url = item.type === 'discussions'
+				? `https://www.steamgifts.com/discussion/${item.code}/`
+				: `https://www.steamtrades.com/trade/${item.code}/`;
 
+			const response = await FetchRequest.get(url);
 			const mainPageHeading = response.html.querySelectorAll('.page__heading, .page_heading')[1];
+			if (!mainPageHeading) continue;
 
-			const heading = mainPageHeading.querySelector(
-				'.page__heading__breadcrumbs, .page_heading_breadcrumbs'
-			).firstElementChild;
-			const count = parseInt(heading.textContent.replace(/,/g, '').match(/\d+/)[0]);
+			const heading = mainPageHeading.querySelector('.page__heading__breadcrumbs, .page_heading_breadcrumbs')?.firstElementChild;
+			if (!heading) continue;
+
+			const count = parseInt(heading.textContent.replace(/,/g, '').match(/\d+/)?.[0] || '0', 10);
 
 			if (count !== item.count) {
 				item.diff = count - item.count;
@@ -343,7 +349,9 @@ class GeneralThreadSubscription extends Module {
 			}
 		}
 
-		for (const code in Settings.get('tds_forums')) {
+		// ---------------- Forums ----------------
+		const tdsForums = Settings.get('tds_forums');
+		for (const code in tdsForums) {
 			const codes = [];
 
 			const response = await FetchRequest.get(
@@ -353,36 +361,43 @@ class GeneralThreadSubscription extends Module {
 			const elements = response.html.querySelectorAll('.table__column__heading');
 
 			for (const element of elements) {
-				codes.push(element.getAttribute('href').match(/\/discussion\/(.+?)\//)[1]);
+				const match = element.getAttribute('href').match(/\/discussion\/(.+?)\//);
+				if (match) codes.push(match[1]);
 			}
 
-			const diff = codes.filter((subCode) => !Settings.get('tds_forums')[code].includes(subCode))
-				.length;
+			const dismissed = tdsForums[code] || [];
+			const newOnes = codes.filter(subCode => !dismissed.includes(subCode));
+
+			const diff = newOnes.length;
 
 			this.subscribedItems.push({
 				code,
-				codes,
+				codes: newOnes,
 				diff,
 				type: 'forum',
 			});
 		}
 
-		const newDiff = this.subscribedItems
-			.filter((item) => item.diff)
-			.reduce((sum, currentItem) => sum + currentItem.diff, 0);
 
-		if (Settings.get('tds_n') && !firstRun && oldDiff !== newDiff) {
-			this.showNotification();
-		}
+		// ---------------- Broadcast to other tabs ----------------
+		chrome.runtime.sendMessage({
+			action: 'update-tds',
+			values: this.subscribedItems,
+		});
 
-		Shared.common.notifyTds(this.subscribedItems);
+		// ---------------- Notify Service Worker ----------------
+		await Shared.common.notifyTds(this.subscribedItems);
 
+
+		// ---------------- Update UI ----------------
 		this.updateButton();
 
+		// ---------------- Schedule next run ----------------
 		window.setTimeout(this.runDaemon.bind(this, false), this.minutes);
 	}
 
 	async startDaemon() {
+		console.log('[TDS] startDaemon called');
 		this.lock = new Lock('tds', {
 			threshold: 300,
 			timeout: this.minutes + 15000,
@@ -391,13 +406,14 @@ class GeneralThreadSubscription extends Module {
 		await this.lock.lock();
 
 		if (!this.lock.isLocked) {
+			console.log('[TDS] Daemon already running, updating items from cache...');
 			//Logger.info('TDS Daemon already running....');
 
 			this.updateItems(await Shared.common.getTds());
 
 			return;
 		}
-
+		console.log('[TDS] Lock acquired, running daemon');
 		await this.runDaemon(true);
 	}
 
@@ -409,13 +425,10 @@ class GeneralThreadSubscription extends Module {
 				Settings.set('tds_forums', forums);
 			} else {
 				const codes = [];
-
 				const response = await FetchRequest.get(
 					`/discussions${code ? `/${code}` : ''}/search?sort=new`
 				);
-
 				const elements = response.html.querySelectorAll('.table__column__heading');
-
 				for (const element of elements) {
 					codes.push(element.getAttribute('href').match(/\/discussion\/(.+?)\//)[1]);
 				}
@@ -432,12 +445,17 @@ class GeneralThreadSubscription extends Module {
 			}
 
 			await Shared.common.setSetting('tds_forums', Settings.get('tds_forums'));
+
+			// Update local items
+			this.subscribedItems.push({
+				code,
+				codes: countOrCodes || [],
+				diff: 0,
+				type: 'forum',
+			});
 		} else {
 			const savedThread = Shared.esgst[type][code] || {};
-
-			if (!savedThread.readComments) {
-				savedThread.readComments = {};
-			}
+			if (!savedThread.readComments) savedThread.readComments = {};
 
 			savedThread.name = name;
 			savedThread.subscribed = countOrCodes;
@@ -446,14 +464,26 @@ class GeneralThreadSubscription extends Module {
 			switch (type) {
 				case 'discussions':
 					await Shared.common.lockAndSaveDiscussions({ [code]: savedThread });
-
 					break;
 				case 'trades':
 					await Shared.common.lockAndSaveTrades({ [code]: savedThread });
-
 					break;
 			}
+
+			// Update local items
+			this.subscribedItems.push({
+				code,
+				count: countOrCodes,
+				diff: 0,
+				name,
+				type,
+				subscribed: countOrCodes,
+			});
 		}
+
+		// Broadcast + update UI
+		await Shared.common.notifyTds(this.subscribedItems);
+		this.updateButton();
 
 		return true;
 	}
@@ -461,28 +491,37 @@ class GeneralThreadSubscription extends Module {
 	async unsubscribe(code, type) {
 		if (type === 'forum') {
 			delete Settings.get('tds_forums')[code];
-
 			await Shared.common.setSetting('tds_forums', Settings.get('tds_forums'));
+
+			this.subscribedItems = this.subscribedItems.filter(
+				(item) => !(item.type === 'forum' && item.code === code)
+			);
 		} else {
 			const savedThread = Shared.esgst[type][code] || {};
-
 			savedThread.subscribed = null;
 			savedThread.lastUsed = Date.now();
 
 			switch (type) {
 				case 'discussions':
 					await Shared.common.lockAndSaveDiscussions({ [code]: savedThread });
-
 					break;
 				case 'trades':
 					await Shared.common.lockAndSaveTrades({ [code]: savedThread });
-
 					break;
 			}
+
+			this.subscribedItems = this.subscribedItems.filter(
+				(item) => !(item.type === type && item.code === code)
+			);
 		}
+
+		// Broadcast + update UI
+		await Shared.common.notifyTds(this.subscribedItems);
+		this.updateButton();
 
 		return true;
 	}
+
 
 	addSubscribeButton(button, code, context, count, name, type) {
 		if (!button) {
@@ -500,20 +539,19 @@ class GeneralThreadSubscription extends Module {
 		);
 
 		let busy = false;
-
-		button.addEventListener('click', async () => {
-			if (busy) {
-				return;
-			}
-
+		button.onclick = async () => {
+			if (busy) return;
 			busy = true;
 
 			DOM.insert(button, 'atinner', <i className="fa fa-circle-o-notch fa-spin"></i>);
 
 			await this.subscribe(code, count, name, type);
 
+			// swap to unsubscribe button after subscription succeeds
 			this.addUnsubscribeButton(button, code, context, count, name, type);
-		});
+
+			busy = false;
+		};
 	}
 
 	addUnsubscribeButton(button, code, context, count, name, type) {
@@ -532,21 +570,21 @@ class GeneralThreadSubscription extends Module {
 		);
 
 		let busy = false;
-
-		button.addEventListener('click', async () => {
-			if (busy) {
-				return;
-			}
-
+		button.onclick = async () => {
+			if (busy) return;
 			busy = true;
 
 			DOM.insert(button, 'atinner', <i className="fa fa-circle-o-notch fa-spin"></i>);
 
 			await this.unsubscribe(code, type);
 
+			// swap to subscribe button after unsubscription succeeds
 			this.addSubscribeButton(button, code, context, count, name, type);
-		});
+
+			busy = false;
+		};
 	}
+
 }
 
 const generalThreadSubscription = new GeneralThreadSubscription();

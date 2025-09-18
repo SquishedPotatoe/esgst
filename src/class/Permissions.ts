@@ -1,5 +1,3 @@
-import { browser } from '../browser';
-
 export interface Permission {
 	isOrigin?: boolean;
 	messages: Record<string, string>;
@@ -20,9 +18,9 @@ class Permissions {
 			},
 			cookies: {
 				messages: {
-					manipulateCookies: 'Required if the option to manipulate cookies is enabled.',
+					manipulateCookies: 'Required by Game Categories to retrieve age gated content from Steam',
 				},
-				values: ['cookies', 'webRequest', 'webRequestBlocking'],
+				values: ['cookies'],
 			},
 			dropbox: {
 				isOrigin: true,
@@ -65,6 +63,14 @@ class Permissions {
 					itadi: 'Required by IsThereAnyDeal Info to retrieve the deals.',
 				},
 				values: ['*://*.isthereanydeal.com/*'],
+			},
+			Notification: {
+				messages: {
+					hr: 'Required by Header Refresher to show a notification when points reach a specified threshold.',
+					hr_m_n: 'Show the number of unread messages as a notification.',
+					tds_n: 'Required by Thread Subscription to show a notification when there are new comments.',
+				},
+				values: ['notifications'],
 			},
 			oneDrive: {
 				isOrigin: true,
@@ -147,19 +153,18 @@ class Permissions {
 		};
 	}
 
-	async contains(keyArrays) {
+	async contains(keyArrays: string[][]): Promise<boolean> {
+		if (!chrome.runtime?.sendMessage) return false;
 		let result = false;
 
 		for (const keys of keyArrays) {
 			const { permissions, origins } = this.getValues(keys);
-			result =
-				result ||
-				(await browser.runtime.sendMessage({
-					action: 'permissions_contains',
-					permissions: JSON.stringify({ permissions, origins }),
-				}));
-
-			if (result) {
+			const response = await chrome.runtime.sendMessage({
+				action: 'permissions_contains',
+				permissions: JSON.stringify({ permissions, origins }),
+			});
+			if (response?.success && response.result) {
+				result = true;
 				break;
 			}
 		}
@@ -167,26 +172,53 @@ class Permissions {
 		return result;
 	}
 
-	request(keys, callback) {
+	async request(keys: string[]): Promise<boolean> {
 		const { permissions, origins } = this.getValues(keys);
-		browser.permissions.request({ permissions, origins }).then(callback);
+		const response = await chrome.runtime.sendMessage({
+			action: 'permissions_request',
+			permissions: JSON.stringify({ permissions, origins }),
+		});
+
+		return response?.success && response.result;
 	}
 
-	remove(keys, callback) {
+	async remove(keys, callback) {
 		const { permissions, origins } = this.getValues(keys);
-		browser.permissions.remove({ permissions, origins }).then(callback);
+
+		console.log('[Permissions] removing', { permissions, origins });
+
+		const response = await chrome.runtime.sendMessage({
+			action: 'permissions_remove',
+			permissions: JSON.stringify({ permissions, origins }),
+		});
+
+		const removed = response?.success ? response.result : false;
+
+		if (callback) callback(removed);
+		return removed;
 	}
 
-	getValues(keys = []) {
-		const permissions = [];
-		const origins = [];
+	getValues(keys) {
+		const permissions: string[] = [];
+		const origins: string[] = [];
 
 		for (const key of keys) {
-			const permission = this.permissions[key];
-			if (permission.isOrigin) {
-				origins.push(...permission.values);
-			} else {
-				permissions.push(...permission.values);
+			const entry = this.permissions[key];
+			if (!entry) {
+				if (key.startsWith("http://") || key.startsWith("https://") || key.startsWith("*://")) {
+					origins.push(key);
+				} else {
+					permissions.push(key);
+				}
+				continue;
+			}
+
+			for (const val of entry.values) {
+				if (entry.isOrigin) {
+					origins.push(val);
+				} else {
+					permissions.push(val);
+				}
 			}
 		}
 

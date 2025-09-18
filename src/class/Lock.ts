@@ -1,6 +1,3 @@
-import { v4 as uuidv4 } from 'uuid';
-import { browser } from '../browser';
-
 type LockData = {
 	uuid: string;
 	key: string;
@@ -18,7 +15,7 @@ export class Lock {
 
 	constructor(key: string, data: Partial<LockOptions> = {}) {
 		this.data = {
-			uuid: uuidv4(),
+			uuid: crypto.randomUUID(),
 			key: `${key}Lock`,
 			threshold: 100,
 			timeout: 15000,
@@ -32,24 +29,29 @@ export class Lock {
 	}
 
 	lock = async (): Promise<void> => {
-		const response = await browser.runtime.sendMessage({
+		const response = await chrome.runtime.sendMessage({
 			action: 'do_lock',
-			lock: JSON.stringify(this.data),
+			lock: this.data,
 		});
-		this.locked = JSON.parse(response);
+
+		if (response && typeof response.locked === 'boolean') {
+			this.locked = response.locked;
+		} else {
+			this.locked = false;
+		}
 	};
 
 	update = (): Promise<void> => {
-		return browser.runtime.sendMessage({
+		return chrome.runtime.sendMessage({
 			action: 'update_lock',
-			lock: JSON.stringify(this.data),
+			lock: this.data,
 		});
 	};
 
 	unlock = (): Promise<void> => {
-		return browser.runtime.sendMessage({
+		return chrome.runtime.sendMessage({
 			action: 'do_unlock',
-			lock: JSON.stringify(this.data),
+			lock: this.data,
 		});
 	};
 }

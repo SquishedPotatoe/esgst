@@ -37,15 +37,17 @@ class _EventDispatcher {
 	 * @param {Array} params
 	 */
 	async dispatch(event, ...params) {
-		if (!this.subscribers[event]) {
-			return;
-		}
+		if (!this.subscribers[event]) return;
 
 		for (const subscriber of this.subscribers[event]) {
 			try {
 				await subscriber(...params);
 			} catch (error) {
-				window.console.log(error.message);
+				console.error(
+					`Error in subscriber for event ${event} (${subscriber.name || 'anonymous'}):`,
+					error,
+					'Params:', params
+				);
 			}
 		}
 	}

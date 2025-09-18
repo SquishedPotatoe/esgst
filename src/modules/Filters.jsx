@@ -852,94 +852,115 @@ class Filters extends Module {
 		}
 		if (!Settings.get(`${obj.id}_m_a`)) {
 			const templates = {
-				group: `
-					<div id="{{= it.group_id }}" class="rules-group-container">
+				group: ({ group_id, level, conditions, icons, settings, translate }) => `
+					<div id="${group_id}" class="rules-group-container">
 						<div class="rules-group-header">
 							<span class="esgst-gf-filter-count" title="Number of items this group is hiding">0</span>
+
 							<div class="btn-group pull-right group-actions">
 								<button type="button" class="btn btn-xs btn-success" data-add="rule">
-									<i class="{{= it.icons.add_rule }}"></i> {{= it.translate("add_rule") }}
+									<i class="${icons.add_rule}"></i> ${translate("add_rule")}
 								</button>
-							{{? it.settings.allow_groups===-1 || it.settings.allow_groups>=it.level }}
-								<button type="button" class="btn btn-xs btn-success" data-add="group">
-									<i class="{{= it.icons.add_group }}"></i> {{= it.translate("add_group") }}
-								</button>
-							{{?}}
-							{{? it.level>1 }}
-								<button type="button" class="btn btn-xs btn-primary" data-pause="group">
-									<i class="{{= it.icons.pause_group }}"></i> {{= it.translate("pause_group") }}
-								</button>
-								<button type="button" class="btn btn-xs btn-primary" data-resume="group">
-									<i class="{{= it.icons.resume_group }}"></i> {{= it.translate("resume_group") }}
-								</button>
-								<button type="button" class="btn btn-xs btn-danger" data-delete="group">
-									<i class="{{= it.icons.remove_group }}"></i> {{= it.translate("delete_group") }}
-								</button>
-							{{?}}
+
+								${(settings.allow_groups === -1 || settings.allow_groups >= level) ? `
+									<button type="button" class="btn btn-xs btn-success" data-add="group">
+										<i class="${icons.add_group}"></i> ${translate("add_group")}
+									</button>` : ''
+								}
+
+								${level > 1 ? `
+									<button type="button" class="btn btn-xs btn-primary" data-pause="group">
+										<i class="${icons.pause_group}"></i> ${translate("pause_group")}
+									</button>
+									<button type="button" class="btn btn-xs btn-primary" data-resume="group">
+										<i class="${icons.resume_group}"></i> ${translate("resume_group")}
+									</button>
+									<button type="button" class="btn btn-xs btn-danger" data-delete="group">
+										<i class="${icons.remove_group}"></i> ${translate("delete_group")}
+									</button>` : ''
+								}
 							</div>
+
 							<div class="btn-group group-conditions">
-							{{~ it.conditions: condition }}
-								<label class="btn btn-xs btn-default">
-									<input type="radio" name="{{= it.group_id }}_cond" value="{{= condition }}"> {{= it.translate("conditions", condition) }}
-								</label>
-							{{~}}
+								${conditions.map(condition => `
+									<label class="btn btn-xs btn-default">
+										<input type="radio" name="${group_id}_cond" value="${condition}">
+										${translate("conditions", condition)}
+									</label>
+								`).join('')}
 							</div>
-						{{? it.settings.display_errors }}
-							<div class="error-container">
-								<i class="{{= it.icons.error }}"></i>
-							</div>
-						{{?}}
+
+							${settings.display_errors ? `
+								<div class="error-container">
+									<i class="${icons.error}"></i>
+								</div>` : ''
+							}
 						</div>
+
 						<div class="rules-group-body">
 							<div class="rules-list"></div>
 						</div>
 					</div>
 				`,
-				rule: `
-					<div id="{{= it.rule_id }}" class="rule-container">
+				rule: ({ rule_id, icons, settings, translate }) => `
+					<div id="${rule_id}" class="rule-container">
 						<div class="rule-header">
 							<div class="btn-group pull-right rule-actions">
 								<button type="button" class="btn btn-xs btn-primary" data-pause="rule">
-									<i class="{{= it.icons.pause_rule }}"></i> {{= it.translate("pause_rule") }}
+									<i class="${icons.pause_rule}"></i> ${translate("pause_rule")}
 								</button>
 								<button type="button" class="btn btn-xs btn-primary" data-resume="rule">
-									<i class="{{= it.icons.resume_rule }}"></i> {{= it.translate("resume_rule") }}
+									<i class="${icons.resume_rule}"></i> ${translate("resume_rule")}
 								</button>
 								<button type="button" class="btn btn-xs btn-danger" data-delete="rule">
-									<i class="{{= it.icons.remove_rule }}"></i> {{= it.translate("delete_rule") }}
+									<i class="${icons.remove_rule}"></i> ${translate("delete_rule")}
 								</button>
 							</div>
 						</div>
-					{{? it.settings.display_errors }}
-						<div class="error-container">
-							<i class="{{= it.icons.error }}"></i>
-						</div>
-					{{?}}
+
+						${settings.display_errors ? `
+							<div class="error-container">
+								<i class="${icons.error}"></i>
+							</div>` : ''
+						}
+
 						<span class="esgst-gf-filter-count" title="Number of items this rule is hiding">0</span>
 						<div class="rule-filter-container"></div>
 						<div class="rule-operator-container"></div>
 						<div class="rule-value-container"></div>
 					</div>
 				`,
-				filterSelect: `
-					{{ var optgroup = null; }}
-					<select class="form-control" name="{{= it.rule.id }}_filter">
-					{{? it.settings.display_empty_filter }}
-						<option value="-1">{{= it.settings.select_placeholder }}</option>
-					{{?}}
-					{{~ it.filters: filter }}
-						{{ var className = filter.data.check ? '' : 'class="esgst-hidden"'; }}
-						{{? optgroup !== filter.optgroup }}
-							{{? optgroup !== null }}</optgroup>{{?}}
-							{{? (optgroup = filter.optgroup) !== null }}
-								<optgroup label="{{= it.translate(it.settings.optgroups[optgroup]) }}">
-							{{?}}
-						{{?}}
-						<option {{= className }} value="{{= filter.id }}" {{? filter.icon}}data-icon="{{= filter.icon}}"{{?}}>{{= it.translate(filter.label) }}</option>
-					{{~}}
-					{{? optgroup !== null }}</optgroup>{{?}}
-					</select>
-				`,
+				filterSelect: ({ rule, filters, icons, settings, translate }) => {
+					let optgroup = null;
+					return `
+						<select class="form-control" name="${rule.id}_filter">
+							${settings.display_empty_filter ? `
+								<option value="-1">${settings.select_placeholder}</option>` : ''
+							}
+
+							${filters.map(filter => {
+								const className = filter.data?.check ? '' : 'class="esgst-hidden"';
+								let out = '';
+
+								if (optgroup !== filter.optgroup) {
+									if (optgroup !== null) out += '</optgroup>';
+									optgroup = filter.optgroup;
+									if (optgroup !== null) {
+										out += `<optgroup label="${translate(settings.optgroups[optgroup])}">`;
+									}
+								}
+
+								out += `<option ${className} value="${filter.id}" ${filter.icon ? `data-icon="${filter.icon}"` : ''}>
+									${translate(filter.label)}
+								</option>`;
+
+								return out;
+							}).join('')}
+
+							${optgroup !== null ? '</optgroup>' : ''}
+						</select>
+					`;
+				}
 			};
 			const options = {
 				filters: filters,

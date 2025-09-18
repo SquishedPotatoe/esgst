@@ -1,5 +1,3 @@
-import { v4 as uuidv4 } from 'uuid';
-
 interface ScopeData {
 	comments: unknown[];
 	commentsV2: unknown[];
@@ -25,7 +23,7 @@ export class Scope {
 	constructor(id: string | null, context: HTMLElement) {
 		this.findData = this.findData.bind(this);
 
-		this.id = id || uuidv4();
+		this.id = id || crypto.randomUUID();
 		this.context = context;
 		this.data = Scope.getInitialData();
 		this.pages = new Map<number, ScopeData>();

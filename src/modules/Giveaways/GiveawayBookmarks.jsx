@@ -423,14 +423,16 @@ class GiveawaysGiveawayBookmarks extends Module {
 			let element = gb.popup.scrollable.children[i].firstElementChild;
 			if (!element.getAttribute('data-esgst')) {
 				let code = element.textContent;
-				element.textContent = (
-					await FetchRequest.get(element.getAttribute('href'), {
-						queue: true,
-					})
-				).html.getElementsByClassName('featured__heading__medium')[0].textContent;
-				giveaways[code] = {
-					name: element.textContent,
-				};
+				if (code) {
+					element.textContent = (
+						await FetchRequest.get(element.getAttribute('href'), {
+							queue: true,
+						})
+					).html?.getElementsByClassName('featured__heading__medium')[0]?.textContent;
+					giveaways[code] = {
+						name: element.textContent,
+					};
+				}
 			}
 		}
 		lockAndSaveGiveaways(giveaways);

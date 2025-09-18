@@ -10,60 +10,25 @@ If you find any bugs or have any feature requests, please file an issue [here](h
 
 Tested and confirmed as working:
 
-- Chrome (since v55)
-- Firefox (since v52)
-- Pale Moon
+- Chrome (since v140)
 
 Not tested but should be working:
 
 - Any Chromium-based browser (such as Edge Chromium, Opera, Vivaldi, etc...)
 
-Not supported:
-
-- Edge legacy
-- Safari
 
 ---
 
 ## Installation
 
-There are two different ways to use ESGST: extension or userscript. You can choose which one you want to use, but the extension is a lot faster and has a better peformance than the userscript, so I recommend it, although there is no major difference between them, except for a few options that are only available in the extension because of limitations in the userscript.
-
 $${\color{yellow}Caution:}$$ The provided extensions are unsigned, please be aware of the [risks](https://www.google.com/search?q=risks+of+using+an+unsigned+extension) of using unsigned extensions.
-
-### Option 1 - Extension
-
-It should be possible to install the extension in any Chromium-based browser from the Chrome store (such as Opera, Vivaldi, etc...), any Firefox-based browser from the Firefox store (such as Waterfox, etc...), and any browser that uses the Phoebus system from the Pale Moon store (such as Basilik, etc...).
-
-You can also use the extension on Android through Firefox for Android, but some features might not work or not be optimized enough for mobile.
-
-Chrome: 
 
 - Go to the Extensions page (`chrome://extensions`).
 - Enable Developer Mode by clicking the toggle switch next to it
 - Click the Load unpacked button
 - Select the directory you extracted the downloaded zip to.
 
-Firefox : Only [Developer Edition](https://www.mozilla.org/firefox/developer/), [Nightly](https://www.mozilla.org/firefox/nightly/all/), and [ESR](https://www.mozilla.org/firefox/organizations/). accept unsigned extensions.
-- Type `about:config` into the URL bar.
-- Set `extensions.webextensions.keepStorageOnUninstall` to `true`.
-- Set `extensions.webextensions.keepUuidOnUninstall` to `true`.
-- Set `xpinstall.signatures.required` to `false`
-- Go to the Extensions page (`about:addons`).
-- Select `Add-on From File` from the settings cog and select the downloaded zip.
-
-Palemoon:
-
-- Go to the Extensions page (`about:addons`).
-- Select `Add-on From File` from the settings cog and select the downloaded xpi.
-
-### Option 2 - Userscript
-
-To install the userscript, you must install [Tampermonkey](https://tampermonkey.net/), [Greasemonkey](http://www.greasespot.net/) or some other userscript manager first. Then [click here](https://github.com/SquishedPotatoe/esgst/releases/latest/download/userscript.user.js) and you should be prompted to install it. I recommend Tampermonkey, because the userscript uses the GM_addValueChangeListener API to communicate changes in the storage between tabs, and that API is not available on Greasemonkey, so a polyfill is used for Greasemonkey, which is not very effective and can affect the performance.
-
-You can also use the userscript on Android through Firefox with Violentmonkey or USI, but some features might not work or not be optimized enough for mobile.
-
-- [Changelog](https://github.com/SquishedPotatoe/esgst/releases)
+- [Changelog](https://github.com/SquishedPotatoe/esgst/releases?q=Mv3)
 
 ---
 

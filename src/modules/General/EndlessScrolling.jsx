@@ -1,4 +1,3 @@
-import IntersectionObserver from 'intersection-observer-polyfill';
 import { DOM } from '../../class/DOM';
 import { EventDispatcher } from '../../class/EventDispatcher';
 import { FetchRequest } from '../../class/FetchRequest';
@@ -258,19 +257,10 @@ class GeneralEndlessScrolling extends Module {
 		this.es_activate(es);
 
 		if (window.location.href.includes('happy-holidays')) {
-			DOM.insert(
-				document.head,
-				'beforeend',
-				<script>
-					{`
-					  const boxList = document.querySelector(".giveaway_box_list");
-					  var holidayBoxes = new MutationObserver(function() {
-						giveaway_box_redraw();
-					  });
-					  holidayBoxes.observe(boxList, { childList: true });
-					`}
-				</script>
-			);
+			const script = document.createElement('script');
+			script.src = chrome.runtime.getURL('lib/script-holiday.js');
+			script.defer = true;
+			document.head.appendChild(script);
 		}
 	}
 
