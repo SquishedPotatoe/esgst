@@ -7,53 +7,36 @@ const ProgressBarPlugin = require('progress-bar-webpack-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const fs = require('fs');
-const JSZip = require('jszip');
+const { zipSync } = require('fflate');
 
-// --- JSZip plugin with local timestamp preservation ---
-class GenerateZip {
-	constructor(options) {
-		this.options = options || {};
-		this.outputPath = this.options.outputPath || 'build';
-		this.zipName = this.options.zipName || 'chrome-mv3.zip';
-		this.files = this.options.files || [];
-	}
+const outputDir = path.resolve(__dirname, 'build');
+const zipOutputPath = path.resolve(__dirname, 'dist', 'chrome-mv3.zip');
 
-	apply(compiler) {
-		compiler.hooks.done.tapPromise('GenerateZip', async () => {
-			const zip = new JSZip();
+async function zipBuildFolder() {
+    const fileMap = {};
 
-			for (const file of this.files) {
-				let filePath;
-				let zipName;
+    async function addFilesRecursive(dir, baseDir) {
+        const entries = await fs.promises.readdir(dir, { withFileTypes: true });
+        for (const entry of entries) {
+            const absPath = path.join(dir, entry.name);
+            const relPath = path.relative(baseDir, absPath).replace(/\\/g, '/');
 
-				if (typeof file === 'string') {
-					filePath = file;
-					zipName = path.basename(file); // flatten into root
-				} else if (file.path && file.name) {
-					filePath = file.path;
-					zipName = file.name;
-				} else {
-					continue;
-				}
+            if (entry.isDirectory()) {
+                await addFilesRecursive(absPath, baseDir);
+            } else {
+                const content = await fs.promises.readFile(absPath);
+                fileMap[relPath] = content;
+            }
+        }
+    }
 
-				const data = await fs.promises.readFile(filePath);
-				zip.file(zipName, data); // default timestamp
-			}
+    await addFilesRecursive(outputDir, outputDir);
 
-			await fs.promises.mkdir(this.outputPath, { recursive: true });
+    const zippedData = zipSync(fileMap, { level: 9 });
 
-			const content = await zip.generateAsync({
-				type: 'nodebuffer',
-				compression: 'DEFLATE',           // use DEFLATE
-				compressionOptions: { level: 9 }  // maximum compression
-			});
-
-			const zipFullPath = path.join(this.outputPath, this.zipName);
-			await fs.promises.writeFile(zipFullPath, content);
-
-			console.log(`\n\n✅ ZIP created (flattened, max compression): ${zipFullPath}\n`);
-		});
-	}
+    await fs.promises.mkdir(path.dirname(zipOutputPath), { recursive: true });
+    await fs.promises.writeFile(zipOutputPath, zippedData);
+    console.log(`✅ ZIP created: ${zipOutputPath}`);
 }
 
 // --- Webpack config ---
@@ -179,25 +162,11 @@ module.exports = (env = {}) => {
 					{ from: 'src/html/permissions.html', to: 'permissions.html' },
 				],
 			}),
-
-			// --- JSZip plugin ---
-			new GenerateZip({
-				outputPath: path.resolve(__dirname, 'dist'),
-				zipName: 'chrome-mv3.zip',
-				files: [
-					path.join(outputDir, 'esgst.js'),
-					path.join(outputDir, 'eventPage.js'),
-					path.join(outputDir, 'permissions.js'),
-					path.join(outputDir, 'styles.css'),
-					path.join(outputDir, 'manifest.json'),
-					path.join(outputDir, 'icon.png'),
-					path.join(outputDir, 'permissions.html'),
-					path.join(outputDir, 'lib/script-datepicker.js'),
-					path.join(outputDir, 'lib/script-holiday.js'),
-					path.join(outputDir, 'lib/script-accurate-timestamp.js'),
-					path.join(outputDir, 'lib/script-custom-giveaway-calendar.js'),
-				],
-			}),
+			{
+				apply: (compiler) => {
+					compiler.hooks.done.tapPromise('generatingZip', zipBuildFolder);
+				},
+			},
 		],
 		resolve: {
 			extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],

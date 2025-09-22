@@ -202,7 +202,7 @@ async function loadImportFile(dm, storageType, space, callback) {
 						}
 					};
 					if (isZip) {
-						dm.reader.readAsBinaryString(file);
+						dm.reader.readAsArrayBuffer(file);
 					} else {
 						dm.reader.readAsText(file);
 					}

@@ -27,6 +27,7 @@ import { Utils } from '../lib/jsUtils';
 import { settingsModule } from './Settings';
 import { loadDataCleaner, loadDataManagement } from './Storage';
 import { runSilentSync, setSync } from './Sync';
+import { zip, unzipSync, strToU8, strFromU8 } from 'fflate';
 
 const SHORT_MONTHS = [
 	'Jan',
@@ -450,7 +451,7 @@ class Common extends Module {
 			this.esgst.mainPageHeading.appendChild(hideButtonsRight);
 		}
 		this.reorderButtons(this.esgst);
-		this.processHash();		
+		this.processHash();
 		window.addEventListener('beforeunload', this.checkBusy.bind(this));
 		window.addEventListener('hashchange', this.goToComment.bind(this, null, null, false));
 
@@ -946,7 +947,7 @@ class Common extends Module {
 						st: true,
 					},
 					notifyNewVersion: {
-						description: () => (		
+						description: () => (
 							<fragment>
 							<ul>
 									<li>
@@ -1256,7 +1257,7 @@ async checkNewVersion() {
     SettingsWizard.run();
 
     Shared.esgst.isFirstRun = false;
-  } 
+  }
 
   // Manual check button
   document.body.addEventListener('click', async e => {
@@ -3333,37 +3334,44 @@ async checkNewVersion() {
 	}
 
 	async getZip(data, fileName, type = 'blob') {
-		const zip = new JSZip();
-		zip.file(fileName, data);
-		return await zip.generateAsync({
-			compression: 'DEFLATE',
-			compressionOptions: {
-				level: 9,
-			},
-			// @ts-ignore
-			type: type,
+		return new Promise((resolve) => {
+			const files = {};
+			files[fileName] = strToU8(data);
+			zip(files, { level: 9 }, (err, zippedData) => {
+				if (err) throw err;
+				if (type === 'blob') {
+					resolve(new Blob([zippedData], { type: 'application/zip' }));
+				} else {
+					resolve(zippedData);
+				}
+			});
 		});
 	}
 
 	async readZip(data) {
-		const zip = new JSZip();
+		let u8;
+		if (data instanceof Blob) {
+			const arrayBuffer = await data.arrayBuffer();
+			u8 = new Uint8Array(arrayBuffer);
+		} else if (data instanceof ArrayBuffer) {
+			u8 = new Uint8Array(data);
+		} else if (data instanceof Uint8Array) {
+			u8 = data;
+		} else {
+			throw new Error('Unsupported data type for readZip');
+		}
 
-		//** @type {ZipFile} */
-		const contents = await zip.loadAsync(data);
-		const keys = Object.keys(contents.files),
-			output = [];
-		for (const key of keys) {
-			output.push({
-				name: key,
-				value: await zip.file(key).async('text'),
-			});
+		const files = unzipSync(u8);
+		const output = [];
+		for (const name in files) {
+			output.push({ name, value: strFromU8(files[name]) });
 		}
 		return output;
 	}
 
 	downloadFile(data, fileName, blob) {
-		const url = window.URL.createObjectURL(blob || new Blob([data])),
-			file = document.createElement('a');
+		const url = window.URL.createObjectURL(blob || new Blob([data]));
+		const file = document.createElement('a');
 		file.download = fileName;
 		file.href = url;
 		document.body.appendChild(file);

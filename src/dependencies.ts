@@ -1,10 +1,9 @@
 // jQuery QueryBuilder want global interact object
-import interact from 'interactjs/dist/interact.min';
+import interact from 'interactjs';
 import 'jQuery-QueryBuilder/dist/js/query-builder.standalone';
-import 'bootstrap/dist/js/bootstrap';
+import 'bootstrap';
 import 'jquery-ui/ui/widgets/progressbar';
 import 'jquery-ui/ui/widgets/slider';
-import JSZip from 'jszip';
 import VDF from 'simple-vdf';
 import * as emojisUtils from 'emojis-utils';
 
@@ -12,6 +11,5 @@ import 'awesome-bootstrap-checkbox/awesome-bootstrap-checkbox.css';
 import 'jQuery-QueryBuilder/dist/css/query-builder.default.css';
 
 window.interact = interact;
-window.JSZip = JSZip;
 window.VDF = VDF;
 window.emojisUtils = emojisUtils;

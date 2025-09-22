@@ -1,4 +1,4 @@
-import JSZip from 'jszip';
+import { zip, unzipSync, strToU8, strFromU8 } from 'fflate';
 import { RequestQueue } from './class/Queue';
 
 const locks = {};
@@ -422,24 +422,36 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
 	return true;
 });
 
-
 async function getZip(data, fileName) {
-	const zip = new JSZip();
-	zip.file(fileName, data);
-	return await zip.generateAsync({ compression: 'DEFLATE', compressionOptions: { level: 9 }, type: 'blob' });
+	return new Promise((resolve) => {
+		const fileMap = {};
+		fileMap[fileName] = strToU8(data);
+		zip(fileMap, { level: 9 }, (err, zippedData) => {
+			if (err) throw err;
+			resolve(new Blob([zippedData], { type: 'application/zip' }));
+		});
+	});
 }
+
 async function readZip(data) {
-	const zip = await JSZip.loadAsync(data);
-	const output = [];
-	for (const key of Object.keys(zip.files)) {
-		output.push({ name: key, value: await zip.file(key).async('text') });
-	}
-	return output;
+	let u8 = data instanceof Uint8Array
+		? data
+		: data instanceof ArrayBuffer
+			? new Uint8Array(data)
+			: data instanceof Blob
+				? new Uint8Array(await data.arrayBuffer())
+				: null;
+
+	if (!u8) throw new Error("Unsupported data type for readZip in SW");
+
+	const files = unzipSync(u8);
+	return Object.keys(files).map(name => ({ name, value: strFromU8(files[name]) }));
 }
 
 async function doFetch(parameters, request, sender, callbackOrPort) {
 	const steamUrl = "https://store.steampowered.com/";
 	let canManipulateCookies = request.manipulateCookies;
+
 	if (canManipulateCookies) {
 		try {
 			const hasPermission = await chrome.permissions.contains({ permissions: ['cookies'] });
@@ -466,9 +478,11 @@ async function doFetch(parameters, request, sender, callbackOrPort) {
 
 	try {
 		if (request.fileName) parameters.body = await getZip(parameters.body, request.fileName);
+
 		const abortController = new AbortController();
 		const timeoutId = setTimeout(() => abortController.abort(), request.timeout || 10000);
 		parameters.signal = abortController.signal;
+
 		const response = await fetch(request.url, parameters);
 		clearTimeout(timeoutId);
 
@@ -478,11 +492,11 @@ async function doFetch(parameters, request, sender, callbackOrPort) {
 		const useStreaming = callbackOrPort?.postMessage && lengthBytes >= USE_STREAMING_THRESHOLD;
 
 		let responseText = "";
+
 		if (request.blob) {
 			const zipData = await response.blob();
-			const zip = await JSZip.loadAsync(zipData);
-			const firstFile = Object.keys(zip.files)[0];
-			responseText = firstFile ? await zip.file(firstFile).async("text") : "";
+			const files = await readZip(zipData);
+			responseText = files[0]?.value || "";
 		} else if (useStreaming && response.body?.getReader) {
 			const reader = response.body.getReader();
 			const decoder = new TextDecoder();
