@@ -1105,7 +1105,7 @@ async function sync(syncer) {
 		}
 	}
 
-	// sync hltb times
+	// sync hltb times ( HowLongToBeat web app is no longer available )
 	if (
 		(syncer.parameters && syncer.parameters.HltbTimes) ||
 		(!syncer.parameters && Settings.get('syncHltbTimes'))
@@ -1113,39 +1113,24 @@ async function sync(syncer) {
 		const isPermitted = await permissions.contains([['googleWebApp']]);
 		if (isPermitted) {
 			syncer.progressBar.setMessage('Syncing HLTB times...');
-			try {
-				const games = (
-					await FetchRequest.get(
-						`https://script.google.com/macros/s/AKfycbysBF72c0VNylStaslLlOL7X4M0KQIgY0VVv6Q0x2vh72iGAtE/exec`
-					)
-				).json;
-				const hltb = {};
-				for (const game of games) {
-					if (game.steamId) {
-						hltb[game.steamId] = game;
-					}
-				}
-				let cache = JSON.parse(
-					LocalStorage.get(
-						'gcCache',
-						`{ "apps": {}, "subs": {}, "hltb": {}, "timestamp": 0, "version": 7 }`
-					)
-				);
-				if (cache.version !== 7) {
-					cache = {
-						apps: {},
-						subs: {},
-						hltb: cache.hltb,
-						timestamp: 0,
-						version: 7,
-					};
-				}
-				cache.hltb = hltb;
+			const cache = JSON.parse(LocalStorage.get('gcCache', `{ "apps": {}, "subs": {}, "hltb": {}, "timestamp": 0, "version": 7 }`));
+			if (cache.version !== 7) {
+				cache.version = 7;
+				cache.timestamp = 0;
+				cache.apps = cache.apps || {};
+				cache.subs = cache.subs || {};
+				cache.hltb = cache.hltb || {};
 				LocalStorage.set('gcCache', JSON.stringify(cache));
-			} catch (e) {
-				Logger.warning(e.message, e.stack);
 			}
-			DOM.insert(syncer.results, 'beforeend', <div>HLTB times synced.</div>);
+			DOM.insert(
+				syncer.results,
+				'beforeend',
+				<div style={{ color: 'red', marginTop: '10px', marginBottom: '10px', fontWeight: 'bold' }}>
+					The HowLongToBeat web app that powered HLTB Times is no longer available.
+					<br />
+					Syncing times will remain unavailable until a new data source is implemented.
+				</div>
+			);
 		} else {
 			syncer.failed.HltbTimes = true;
 			DOM.insert(

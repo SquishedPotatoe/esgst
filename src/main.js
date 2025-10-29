@@ -76,12 +76,6 @@ import { runSilentSync } from './modules/Sync';
 		esgst.games = JSON.parse(esgst.storage.games);
 		esgst.giveaways = JSON.parse(esgst.storage.giveaways);
 		esgst.groups = JSON.parse(esgst.storage.groups);
-		esgst.requestLog = await chrome.runtime.sendMessage({ action: 'get_request_log' });
-		if (esgst.requestLog.success) {
-			esgst.requestLog = esgst.requestLog.log;
-		} else {
-			console.error('Failed to retrieve request log');
-		}
 		esgst.rerolls = JSON.parse(esgst.storage.rerolls);
 		esgst.settings = JSON.parse(esgst.storage.settings);
 		esgst.tickets = JSON.parse(esgst.storage.tickets);

@@ -52,6 +52,38 @@ export class FetchRequest {
 		return FetchRequest.send(url, { ...options, method: 'PUT' });
 	}
 
+	static rateLimitUntil = 0;
+	static rateLimitPromise: Promise<void> | null = null;
+	static cooldownTimerId: number | null = null;
+
+	static async waitForCooldown() {
+		const now = Date.now();
+
+		if (now >= this.rateLimitUntil) return;
+
+		if (this.rateLimitPromise) {
+			await this.rateLimitPromise;
+			return;
+		}
+
+		const waitTime = Math.max(0, this.rateLimitUntil - now);
+
+		if (this.cooldownTimerId) {
+			clearTimeout(this.cooldownTimerId);
+			this.cooldownTimerId = null;
+		}
+
+		this.rateLimitPromise = new Promise<void>(resolve => {
+			this.cooldownTimerId = window.setTimeout(() => {
+				this.rateLimitPromise = null;
+				this.cooldownTimerId = null;
+				resolve();
+			}, waitTime);
+		});
+
+		await this.rateLimitPromise;
+	}
+
 	static async send(url: string, options: FetchOptions): Promise<FetchResponse> {
 		let response = null;
 		let lock = null;
@@ -105,18 +137,6 @@ export class FetchRequest {
 
 			if (isInternal) {
 				response = await FetchRequest.sendInternal(url, options);
-
-				Shared.esgst.requestLog.unshift({
-					url,
-					timestamp: Date.now(),
-				});
-				if (response.redirected) {
-					Shared.esgst.requestLog.unshift({
-						url: response.url,
-						timestamp: Date.now(),
-					});
-				}
-				await Shared.common.setValue('requestLog', JSON.stringify(Shared.esgst.requestLog));
 			} else {
 				response = await FetchRequest.sendExternal(url, options);
 			}
@@ -151,28 +171,53 @@ export class FetchRequest {
 	}
 
 	static async sendInternal(url: string, options: FetchOptions): Promise<FetchResponse> {
-		const { fetchObj, fetchOptions, abortController } = await FetchRequest.getFetchObj(options);
+		await this.waitForCooldown();
 
-		const { timeout = 10000 } = options;
-		const timeoutId = window.setTimeout(() => abortController.abort(), timeout);
+		const { fetchObj, fetchOptions } = await this.getFetchObj(options);
+		const globalTimeout = 2 * 60_000;
+		const startTime = Date.now();
+		const cooldownDuration = 70_000;
 
-		fetchOptions.signal = abortController.signal;
-		const response = await fetchObj(url, fetchOptions);
+		for (; ;) {
+			if (Date.now() - startTime > globalTimeout) {
+				throw new Error('Fetch retry timeout reached (exceeded 2 minutes)');
+			}
 
-		window.clearTimeout(timeoutId);
+			const abortController = new AbortController();
+			fetchOptions.signal = abortController.signal;
 
-		const text = await response.text();
+			const timeout = options.timeout ?? 10000;
+			const timeoutId = window.setTimeout(() => abortController.abort(), timeout);
 
-		if (!response.ok) {
-			throw new Error(text);
+			let response: Response;
+			try {
+				response = await fetchObj(url, fetchOptions);
+			} finally {
+				window.clearTimeout(timeoutId);
+			}
+
+			const text = await response.text();
+
+			if (response.status === 429) {
+				const now = Date.now();
+
+				if (this.rateLimitUntil < now) {
+					this.rateLimitUntil = now + cooldownDuration;
+					window.dispatchEvent(new CustomEvent('rate_limit_hit', { detail: { cooldown: cooldownDuration } }));
+				}
+				await this.waitForCooldown();
+				continue;
+			}
+
+			if (!response.ok) throw new Error(text);
+
+			return {
+				status: response.status,
+				url: response.url,
+				redirected: response.redirected,
+				text,
+			};
 		}
-
-		return {
-			status: response.status,
-			url: response.url,
-			redirected: response.redirected,
-			text,
-		};
 	}
 
 	static async sendExternal(url: string, options: FetchOptions): Promise<FetchResponse> {
@@ -183,14 +228,11 @@ export class FetchRequest {
 			blob: options.blob,
 			fileName: options.fileName,
 			manipulateCookies,
-			parameters: JSON.stringify(FetchRequest.getFetchOptions(options, manipulateCookies)),
+			parameters: FetchRequest.getFetchOptions(options, manipulateCookies),
 			timeout: options.timeout,
 			url,
 		};
-		let response = await chrome.runtime.sendMessage(messageOptions);
-		if (typeof response === 'string') {
-			response = JSON.parse(response);
-		}
+		const response = await chrome.runtime.sendMessage(messageOptions);
 
 		if (Utils.isSet(response.error)) {
 			throw new Error(response.error);

@@ -156,7 +156,6 @@ class GeneralThreadSubscription extends Module {
 	}
 
 	async dismissItem(event, item) {
-		console.log('[TDS] dismissItem', item);
 		item.diff = 0;
 
 		if (item.type === 'forum') {
@@ -170,7 +169,6 @@ class GeneralThreadSubscription extends Module {
 		event.target.remove();
 
 		await Shared.common.notifyTds(this.subscribedItems);
-		console.log('[TDS] dismissItem complete, notifying subscribers');
 	}
 
 	async unsubscribeItem(element, item) {
@@ -265,24 +263,9 @@ class GeneralThreadSubscription extends Module {
 	}
 
 	updateItems(items) {
-		console.log('[TDS] updateItems called, count:', items.length);
 		this.subscribedItems = items;
 
 		this.updateButton();
-	}
-
-	async showNotification() {
-		const result = await window.Notification.requestPermission();
-
-		if (result !== 'granted') {
-			return;
-		}
-
-		new Notification('ESGST Notification', {
-			body: 'There are new comments in your subscriptions.',
-			icon: 'https://dl.dropboxusercontent.com/s/lr3t3bxrxfxylqe/esgstIcon.ico?raw=1',
-			tag: 'TDS',
-		});
 	}
 
 	async runDaemon(firstRun) {
@@ -378,7 +361,6 @@ class GeneralThreadSubscription extends Module {
 			});
 		}
 
-
 		// ---------------- Broadcast to other tabs ----------------
 		chrome.runtime.sendMessage({
 			action: 'update-tds',
@@ -388,7 +370,6 @@ class GeneralThreadSubscription extends Module {
 		// ---------------- Notify Service Worker ----------------
 		await Shared.common.notifyTds(this.subscribedItems);
 
-
 		// ---------------- Update UI ----------------
 		this.updateButton();
 
@@ -397,7 +378,6 @@ class GeneralThreadSubscription extends Module {
 	}
 
 	async startDaemon() {
-		console.log('[TDS] startDaemon called');
 		this.lock = new Lock('tds', {
 			threshold: 300,
 			timeout: this.minutes + 15000,
@@ -406,14 +386,12 @@ class GeneralThreadSubscription extends Module {
 		await this.lock.lock();
 
 		if (!this.lock.isLocked) {
-			console.log('[TDS] Daemon already running, updating items from cache...');
 			//Logger.info('TDS Daemon already running....');
 
 			this.updateItems(await Shared.common.getTds());
 
 			return;
 		}
-		console.log('[TDS] Lock acquired, running daemon');
 		await this.runDaemon(true);
 	}
 

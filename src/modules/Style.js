@@ -208,7 +208,7 @@ function addStyle() {
 	}
 
 	.form__saving-button--gray:not(.is-disabled):hover {
-    background-image: linear-gradient(#dcdfe6 0%, #caced9 50%, #b4b9c4 100%);
+		background-image: linear-gradient(#dcdfe6 0%, #caced9 50%, #b4b9c4 100%);
 	}
 
 	.btn-action.yellow {
@@ -442,7 +442,7 @@ function addStyle() {
 		margin-left: 5px;
 	}
 
-	.page__heading .esgst-button-container,  .page_heading .esgst-button-container, .esgst-page-heading .esgst-button-container {
+	.page__heading .esgst-button-container, .page_heading .esgst-button-container, .esgst-page-heading .esgst-button-container {
 		border: none;
 		line-height: inherit;
 		padding: 0;
@@ -1445,6 +1445,23 @@ function addStyle() {
 		margin: 2px;
 	}
 
+	.esgst-cfh-emojis ~ .form__saving-button {
+		margin-right: 5px;
+	}
+
+	.esgst-cfh-emojis-list {
+		font-size: ${Settings.get('cfh_e_size') || 48}px;
+		margin-left: auto;
+		margin-right: auto;
+		overflow-x: hidden;
+		width: 430px;
+	}
+	.esgst-cfh-emojis-list > [title*="jp"] {
+		font-size: 24px;
+		margin-left: 5px;
+		margin-right: 5px;
+	}
+
 	.esgst-cfh-popout {
 		white-space: normal;
 		width: 300px;
@@ -1657,7 +1674,7 @@ function addStyle() {
 	}
 
 	.esgst-feature-description.esgst-popout > a {
-	    line-height: 18px;
+	 	line-height: 18px;
 		margin: 2px;
 	}
 
@@ -1844,7 +1861,7 @@ function addStyle() {
 	.esgst-update-dismiss {
 		font-size: large;
 		cursor: pointer;
-		margin-left: 10px;				
+		margin-left: 10px;
 	}
 
 	.esgst-popup-modal {
@@ -1953,6 +1970,10 @@ function addStyle() {
 	.esgst-popup-icon {
 		font-size: 25px;
 		margin-right: 10px;
+	}
+
+	.esgst-rate-limit > .esgst-popup-heading > .esgst-popup-icon {
+		font-size: 52px;
 	}
 
 	.esgst-popup-title {
@@ -2517,7 +2538,7 @@ function addStyle() {
 	.page_heading .esgst-button-container > .page_heading_btn.esgst-button i {
 		line-height: 22px;
 		margin: 0 !important;
-	} 
+	}
 
 	header ~ .esgst-popup-layer .esgst-popup .page_heading .esgst-button-container > .page_heading_btn.esgst-button i:nth-of-type(2), header ~ .esgst-popup-layer .esgst-popup .page_heading .esgst-button-container > .page_heading_btn.esgst-button i:nth-of-type(2) {
 		margin-left: 3px !important;
@@ -2530,7 +2551,7 @@ function addStyle() {
 	}
 
 	.esgst-sync-warning ~ .esgst-text-left hr {
-		border-top: 1px solid #ccd6de; 
+		border-top: 1px solid #ccd6de;
 		border-bottom: 1px solid rgba(255, 255, 255, .3);
 		margin: 0.5em 0;
 	}
@@ -2649,6 +2670,31 @@ function addStyle() {
 		padding: 10px;
 		text-align: center;
 		width: 100px;
+	}
+
+	.esgst-gv-slider.ui-slider-range {
+		 -webkit-appearance: none;
+		height: 6px;
+		background-image: linear-gradient(to right, #c8d6fd 0%, #c8d6fd var(--progress, 0%), #e7e7e7 var(--progress, 0%), #e7e7e7 100%);
+		border-radius: 2px;
+		border: 1px solid #ccc;
+		outline: none;
+		padding: 4px 0;
+		width: 100px;
+	}
+
+	.esgst-gv-slider::-webkit-slider-thumb {
+		-webkit-appearance: none;
+		height: 12px;
+		width: 12px;
+		border-radius: 2px;
+		background: #3c6fa2;
+		box-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
+	}
+
+	.esgst-gv-slider-display {
+		display: inline-block;
+		margin-top: 14px;
 	}
 
 	.esgst-gv-view {

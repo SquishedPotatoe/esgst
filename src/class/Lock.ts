@@ -29,29 +29,39 @@ export class Lock {
 	}
 
 	lock = async (): Promise<void> => {
-		const response = await chrome.runtime.sendMessage({
-			action: 'do_lock',
-			lock: this.data,
-		});
+		try {
+			const response = await chrome.runtime.sendMessage({
+				action: 'do_lock',
+				lock: this.data,
+			});
 
-		if (response && typeof response.locked === 'boolean') {
-			this.locked = response.locked;
-		} else {
+			this.locked = !!(response && response.locked);
+		} catch (err) {
+			console.error('Lock error:', err);
 			this.locked = false;
 		}
 	};
 
-	update = (): Promise<void> => {
-		return chrome.runtime.sendMessage({
-			action: 'update_lock',
-			lock: this.data,
-		});
+	update = async (): Promise<void> => {
+		try {
+			await chrome.runtime.sendMessage({
+				action: 'update_lock',
+				lock: this.data,
+			});
+		} catch (err) {
+			console.error('Lock update error:', err);
+		}
 	};
 
-	unlock = (): Promise<void> => {
-		return chrome.runtime.sendMessage({
-			action: 'do_unlock',
-			lock: this.data,
-		});
+	unlock = async (): Promise<void> => {
+		try {
+			await chrome.runtime.sendMessage({
+				action: 'do_unlock',
+				lock: this.data,
+			});
+			this.locked = false;
+		} catch (err) {
+			console.error('Unlock error:', err);
+		}
 	};
 }

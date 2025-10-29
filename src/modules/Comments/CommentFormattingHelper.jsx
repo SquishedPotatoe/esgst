@@ -318,10 +318,36 @@ class CommentsCommentFormattingHelper extends Module {
 						<ul>
 							<li>
 								Adds a button(<i className="fa fa-smile-o"></i>) to the panel that allows you to add
-								emojis to your comments by selecting them out of a huge list of emojis.
+								emojis to your comments by selecting them from your saved emojis.
 							</li>
 						</ul>
 					),
+					features: {
+						cfh_emojiPicker: {
+							description: () => (
+								<ul>
+									<li>
+										Adds a button to the popout to select emojis out of a huge list of emojis.
+									</li>
+								</ul>
+							),
+							inputItems: [
+								{
+									id: 'cfh_e_size',
+									prefix: 'Set emoji size to optimize performance ',
+									suffix: '( Default: 48 )',
+									attributes: {
+										type: 'number',
+										min: '1',
+										step: '1',
+									},
+								},
+							],
+							name: 'Emoji Picker',
+							sg: true,
+							st: true,
+						},
+					},
 					name: 'Emoji',
 					sg: true,
 					st: true,
@@ -743,7 +769,7 @@ class CommentsCommentFormattingHelper extends Module {
 				icons: ['fa-smile-o'],
 				name: 'Emojis',
 				setPopout: async (popout) => {
-					let emojis, popup;
+					let emojis, popup, filter, savedEmojis;
 					DOM.insert(
 						popout.popout,
 						'atinner',
@@ -755,29 +781,30 @@ class CommentsCommentFormattingHelper extends Module {
 								className="form__saving-button btn_action white"
 								onclick={async () => {
 									try {
-										let emoji = window.prompt(`Enter the custom emoji:`).trim();
+										let emoji = window.prompt(`Enter the custom emoji:`);
+										if (emoji === null) return;
+										emoji = emoji.trim();
+										if (!emoji) return;
 										const codes = [];
 										for (let i = 0, n = emoji.length; i < n; i++) {
 											codes.push(emoji.codePointAt(i));
 										}
 										emoji = String.fromCodePoint(...codes);
-										this.cfh_setEmoji(
-											DOM.insert(
-												emojis,
-												'beforeend',
-												<span data-draggable-id={emoji}>{emoji}</span>
-											)
+										const [added] = DOM.insert(
+											emojis,
+											'beforeend',
+											<span data-draggable-id={emoji}>{emoji}</span>
 										);
+										this.cfh_setEmoji(added);
 										Shared.common.draggable_set({
 											addTrash: true,
 											context: emojis,
 											id: 'emojis',
 											item: {},
 										});
-										const emojiArray = [];
-										for (const element of emojis.children) {
-											emojiArray.push(element.getAttribute('data-draggable-id'));
-										}
+										const emojiArray = Array.from(emojis.children).map((el) =>
+											el.getAttribute('data-draggable-id')
+										);
 										await Shared.common.setValue('emojis', JSON.stringify(emojiArray));
 									} catch (error) {
 										window.alert('Invalid emoji!');
@@ -787,109 +814,115 @@ class CommentsCommentFormattingHelper extends Module {
 							>
 								Add Custom Emoji
 							</div>
-							<div
-								className="form__saving-button btn_action white"
-								onclick={async () => {
-									if (popup) {
-										popup.open(() => {
-											popout.popout.classList.add('esgst-hidden');
-										});
-									} else {
-										let emoji, emojis, filter, i;
-										popup = new Popup({
-											icon: 'fa-smile-o',
-											title: `Select emojis:`,
-											addScrollable: true,
-										});
-										popup.getScrollable(
-											<fragment>
-												<input
-													placeholder="Filter emojis..."
-													type="text"
-													ref={(ref) => (filter = ref)}
-												/>
-												<div className="esgst-cfh-emojis"></div>
-												<div className="esgst-description">
-													Simply click on an emoji above to add it to your selection. You can
-													re-order emojis in your selection by dragging and dropping them. To remove
-													an emoji from your selection, start dragging it and a trash area will
-													appear, then drop it there.
-												</div>
-												<div className="global__image-outer-wrap page_heading_btn esgst-cfh-emojis"></div>
-											</fragment>
-										);
-										emojis = filter.nextElementSibling;
-										const savedEmojis = emojis.nextElementSibling.nextElementSibling;
-										DOM.insert(
-											savedEmojis,
-											'atinner',
-											<fragment>{await this.cfh_getEmojis()}</fragment>
-										);
-										const obj = {
-											addTrash: true,
-											context: savedEmojis,
-											id: 'emojis',
-											item: {},
-										};
-										Shared.common.draggable_set(obj);
-										for (const emoji of emojisUtils.emojis) {
+						</fragment>
+					);
+					if (Settings.get('cfh_emojiPicker')) {
+						DOM.insert(
+							popout.popout,
+							'beforeend',
+							<fragment>
+								<div
+									className="form__saving-button btn_action white"
+									onclick={async () => {
+										if (popup) {
+											popup.open(() => {
+												popout.popout.classList.add('esgst-hidden');
+											});
+										} else {
+											popup = new Popup({
+												icon: 'fa-smile-o',
+												title: `Select emojis:`,
+												addScrollable: true,
+											});
+											popup.getScrollable(
+												<fragment>
+													<input
+														placeholder="Filter emojis..."
+														type="text"
+														ref={(ref) => (filter = ref)}
+													/>
+													<div className="esgst-cfh-emojis esgst-cfh-emojis-list"></div>
+													<div className="esgst-description">
+														Click an emoji above to add it to your selection. You can reorder saved emojis
+														by dragging, and remove by dragging to trash.
+													</div>
+													<div className="global__image-outer-wrap page_heading_btn esgst-cfh-emojis"></div>
+												</fragment>
+											);
+											emojis = filter.nextElementSibling;
+											savedEmojis = emojis.nextElementSibling.nextElementSibling;
+											DOM.insert(savedEmojis, 'atinner', <fragment>{await this.cfh_getEmojis()}</fragment>);
+											const obj = {
+												addTrash: true,
+												context: savedEmojis,
+												id: 'emojis',
+												item: {},
+											};
+											Shared.common.draggable_set(obj);
+											function insertEmojiList(container, list) {
+												list.forEach((data) => {
+													DOM.insert(
+														container,
+														'beforeend',
+														<span
+															data-draggable-id={data.emoji}
+															title={`${data.name} (Keyword: :${data.short_name}:)`}
+															onclick={() => {
+																DOM.insert(
+																	savedEmojis,
+																	'beforeend',
+																	<span
+																		data-draggable-id={data.emoji}
+																		title={`${data.name} (Keyword: :${data.short_name}:)`}
+																	>
+																		{data.emoji}
+																	</span>
+																);
+																Shared.common.draggable_set(obj);
+															}}
+														>
+															{data.emoji}
+														</span>
+													);
+												});
+											}
 											DOM.insert(
 												emojis,
 												'beforeend',
-												<span
-													data-draggable-id={emoji.emoji}
-													title={`${emoji.name} (Keyword: :${emoji.short_name}:)`}
-													onclick={() => {
-														DOM.insert(
-															savedEmojis,
-															'beforeend',
-															<span
-																data-draggable-id={emoji.emoji}
-																title={`${emoji.name} (Keyword: :${emoji.short_name}:)`}
-															>
-																{emoji.emoji}
-															</span>
-														);
-														Shared.common.draggable_set(obj);
-													}}
-												>
-													{emoji.emoji}
-												</span>
+												<div className="esgst-notification-bar notification notification--info" style={{ width: '90%' }}>
+													<i className="fa fa-circle-o-notch fa-spin"></i>
+													<span> Loading...</span>
+												</div>
 											);
+											setTimeout(async () => {
+												emojis.innerHTML = '';
+												const list = await this.fetchEmojis();
+												insertEmojiList(emojis, list);
+											}, 0);
+											popup.onClose = () => {
+												const emojiArray = Array.from(savedEmojis.children).map((el) =>
+													el.getAttribute('data-draggable-id')
+												);
+												Shared.common.setValue('emojis', JSON.stringify(emojiArray));
+											};
+											filter.addEventListener('input', () => {
+												const val = filter.value.toLowerCase();
+												Array.from(emojis.children).forEach((emoji) => {
+													const title = emoji.getAttribute('title').toLowerCase();
+													emoji.classList.toggle('esgst-hidden', val && !title.includes(val));
+												});
+											});
+											popup.open(() => {
+												popout.popout.classList.add('esgst-hidden');
+											});
 										}
-										popup.onClose = () => {
-											const emojiArray = [];
-											for (const element of savedEmojis.children) {
-												emojiArray.push(element.getAttribute('data-draggable-id'));
-											}
-											Shared.common.setValue('emojis', JSON.stringify(emojiArray));
-										};
-										filter.addEventListener('input', () => {
-											if (filter.value) {
-												for (i = emojis.children.length - 1; i > -1; --i) {
-													emoji = emojis.children[i];
-													if (emoji.getAttribute('title').toLowerCase().match(filter.value)) {
-														emoji.classList.remove('esgst-hidden');
-													} else {
-														emoji.classList.add('esgst-hidden');
-													}
-												}
-											} else {
-												for (i = emojis.children.length - 1; i > -1; --i) {
-													emojis.children[i].classList.remove('esgst-hidden');
-												}
-											}
-										});
-										popup.open(() => {
-											popout.popout.classList.add('esgst-hidden');
-										});
-									}
-								}}
-							>
-								Select Emojis
-							</div>
-						</fragment>
-					);
+									}}
+								>
+									Select Emojis
+								</div>
+							</fragment>
+						);
+					}
 					Shared.common.draggable_set({
 						addTrash: true,
 						context: emojis,
@@ -897,17 +930,7 @@ class CommentsCommentFormattingHelper extends Module {
 						item: {},
 					});
 					this.cfh_setEmojis(emojis);
-				},
-				callback: async (popout) => {
-					let emojis = popout.firstElementChild;
-					DOM.insert(emojis, 'atinner', <fragment>{await this.cfh_getEmojis()}</fragment>);
-					Shared.common.draggable_set({
-						addTrash: true,
-						context: emojis,
-						id: 'emojis',
-						item: {},
-					});
-					this.cfh_setEmojis(emojis);
+					popout.popout.style.width = '330px';
 				},
 			},
 			{
@@ -1204,23 +1227,56 @@ class CommentsCommentFormattingHelper extends Module {
 	}
 
 	async cfh_getEmojis() {
-		let emojis = JSON.parse(Shared.common.getValue('emojis', '[]'));
-		return emojis
-			.map((emoji) => {
-				const emojiData = emojisUtils.emojis.filter(
-					(x) => x.emoji === emoji || emojisUtils.getEntities(x.emoji).join('') === emoji
-				)[0];
-				emoji = emojiData ? emojiData.emoji : emoji;
-				return (
-					<span
-						data-draggable-id={emoji}
-						title={emojiData ? `${emojiData.name} (Keyword: :${emojiData.short_name}:)` : ''}
-					>
-						{emoji}
-					</span>
-				);
-			})
-			.filter((emoji) => emoji !== null);
+		const stored = JSON.parse(Shared.common.getValue('emojis', '[]'));
+		const emojiList = await this.fetchEmojis();
+		return stored.map(char => {
+			let data = emojiList.find(e => e.emoji === char);
+			if (!data) {
+				const shortName = this.getShortName(char);
+				if (shortName) {
+					data = this.getEmojiDataByShortName(shortName);
+				}
+			}
+			return (
+				<span
+					data-draggable-id={char}
+					title={data ? `${data.name} (Keyword: :${data.short_name}:)` : ''}
+				>
+					{char}
+				</span>
+			);
+		});
+	}
+
+	async fetchEmojis() {
+		if (Settings.get('cfh_emojiPicker')) {
+
+			if (!this.emojiList) {
+				try {
+					const url = chrome.runtime.getURL('emojis.json');
+					const response = await fetch(url);
+					this.emojiList = await response.json();
+				} catch (err) {
+					console.error('Failed to load emoji JSON:', err);
+					this.emojiList = [];
+				}
+			}
+		} else {
+			this.emojiList = [];
+		}
+		return this.emojiList;
+	}
+
+	getEmojiDataByShortName(shortName) {
+		return this.emojiList?.find(e => e.short_name === shortName) || null;
+	}
+
+	getEmojiDataByChar(emoji) {
+		return this.emojiList?.find(e => e.emoji === emoji) || null;
+	}
+
+	getShortName(emoji) {
+		return this.getEmojiDataByChar(emoji)?.short_name || null;
 	}
 
 	cfh_setTextAreas(context, main, source, endless) {

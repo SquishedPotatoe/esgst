@@ -84,7 +84,7 @@ function getWebExtensionManifest(env) {
 		],
 		options_ui: { page: 'permissions.html', open_in_tab: true },
 		web_accessible_resources: [
-			{ resources: ['icon.png', 'permissions.html', 'lib/script-datepicker.js', 'lib/script-holiday.js', 'lib/script-accurate-timestamp.js', 'lib/script-custom-giveaway-calendar.js'], matches: ['<all_urls>'] },
+			{ resources: ['icon.png', 'permissions.html', 'lib/script-datepicker.js', 'lib/script-holiday.js', 'lib/script-accurate-timestamp.js', 'lib/script-custom-giveaway-calendar.js', 'emojis.json'], matches: ['<all_urls>'] },
 		],
 		background: { service_worker: 'eventPage.js', type: 'module' },
 	};
@@ -158,6 +158,7 @@ module.exports = (env = {}) => {
 					{ from: 'src/lib/script-holiday.js', to: 'lib/script-holiday.js' },
 					{ from: 'src/lib/script-accurate-timestamp.js', to: 'lib/script-accurate-timestamp.js' },
 					{ from: 'src/lib/script-custom-giveaway-calendar.js', to: 'lib/script-custom-giveaway-calendar.js' },
+					{ from: 'src/assets/emojis.json', to: 'emojis.json' },
 					{ from: 'src/assets/images/icon.png', to: 'icon.png' },
 					{ from: 'src/html/permissions.html', to: 'permissions.html' },
 				],
@@ -170,7 +171,7 @@ module.exports = (env = {}) => {
 		],
 		resolve: {
 			extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
-			alias: { jquery: path.resolve(__dirname, 'node_modules/jquery') },
+			alias: { jquery: path.resolve(__dirname, 'node_modules/jquery/dist/jquery.slim.js') },
 		},
 		optimization: isProduction
 			? {

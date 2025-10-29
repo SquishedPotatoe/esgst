@@ -7,7 +7,7 @@ import { LocalStorage } from './LocalStorage';
 
 class PersistentStorage {
 	constructor() {
-		this.currentVersion = 15;
+		this.currentVersion = 16;
 
 		this.defaultValues = {
 			decryptedGiveaways: '{}',
@@ -19,7 +19,6 @@ class PersistentStorage {
 			gdtttCache: '{ "giveaways": [], "discussions": [], "tickets": [], "trades": [] }',
 			giveaways: '{}',
 			groups: '[]',
-			requestLog: '[]',
 			rerolls: '[]',
 			rfiCache: '{}',
 			settings: '{}',
@@ -876,6 +875,17 @@ class PersistentStorage {
 				toSet.settings = JSON.stringify(settings);
 				storage.settings = toSet.settings;
 			}
+		}
+
+		if (version < 16) {
+			window.console.log('Upgrading storage to version 16...');
+
+			toDelete.push(
+				'sgRequestLog_day_0_collapsed', 'sgRequestLog_day_1_collapsed',
+				'sgRequestLog_hour_0_collapsed', 'sgRequestLog_hour_1_collapsed',
+				'sgRequestLog_minute_0_collapsed', 'sgRequestLog_minute_1_collapsed',
+				'sgRequestLog_view', 'requestLog'
+			);
 		}
 
 		for (const key of Object.keys(toSet)) {

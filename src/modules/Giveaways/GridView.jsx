@@ -54,7 +54,7 @@ class GiveawaysGridView extends Module {
 								</li>
 							</ul>
 							<ul>
-								<strong>example: </strong> 
+								<strong>example: </strong>
 								<a href="https://www.steamgifts.com/game/Q6JGq/garrys-mod">https://www.steamgifts.com/game/Q6JGq/garrys-mod</a>
 							</ul>
 						</fragment>
@@ -126,36 +126,40 @@ class GiveawaysGridView extends Module {
 				});
 				popout = new Popout('esgst-gv-spacing', button, 0, true);
 				spacing = Settings.get('gv_spacing');
-				element = createElements(popout.popout, 'beforeend', [
-					{
-						type: 'div',
-						children: [
-							{
-								type: 'div',
-							},
-							{
-								text: `${spacing}px`,
-								type: 'div',
-							},
-						],
-					},
-				]);
-				slider = element.firstElementChild;
-				display = slider.nextElementSibling;
-				window.$(slider).slider({
-					slide: (event, ui) => {
-						spacing = ui.value;
-						elements = document.getElementsByClassName('esgst-gv-container');
-						for (i = 0, n = elements.length; i < n; ++i) {
-							elements[i].style.margin = `${spacing}px`;
-						}
-						popout.reposition();
-						display.textContent = `${spacing}px`;
-						setSetting('gv_spacing', spacing);
-					},
-					max: 10,
-					value: spacing,
-				});
+				element = DOM.insert(popout.popout, 'beforeend', (
+					<div className="ui-slider">
+						<input
+							type="range"
+							min="0"
+							max="10"
+							value={spacing}
+							className="esgst-gv-slider ui-slider-range"
+							ref={(ref) => (slider = ref)}
+							oninput={(e) => updateSpacing(e.target.value)}
+						/>
+						<div className="esgst-gv-slider-display" ref={(ref) => (display = ref)}>
+							{spacing}px
+						</div>
+					</div>
+				));
+
+				function updateSliderFill(slider) {
+					const val = ((slider.value - slider.min) / (slider.max - slider.min)) * 100;
+					slider.style.setProperty('--progress', `${val}%`);
+				}
+
+				function updateSpacing(value) {
+					spacing = parseInt(value, 10);
+					const elements = document.getElementsByClassName('esgst-gv-container');
+					for (let i = 0, n = elements.length; i < n; ++i) {
+						elements[i].style.margin = `${spacing}px`;
+					}
+					popout.reposition();
+					display.textContent = `${spacing}px`;
+					setSetting('gv_spacing', spacing);
+					updateSliderFill(slider);
+				}
+				updateSliderFill(slider);
 			}
 		}
 	}

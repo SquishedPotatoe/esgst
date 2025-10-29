@@ -377,9 +377,6 @@ class Esgst {
 		/** @type {boolean} */
 		this.firstInstall = undefined;
 
-		/** @type {{ url: string, timestamp: number }[]} */
-		this.requestLog = [];
-
 		this.giveaways = null;
 
 		this.mainContext = null;

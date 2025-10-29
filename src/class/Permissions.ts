@@ -18,7 +18,7 @@ class Permissions {
 			},
 			cookies: {
 				messages: {
-					manipulateCookies: 'Required by Game Categories to retrieve age gated content from Steam',
+					manipulateCookies: 'Required if the option to manipulate cookies is enabled.',
 				},
 				values: ['cookies'],
 			},
@@ -161,7 +161,7 @@ class Permissions {
 			const { permissions, origins } = this.getValues(keys);
 			const response = await chrome.runtime.sendMessage({
 				action: 'permissions_contains',
-				permissions: JSON.stringify({ permissions, origins }),
+				permissions: { permissions, origins },
 			});
 			if (response?.success && response.result) {
 				result = true;
@@ -176,7 +176,7 @@ class Permissions {
 		const { permissions, origins } = this.getValues(keys);
 		const response = await chrome.runtime.sendMessage({
 			action: 'permissions_request',
-			permissions: JSON.stringify({ permissions, origins }),
+			permissions: { permissions, origins },
 		});
 
 		return response?.success && response.result;
@@ -189,7 +189,7 @@ class Permissions {
 
 		const response = await chrome.runtime.sendMessage({
 			action: 'permissions_remove',
-			permissions: JSON.stringify({ permissions, origins }),
+			permissions: { permissions, origins },
 		});
 
 		const removed = response?.success ? response.result : false;
