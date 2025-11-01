@@ -7,17 +7,13 @@ specifiers:
   '@babel/preset-typescript': ^7.27.1
   '@types/jquery': ^3.5.0
   '@types/node': ^16.15.0
-  awesome-bootstrap-checkbox: 2.0.1
   babel-loader: ^10.0.0
-  bootstrap: 5.3.8
   copy-webpack-plugin: ^13.0.1
   cross-env: ^7.0.2
   css-loader: ^7.1.2
   css-minimizer-webpack-plugin: ^7.0.2
   date-fns: 4.1.0
-  emojis-utils: ^1.0.2
   fflate: ^0.8.2
-  interactjs: 1.10.27
   jQuery-QueryBuilder: ^3.0.0
   jquery: 3.7.1
   jquery-ui: ^1.14.1
@@ -32,12 +28,8 @@ specifiers:
   webpack-sources: ^3.3.3
 
 dependencies:
-  awesome-bootstrap-checkbox: 2.0.1
-  bootstrap: 5.3.8
   date-fns: 4.1.0
-  emojis-utils: 1.0.2
   fflate: 0.8.2
-  interactjs: 1.10.27
   jQuery-QueryBuilder: 3.0.0
   jquery: 3.7.1
   jquery-ui: 1.14.1
@@ -1251,10 +1243,6 @@ packages:
     engines: {node: '>=10.0.0'}
     dev: true
 
-  /@interactjs/types/1.10.27:
-    resolution: {integrity: sha512-BUdv0cvs4H5ODuwft2Xp4eL8Vmi3LcihK42z0Ft/FbVJZoRioBsxH+LlsBdK4tAie7PqlKGy+1oyOncu1nQ6eA==}
-    dev: false
-
   /@jest/schemas/29.6.3:
     resolution: {integrity: sha512-mo5j5X+jIZmJQveBKeS/clAueipV7KgiX1vMgCxam1RNYiqE1w62n0/tJJnHtjW8ZHcQco5gY85jA3mi0L+nSA==}
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
@@ -1596,10 +1584,6 @@ packages:
       color-convert: 2.0.1
     dev: true
 
-  /awesome-bootstrap-checkbox/2.0.1:
-    resolution: {integrity: sha512-9F94wBv+EfLqdkj9abEs9NVPzucixgd4klxT5LFx09+rbNKUsi9qU6N4loAVFi31Kj0iyPYdDeMcWocXVfce4A==}
-    dev: false
-
   /babel-loader/10.0.0_2wej3svicltrh2qcuppkfkvmlm:
     resolution: {integrity: sha512-z8jt+EdS61AMw22nSfoNJAZ0vrtmhPRVi6ghL3rCeRZI8cdNYFiV5xeV3HbE7rlZZNmGH8BVccwWt8/ED0QOHA==}
     engines: {node: ^18.20.0 || ^20.10.0 || >=22.0.0}
@@ -1654,12 +1638,6 @@ packages:
 
   /bootstrap-icons/1.13.1:
     resolution: {integrity: sha512-ijombt4v6bv5CLeXvRWKy7CuM3TRTuPEuGaGKvTV5cz65rQSY8RQ2JcHt6b90cBBAC7s8fsf2EkQDldzCoXUjw==}
-    dev: false
-
-  /bootstrap/5.3.8:
-    resolution: {integrity: sha512-HP1SZDqaLDPwsNiqRqi5NcP0SSXciX2s9E+RyqJIIqGo+vJeN5AJVM98CXmW/Wux0nQ5L7jeWUdplCEf0Ee+tg==}
-    peerDependencies:
-      '@popperjs/core': ^2.11.8
     dev: false
 
   /bootstrap/5.3.8_@popperjs+core@2.11.8:
@@ -2050,10 +2028,6 @@ packages:
     resolution: {integrity: sha512-IGBvimJkotaLzFnwIVgW9/UD/AOJ2tByUmeOrtqBfACSbAw5b1G0XpvdaieKyc7ULmbwXVx+4e4Be8pOPBrYkw==}
     dev: true
 
-  /emojis-utils/1.0.2:
-    resolution: {integrity: sha512-jGhvjXry49SjgjF78L7wflu4tVfsS1bME015LnkiBc6JHvP7O9C1QR0QlnK2d8qW1HBdA3cEo8EANQOy3cs7ww==}
-    dev: false
-
   /enhanced-resolve/5.18.3:
     resolution: {integrity: sha512-d4lC8xfavMeBjzGr2vECC3fsGXziXZQyJxD868h2M/mBI3PwAuODxAkLkq5HYuvrPYcUtiLzsTo8U3PgX3Ocww==}
     engines: {node: '>=10.13.0'}
@@ -2224,12 +2198,6 @@ packages:
       pkg-dir: 4.2.0
       resolve-cwd: 3.0.0
     dev: true
-
-  /interactjs/1.10.27:
-    resolution: {integrity: sha512-y/8RcCftGAF24gSp76X2JS3XpHiUvDQyhF8i7ujemBz77hwiHDuJzftHx7thY8cxGogwGiPJ+o97kWB6eAXnsA==}
-    dependencies:
-      '@interactjs/types': 1.10.27
-    dev: false
 
   /interpret/3.1.1:
     resolution: {integrity: sha512-6xwYfHbajpoF0xLW+iwLkhwgvLoZDfjYfoFNu8ftMoXINzwuymNLd9u/KmwtdT2GbR+/Cz66otEGEVVUHX9QLQ==}

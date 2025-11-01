@@ -1262,6 +1262,8 @@ class Common extends Module {
 			Shared.esgst.isFirstRun = false;
 		}
 
+		chrome.runtime.sendMessage({ action: 'pendingUpdateCheck' });
+
 		// Manual check button
 		document.body.addEventListener('click', async e => {
 			const btn = e.target.closest('#manualCheck');
@@ -1365,7 +1367,6 @@ class Common extends Module {
 		}
 	}
 
-
 	showUpdatePopup(currentVersion, latestVersion) {
 		document.querySelectorAll('.esgst-update-bar').forEach(el => el.remove());
 
@@ -1379,7 +1380,7 @@ class Common extends Module {
 						{` (you have ${currentVersion}).`}
 					</span>
 					<a
-						href="https://github.com/SquishedPotatoe/esgst/releases/tag/Mv3-v${latestVersion}"
+						href={`https://github.com/SquishedPotatoe/esgst/releases/tag/Mv3-v${latestVersion}`}
 						target="_blank"
 						className="esgst-update-link"
 					>
@@ -1433,7 +1434,7 @@ class Common extends Module {
 				Rate limit hit Retrying in{' '}
 				<span ref={(ref) => (countdown = ref)}>{remaining}</span>s. <br /><br />
 				Too avoid this in the future consider enabling <br />
-				<a href="https://www.steamgifts.com/account/settings/profile?esgst=settings&id=useCustomAdaReqLim" className="table__column__secondary-link">
+				<a href={`https://www.steamgifts.com/account/settings/profile?esgst=settings&id=useCustomAdaReqLim`} className="table__column__secondary-link">
 					Use custom adaptive request limits for SteamGifts
 				</a><br />
 				or raise the limits if you already have it enabled.<br /><br />

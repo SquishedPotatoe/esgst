@@ -205,9 +205,14 @@ const StorageManager = (() => {
 
 	chrome.storage.onChanged.addListener(async (changes, area) => {
 		if (area !== "local") return;
-
 		if (changes.swSettings) {
-			Object.assign(self.cache.settings, changes.swSettings.newValue || {});
+			const newSettings = changes.swSettings.newValue || {};
+			const keysToMerge = Object.keys(newSettings).filter(k => k !== 'pendingUpdateNotification');
+			for (const k of keysToMerge) self.cache.settings[k] = newSettings[k];
+
+			if ('updateCheckInterval' in newSettings || 'notifyNewVersion_sg' in newSettings || 'notifyNewVersion_st' in newSettings) {
+				await scheduleUpdateChecks();
+			}
 			return;
 		}
 
@@ -269,11 +274,11 @@ const RequestQueue = (() => {
 		const useCustom = settings[`useCustomAdaReqLim_${key}`]?.enabled;
 
 		const defaultThresholds = {
-			default: 0.25,
-			minute50: 1.0,
-			minute75: 2.0,
-			hourly75: 3.0,
-			daily75: 4.0
+			default: 0,
+			minute50: 0.25,
+			minute75: 0.5,
+			hourly75: 1,
+			daily75: 1.5
 		};
 
 		q.thresholds = useCustom
@@ -417,165 +422,102 @@ function isNewerVersion(a, b) {
 	return false;
 }
 
-async function checkRemoteVersionSW({ ignoreLastNotified = false, manual = false } = {}) {
-	try {
-		const manifest = chrome.runtime.getManifest();
-		const currentVersion = manifest.version;
-		const refsResponse = await fetch(
-			'https://api.github.com/repos/SquishedPotatoe/esgst/git/matching-refs/tags'
-		);
-		const refsJson = await refsResponse.json();
-		const mv3Versions = refsJson
-			.map(ref => {
-				const match = ref.ref.match(/^refs\/tags\/Mv3-v(\d+\.\d+\.\d+)$/);
-				return match ? match[1] : null;
-			})
-			.filter(Boolean);
-
-		if (mv3Versions.length === 0) {
-			return;
-		}
-
-		mv3Versions.sort((a, b) => {
-			const aParts = a.split('.').map(Number);
-			const bParts = b.split('.').map(Number);
-			for (let i = 0; i < 3; i++) {
-				if (aParts[i] !== bParts[i]) return bParts[i] - aParts[i];
-			}
-			return 0;
-		});
-
-		const latestVersion = mv3Versions[0];
-		const stored = StorageManager.get('settings') || {};
-		const lastNotified = stored.lastNotifiedVersion ?? null;
-		const isNew = isNewerVersion(latestVersion, currentVersion);
-		const shouldNotify = isNew && (ignoreLastNotified || latestVersion !== lastNotified);
-		const openTabs = await getOpenTabs();
-
-		if (shouldNotify) {
-			for (const { id, url } of openTabs) {
-				if (!id || !isSgStTab(url)) continue;
-				chrome.tabs.sendMessage(id, {
-					action: 'showUpdatePopup',
-					latestVersion,
-					currentVersion
-				}).catch(() => { });
-			}
-
-			if (!ignoreLastNotified) {
-				const settings = StorageManager.get('settings') || {};
-				settings.lastNotifiedVersion = latestVersion;
-				StorageManager.set('settings', settings);
-			}
-
-		} else if (manual) {
-			for (const { id, url } of openTabs) {
-				if (!id || !isSgStTab(url)) continue;
-				chrome.tabs.sendMessage(id, {
-					action: 'showUpToDatePopup',
-					latestVersion,
-					currentVersion
-				}).catch(() => { });
-			}
-		}
-
-	} catch (err) { console.warn('[SW] Update check failed', err); }
-}
-
 async function scheduleUpdateChecks() {
 	const settings = StorageManager.get('settings') || {};
-	const enabled = settings.notifyNewVersion ?? false;
+	const enabled = settings.notifyNewVersion_sg || settings.notifyNewVersion_st;
+
 	if (!enabled) {
 		await chrome.alarms.clear('checkUpdates');
 		return;
 	}
 
 	const intervalDays = settings.updateCheckInterval ?? 7;
-	await chrome.alarms.clear('checkUpdates');
-	await chrome.alarms.create('checkUpdates', { periodInMinutes: intervalDays * 24 * 60 });
+	const periodMinutes = intervalDays * 24 * 60;
+	const alarms = await chrome.alarms.getAll();
+	const existing = alarms.find(a => a.name === 'checkUpdates');
+
+	if (existing) {
+		if (existing.periodInMinutes !== periodMinutes) {
+			await chrome.alarms.clear('checkUpdates');
+			await chrome.alarms.create('checkUpdates', { periodInMinutes: periodMinutes });
+		}
+	} else {
+		await chrome.alarms.create('checkUpdates', { periodInMinutes: periodMinutes });
+	}
+}
+
+async function fetchMv3Versions() {
+	const url = 'https://api.github.com/repos/SquishedPotatoe/esgst/git/matching-refs/tags';
+	const res = await fetch(url);
+	const data = await res.json();
+
+	return data
+		.map(ref => ref.ref.match(/^refs\/tags\/Mv3-v(\d+\.\d+\.\d+)$/)?.[1])
+		.filter(Boolean)
+		.sort((a, b) => {
+			const pa = a.split('.').map(Number);
+			const pb = b.split('.').map(Number);
+			for (let i = 0; i < 3; i++) if (pa[i] !== pb[i]) return pb[i] - pa[i];
+			return 0;
+		});
+}
+
+async function checkRemoteVersionSW({ ignoreLastNotified = false } = {}) {
+	try {
+		const currentVersion = chrome.runtime.getManifest().version;
+		const mv3Versions = await fetchMv3Versions();
+
+		if (!mv3Versions.length) return { latestVersion: null, isNew: false };
+
+		const latestVersion = mv3Versions[0];
+		const settings = StorageManager.get('settings') || {};
+		const lastNotified = settings.lastNotifiedVersion ?? null;
+		const isNew = isNewerVersion(latestVersion, currentVersion);
+		const shouldNotify = isNew && (ignoreLastNotified || latestVersion !== lastNotified);
+
+		return { latestVersion, isNew: shouldNotify };
+	} catch (err) {
+		console.warn('[SW] Update check failed', err);
+		return { latestVersion: null, isNew: false };
+	}
 }
 
 chrome.alarms.onAlarm.addListener((alarm) => {
 	if (alarm.name !== 'checkUpdates') return;
-	checkRemoteVersionSW().catch(err => console.warn('[SW] Alarm check failed', err));
-});
-chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
-	try {
-		if (message.action === 'manualCheckVersion') {
-			checkRemoteVersionSW({ ignoreLastNotified: true, manual: true }).catch(err =>
-				console.warn('[SW] Manual check failed', err)
-			);
-			sendResponse({ success: true });
-		}
 
-		else if (message.action === 'dismissUpdateNotification') {
-			try {
-				const settings = StorageManager.get('settings') || {};
-				settings.lastNotifiedVersion = message.version;
+	(async () => {
+		try {
+			const currentVersion = chrome.runtime.getManifest().version;
+			const { latestVersion, isNew } = await checkRemoteVersionSW();
 
-				StorageManager.set('settings', settings);
+			if (!latestVersion || !isNew) return;
 
-				sendResponse({ success: true });
-			} catch (err) {
-				console.warn('[SW] Failed to dismiss update notification', err);
-				sendResponse({ success: false, error: err.message });
-			}
-		}
+			const { swSettings = {} } = await chrome.storage.local.get('swSettings');
 
-		else if (message.action === 'fetchChangelog') {
-			const { previousVersion, currentVersion } = message;
+			if (latestVersion === swSettings.lastNotifiedVersion) return;
 
-			try {
-				const refsResponse = await fetch(
-					'https://api.github.com/repos/SquishedPotatoe/esgst/git/matching-refs/tags'
-				);
-				const refsJson = await refsResponse.json();
+			const openTabs = await getOpenTabs();
 
-				const mv3Versions = refsJson
-					.map(ref => {
-						const match = ref.ref.match(/^refs\/tags\/Mv3-v(\d+\.\d+\.\d+)$/);
-						return match ? match[1] : null;
-					})
-					.filter(Boolean);
-
-				mv3Versions.sort((a, b) => {
-					const pa = a.split('.').map(Number);
-					const pb = b.split('.').map(Number);
-					for (let i = 0; i < 3; i++) {
-						if (pa[i] !== pb[i]) return pa[i] - pb[i];
-					}
-					return 0;
-				});
-
-				const changelogVersions = mv3Versions.filter(v =>
-					isNewerVersion(v, previousVersion) && !isNewerVersion(v, currentVersion)
-				);
-
-				let changelog = '';
-				for (const v of changelogVersions) {
-					const tag = `Mv3-v${v}`;
-					const releaseResponse = await fetch(
-						`https://api.github.com/repos/SquishedPotatoe/esgst/releases/tags/${tag}`
-					);
-					const releaseData = await releaseResponse.json();
-					if (releaseData && releaseData.body) {
-						changelog += `## ${v}\n\n${releaseData.body.replace(
-							/#(\d+)/g,
-							'[$1](https://github.com/SquishedPotatoe/esgst/issues/$1)'
-						)}\n\n`;
-					}
+			if (openTabs.length) {
+				for (const { id, url } of openTabs) {
+					if (!id || !isSgStTab(url)) continue;
+					chrome.tabs.sendMessage(id, {
+						action: 'showUpdatePopup',
+						currentVersion,
+						latestVersion
+					});
 				}
-
-				sendResponse({ success: true, changelog });
-			} catch (err) {
-				console.warn('[SW] Failed to fetch changelog', err);
-				sendResponse({ success: false, error: err.message });
+				delete swSettings.pendingUpdateNotification;
+			} else {
+				swSettings.pendingUpdateNotification = latestVersion;
 			}
+
+			swSettings.lastNotifiedVersion = latestVersion;
+			await chrome.storage.local.set({ swSettings });
+		} catch (err) {
+			console.warn('[SW] Alarm update check failed', err);
 		}
-
-	} catch (err) { console.warn('[SW] onMessage error', err); }
-
-	return true;
+	})();
 });
 
 async function getZip(data, fileName) {
@@ -714,7 +656,9 @@ function do_lock(lock) {
 		} else resolve(false);
 	});
 }
+
 function update_lock(lock) { if (locks[lock.key] && locks[lock.key].uuid === lock.uuid) locks[lock.key].timestamp = Date.now(); }
+
 function do_unlock(lock) { if (locks[lock.key] && locks[lock.key].uuid === lock.uuid) delete locks[lock.key]; }
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -732,11 +676,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 							}
 						} catch (e) { console.warn("[SW] Failed to rehydrate tdsData", e); }
 					}
-
 					sendResponse({ success: true, values: tdsData });
 					break;
 				}
-
 				case 'notify-tds': {
 					const payload = request.values || {};
 					let subscribedItems = Array.isArray(payload.subscribedItems) ? payload.subscribedItems : [];
@@ -763,11 +705,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 						if (!id || !isSgStTab(url)) continue;
 						chrome.tabs.sendMessage(id, { action: 'update-tds', values: subscribedItems }).catch(() => { });
 					}
-
 					sendResponse({ success: true });
 					break;
 				}
-
 				case 'flush': await StorageManager.saveNow(); sendResponse({ success: true }); break;
 				case 'permissions_contains': sendResponse({ success: true, result: await chrome.permissions.contains(request.permissions) }); break;
 				case 'permissions_request': sendResponse({ success: true, result: await chrome.permissions.request(request.permissions) }); break;
@@ -791,6 +731,72 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 						await RequestQueue.loadThresholds(key);
 					}
 					sendResponse({ success: true });
+					break;
+				}
+				case 'pendingUpdateCheck': {
+					const { swSettings } = await chrome.storage.local.get('swSettings');
+					const latestVersion = swSettings?.pendingUpdateNotification;
+
+					if (latestVersion && sender.tab?.id) {
+						chrome.tabs.sendMessage(sender.tab.id, {
+							action: 'showUpdatePopup',
+							currentVersion: chrome.runtime.getManifest().version,
+							latestVersion
+						});
+						delete swSettings.pendingUpdateNotification;
+						await chrome.storage.local.set({ swSettings });
+					}
+					break;
+				}
+				case 'manualCheckVersion': {
+					try {
+						const { latestVersion, isNew } = await checkRemoteVersionSW({ ignoreLastNotified: true });
+
+						if (latestVersion && isNew && sender.tab?.id) {
+							const currentVersion = chrome.runtime.getManifest().version;
+
+							chrome.tabs.sendMessage(sender.tab.id, {
+								action: 'showUpdatePopup',
+								currentVersion,
+								latestVersion
+							});
+						}
+						sendResponse({ success: true });
+					} catch (err) {
+						console.warn('[SW] Manual update check failed', err);
+						sendResponse({ success: false, error: err.message });
+					}
+					break;
+				}
+				case 'dismissUpdateNotification': {
+					const { swSettings = {} } = await chrome.storage.local.get('swSettings');
+					swSettings.lastNotifiedVersion = request.version;
+					await chrome.storage.local.set({ swSettings });
+					sendResponse({ success: true });
+					break;
+				}
+				case 'fetchChangelog': {
+					const { previousVersion, currentVersion } = request;
+					const mv3Versions = await fetchMv3Versions();
+					const changelogVersions = mv3Versions.filter(
+						v => isNewerVersion(v, previousVersion) && !isNewerVersion(v, currentVersion)
+					);
+
+					let changelog = '';
+					for (const v of changelogVersions) {
+						const tag = `Mv3-v${v}`;
+						const releaseRes = await fetch(
+							`https://api.github.com/repos/SquishedPotatoe/esgst/releases/tags/${tag}`
+						);
+						const release = await releaseRes.json();
+						if (release?.body) {
+							changelog += `## ${v}\n\n${release.body.replace(
+								/#(\d+)/g,
+								'[$1](https://github.com/SquishedPotatoe/esgst/issues/$1)'
+							)}\n\n`;
+						}
+					}
+					sendResponse({ success: true, changelog });
 					break;
 				}
 				default: sendResponse({ success: false, error: 'Unknown action' });
@@ -999,15 +1005,9 @@ async function bootstrap() {
 
 			await manageTabs();
 			debugLog('manageTabs run on bootstrap');
+			await scheduleUpdateChecks();
 		} catch (e) { console.error('Failed to build openTabs or manageTabs on bootstrap', e); }
 	} catch (err) { console.error('Bootstrap failed', err); }
 }
-
-chrome.runtime.onStartup.addListener(() => {
-    (async () => {
-        await bootstrap();
-        await scheduleUpdateChecks();
-    })();
-});
 
 bootstrap();
