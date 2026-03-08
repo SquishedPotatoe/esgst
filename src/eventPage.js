@@ -746,6 +746,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 						delete swSettings.pendingUpdateNotification;
 						await chrome.storage.local.set({ swSettings });
 					}
+					sendResponse({ success: true });
 					break;
 				}
 				case 'manualCheckVersion': {
