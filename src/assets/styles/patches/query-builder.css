@@ -29,7 +29,7 @@
 }
 
 .query-builder .rules-group-container [data-resume='group'],
-.query-builder .rules-group-container[data-esgst-paused='true'] [data-pause='group']
+.query-builder .rules-group-container[data-esgst-paused='true'] [data-pause='group'],
 .query-builder .rule-container [data-resume='rule'],
 .query-builder .rule-container[data-esgst-paused='true'] [data-pause='rule'],
 .rule-operator-container > span {
