@@ -13,6 +13,8 @@ import { Button } from '../components/Button';
 import { Utils } from '../lib/jsUtils';
 import { common } from './Common';
 import { SYNC_KEYS } from './Sync';
+import 'jQuery-QueryBuilder/dist/js/query-builder.standalone';
+import 'jQuery-QueryBuilder/dist/css/query-builder.default.css';
 
 const createElements = common.createElements.bind(common),
 	createFadeMessage = common.createElements.bind(common),
@@ -996,8 +998,8 @@ class Filters extends Module {
 			if (obj.rules.rules && obj.rules.rules.length) {
 				options.rules = obj.rules;
 			}
-			window.$(advancedFilters).queryBuilder(options);
-			obj.builder = window.$(advancedFilters)[0].queryBuilder;
+			$(advancedFilters).queryBuilder(options);
+			obj.builder = $(advancedFilters)[0].queryBuilder;
 			[obj.rules, obj.rules_save] = this.filters_changeRules(obj);
 
 			obj.builder.$el.on('click.queryBuilder', `[data-pause=group]`, (event) => {
@@ -1290,13 +1292,6 @@ class Filters extends Module {
 						<li>
 							<span className="esgst-bold">OR</span> - Turns the group into an OR group, which means
 							that only items that apply to at least one rule of the group will be shown.
-						</li>
-						<li>
-							<span className="esgst-bold">
-								<i className="fa fa-arrows"></i>
-							</span>{' '}
-							- Allows you reorder/move rules/groups. The order of the rules does not alter the
-							result.
 						</li>
 						<li>
 							<span className="esgst-bold">

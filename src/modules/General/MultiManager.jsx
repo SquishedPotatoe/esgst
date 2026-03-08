@@ -15,6 +15,7 @@ import { Button } from '../../components/Button';
 import { NotificationBar } from '../../components/NotificationBar';
 import { Utils } from '../../lib/jsUtils';
 import { common } from '../Common';
+import VDF from 'simple-vdf';
 
 const createElements = common.createElements.bind(common),
 	createFadeMessage = common.createFadeMessage.bind(common),

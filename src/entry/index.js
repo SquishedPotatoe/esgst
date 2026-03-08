@@ -1,4 +1,4 @@
-import '../dependencies';
+//import '../dependencies';
 import '../main';
 
 window.addEventListener('beforeunload', () => {

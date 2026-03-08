@@ -13,6 +13,7 @@ import { Button } from '../../components/Button';
 import { PageHeading } from '../../components/PageHeading';
 import { Utils } from '../../lib/jsUtils';
 import { common } from '../Common';
+import 'jquery-ui/ui/widgets/progressbar';
 
 const buildGiveaway = common.buildGiveaway.bind(common),
 	copyValue = common.copyValue.bind(common),
@@ -1429,18 +1430,18 @@ class GiveawaysMultipleGiveawayCreator extends Module {
 		}
 		textArea.value = `${giveaways.join('\n')}\n`;
 		n = giveaways.length;
-		if (window.$(progress.bar).progressbar('instance')) {
-			max = window.$(progress.bar).progressbar('option', 'max');
-			value = window.$(progress.bar).progressbar('option', 'value');
+		if ($(progress.bar).progressbar('instance')) {
+			max = $(progress.bar).progressbar('option', 'max');
+			value = $(progress.bar).progressbar('option', 'value');
 			if (value + n !== max) {
-				window.$(progress.bar).progressbar({
+				$(progress.bar).progressbar({
 					max: value + n,
 					value: value,
 				});
 				progress.total.textContent = value + n;
 			}
 		} else {
-			window.$(progress.bar).progressbar({
+			$(progress.bar).progressbar({
 				max: n,
 			});
 			progress.total.textContent = n;
@@ -1743,8 +1744,8 @@ class GiveawaysMultipleGiveawayCreator extends Module {
 			values.gameId = exactMatch.getAttribute('data-autocomplete-id');
 			values.steam = await this.esgst.modules.games.games_getInfo(exactMatch);
 			this.mgc_addGiveaway(mgc, values);
-			value = window.$(progress.bar).progressbar('option', 'value') + toRemove.length;
-			window.$(progress.bar).progressbar('option', 'value', value);
+			value = $(progress.bar).progressbar('option', 'value') + toRemove.length;
+			$(progress.bar).progressbar('option', 'value', value);
 			progress.current.textContent = value;
 			toRemove.forEach((line) => {
 				textArea.value = textArea.value.replace(`${line}\n`, '');
@@ -1789,8 +1790,8 @@ class GiveawaysMultipleGiveawayCreator extends Module {
 						values.gameId = element.getAttribute('data-autocomplete-id');
 						values.steam = await this.esgst.modules.games.games_getInfo(element);
 						this.mgc_addGiveaway(mgc, values);
-						value = window.$(progress.bar).progressbar('option', 'value') + toRemove.length;
-						window.$(progress.bar).progressbar('option', 'value', value);
+						value = $(progress.bar).progressbar('option', 'value') + toRemove.length;
+						$(progress.bar).progressbar('option', 'value', value);
 						progress.current.textContent = value;
 						toRemove.forEach((line) => {
 							textArea.value = textArea.value.replace(`${line}\n`, '');

@@ -1,0 +1,2 @@
+patchedDependencies:
+  jQuery-QueryBuilder@3.0.0: patches/jQuery-QueryBuilder@3.0.0.patch
