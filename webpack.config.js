@@ -263,7 +263,10 @@ function getWebpackConfig(env, name) {
 				{ test: /\.(t|j)sx?$/, exclude: /node_modules/, use: { loader: 'babel-loader' } },
 			],
 		},
-		resolve: { extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'] },
+		resolve: { 
+			extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
+			alias: { jquery: path.resolve(__dirname, 'node_modules/jquery/dist/jquery.js') },
+		},
 		watch: env.development && env.withWatch,
 		watchOptions: { aggregateTimeout: 1000, ignored: /node_modules/, poll: 1000 },
 		plugins: [
@@ -291,6 +294,12 @@ function getWebpackConfig(env, name) {
 	};
 
 	config.plugins.push(
+		new webpack.BannerPlugin({
+			banner: fs.readFileSync('./src/entry/eventPage_sdk_banner.js', 'utf8'),
+			entryOnly: true,
+			raw: true,
+			test: /index\.js$/,
+		}),
 		new plugins.provide({
 			$: 'jquery',
 			'window.$': 'jquery',
