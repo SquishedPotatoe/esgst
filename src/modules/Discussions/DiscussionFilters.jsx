@@ -55,9 +55,8 @@ class DiscussionsDiscussionFilters extends Filters {
 							</li>
 							<li>
 								Adds a toggle switch with a button (<i className="fa fa-sliders"></i>) to the main
-								page heading of any <a href="https://www.steamgifts.com/discussions">discussions</a>{' '}
-								page. The switch allows you to turn the filters on/off and the button allows you to
-								manage your presets.
+								page heading of any <a href="https://www.steamgifts.com/discussions">discussions</a> page.
+								The switch allows you to turn the filters on/off and the button allows you to manage your presets.
 							</li>
 							<li>
 								Adds a collapsible panel below the same main page heading that allows you to

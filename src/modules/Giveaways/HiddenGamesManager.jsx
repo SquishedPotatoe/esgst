@@ -21,10 +21,8 @@ class GiveawaysHiddenGamesManager extends Module {
 					<li>
 						Adds a button (<i className="fa fa-eye-slash"></i> <i className="fa fa-plus-circle"></i>{' '}
 						<i className="fa fa-times-circle"></i>) to your{' '}
-						<a href="https://www.steamgifts.com/account/settings/giveaways/filters">
-							giveaway filters
-						</a>{' '}
-						page that allows you to add / remove games to / from your hidden list.
+						<a href="https://www.steamgifts.com/account/settings/giveaways/filters">giveaway filters</a> page
+						that allows you to add / remove games to / from your hidden list.
 					</li>
 					<li>You can add all your owned / ignored games with a single click.</li>
 					<li>You can remove all your owned / wishlisted games with a single click.</li>

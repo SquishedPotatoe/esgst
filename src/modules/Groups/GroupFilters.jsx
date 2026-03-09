@@ -13,8 +13,8 @@ class GroupsGroupFilters extends Filters {
 					<li>Allows you to filter groups.</li>
 					<li>
 						Adds a toggle switch with a button (<i className="fa fa-sliders"></i>) to the main page
-						heading of the <a href="https://www.steamgifts.com/account/steam/groups">groups</a>{' '}
-						page. The switch allows you to turn the filters on/off and the button allows you to
+						heading of the <a href="https://www.steamgifts.com/account/steam/groups">groups</a> page.
+						The switch allows you to turn the filters on/off and the button allows you to
 						manage your presets.
 					</li>
 					<li>
