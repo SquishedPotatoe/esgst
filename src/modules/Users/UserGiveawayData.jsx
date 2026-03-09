@@ -29,8 +29,8 @@ class UsersUserGiveawayData extends Module {
 				<ul>
 					<li>
 						Adds 2 identical buttons (<i className="fa fa-bar-chart"></i>) to the "Gifts Won" and
-						"Gifts Sent" rows of a user's <a href="https://www.steamgifts.com/user/cg">profile</a>{' '}
-						page that allow you to gather data about their giveaways:
+						"Gifts Sent" rows of a user's <a href="https://www.steamgifts.com/user/cg">profile</a> page
+						that allow you to gather data about their giveaways:
 					</li>
 					<ul>
 						<li>

@@ -14,8 +14,7 @@ class GiveawaysDeleteKeyConfirmation extends Module {
 				<ul>
 					<li>
 						Shows a confirmation popup if you try to delete a giveaway's key(s) (in any{' '}
-						<a href="https://www.steamgifts.com/giveaway/aeqw7/dead-space/winners">winners</a>{' '}
-						page).
+						<a href="https://www.steamgifts.com/giveaway/aeqw7/dead-space/winners">winners</a> page).
 					</li>
 				</ul>
 			),

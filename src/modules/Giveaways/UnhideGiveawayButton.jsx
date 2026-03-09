@@ -15,10 +15,7 @@ class GiveawaysUnhideGiveawayButton extends Module {
 						Adds a button (<i className="fa fa-eye"></i>) next to a giveaway's game name (in any
 						page), if you have hidden the game on SteamGifts, that allows you to unhide the game
 						without having to access your{' '}
-						<a href="https://www.steamgifts.com/account/settings/giveaways/filters">
-							giveaway filters
-						</a>{' '}
-						page.
+						<a href="https://www.steamgifts.com/account/settings/giveaways/filters">giveaway filters</a> page.
 					</li>
 				</ul>
 			),

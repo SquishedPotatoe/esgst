@@ -19,8 +19,7 @@ class UsersProfileLinks extends Module {
 						<a href="https://www.steamgifts.com/account/steam/games">games</a>/
 						<a href="https://www.steamgifts.com/account/steam/groups">groups</a>/
 						<a href="https://www.steamgifts.com/account/steam/wishlist">wishlist</a> pages to the
-						sidebar of your <a href="https://www.steamgifts.com/user/your-username">profile</a>{' '}
-						page.
+						sidebar of your <a href="https://www.steamgifts.com/user/your-username">profile</a> page.
 					</li>
 					<li>
 						The count for each link might be off if you do not have your whitelist/blacklist/owned
