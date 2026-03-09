@@ -375,6 +375,7 @@ export abstract class Button extends Base<Button, ButtonData, ButtonNodes> {
 				iconParts.push(matches[0]);
 			}
 			this._data.icons.push(iconParts.join(' '));
+			if (iconParts.length) this._data.icons.push(iconParts.join(' '));
 		}
 		return this;
 	};
@@ -512,11 +513,7 @@ export class SgButton extends Button {
 			return this;
 		}
 		for (const iconNode of this._nodes.icons) {
-			const iconNodeSibling = iconNode.nextSibling;
 			iconNode.remove();
-			if (iconNodeSibling?.nodeType === Node.TEXT_NODE && iconNodeSibling.textContent === ' ') {
-				iconNodeSibling.remove();
-			}
 		}
 		this._data.icons = [];
 		this._nodes.icons = [];
@@ -602,7 +599,9 @@ export class StButton extends Button {
 			'afterbegin',
 			<fragment>
 				{this._data.icons.map((icon) => (
-					<i className={`fa ${icon}`} ref={(ref) => this._nodes.icons.push(ref)}></i>
+					<fragment>
+						<i className={`fas ${icon}`} ref={(ref) => this._nodes.icons.push(ref)}></i>{' '}
+					</fragment>
 				))}
 			</fragment>
 		);
@@ -610,10 +609,13 @@ export class StButton extends Button {
 	};
 
 	removeIcons = (): Button => {
+		if (!this._nodes.outer) {
+			throw this.getError('failed to remove icons');
+		}
 		if (this._data.icons.length === 0) {
 			return this;
 		}
-		for (const iconNode of this._nodes.icons) {
+		for (const iconNode of this._nodes.outer.querySelectorAll('i, svg')) {
 			iconNode.remove();
 		}
 		this._data.icons = [];

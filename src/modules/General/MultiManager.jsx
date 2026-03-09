@@ -466,7 +466,7 @@ class GeneralMultiManager extends Module {
 								{
 									color: 'green',
 									tooltip: 'Custom',
-									icons: ['fa-pencil'],
+									icons: ['fa-edit'],
 									name: '',
 									onClick: this.mm_exportCustom.bind(this, obj, items, key),
 								},

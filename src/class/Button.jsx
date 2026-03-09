@@ -25,7 +25,10 @@ class Button {
 		}
 		this.index = index + 1;
 		this.button.title = Shared.common.getFeatureTooltip(this.id, this.titles[index]);
-		DOM.insert(this.button, 'atinner', <i className={`fa ${this.icons[index]}`}></i>);
+		const icon = this.icons[index];
+		const prefix = /^(fas|far|fal|fab)\b/.test(icon) ? '' : 'fa ';
+
+		DOM.insert(this.button, 'atinner', <i className={`${prefix}${icon}`}></i>);
 		if (mainCallback) {
 			if (await mainCallback(event)) {
 				// noinspection JSIgnoredPromiseFromCall
@@ -38,7 +41,7 @@ class Button {
 				);
 			}
 		} else if (this.callbacks[index]) {
-			this.button.firstElementChild.addEventListener(
+			this.button.addEventListener(
 				'click',
 				this.change.bind(this, this.callbacks[index], undefined)
 			);

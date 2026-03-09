@@ -182,12 +182,17 @@ class GeneralCustomHeaderFooterLinks extends Module {
 								delete Shared.footer.linkContainers[objOrId.id];
 							}
 
-							item = Shared.footer.addLinkContainer({
-								icon: `fa ${objOrId.icon}`,
+							const footerConfig = {
 								name: objOrId.name,
 								side: 'right',
 								url: objOrId.url,
-							});
+							};
+
+							if (objOrId.icon) {
+								footerConfig.icon = `fa ${objOrId.icon}`;
+							}
+
+							item = Shared.footer.addLinkContainer(footerConfig);
 
 							item.nodes.outer.dataset.linkId = objOrId.id;
 							item.nodes.outer.dataset.linkKey = key;
@@ -199,13 +204,18 @@ class GeneralCustomHeaderFooterLinks extends Module {
 								delete Shared.header.buttonContainers[source].dropdownItems[objOrId.id];
 							}
 
-							item = Shared.header.addDropdownItem({
+							const dropdownConfig = {
 								buttonContainerId: source,
 								description: objOrId.description,
-								icon: `fa fa-fw ${objOrId.icon} ${objOrId.color} icon-${objOrId.color}`,
 								name: objOrId.name,
 								url: objOrId.url,
-							});
+							};
+
+							if (objOrId.icon) {
+								dropdownConfig.icon = `fa fa-fw ${objOrId.icon} ${objOrId.color} icon-${objOrId.color}`;
+							}
+
+							item = Shared.header.addDropdownItem(dropdownConfig);
 
 							item.nodes.outer.dataset.linkId = objOrId.id;
 							item.nodes.outer.dataset.linkKey = key;
@@ -439,8 +449,23 @@ class GeneralCustomHeaderFooterLinks extends Module {
 					</div>
 				);
 
-				panel.firstElementChild.addEventListener('click', this.openPopup.bind(this, item, key));
-				panel.lastElementChild.addEventListener('click', this.removeLink.bind(this, item, key));
+				panel.addEventListener('click', (e) => {
+					const editBtn = e.target.closest('.esgst-chfl-edit-button');
+					const removeBtn = e.target.closest('.esgst-chfl-remove-button');
+
+					if (editBtn) {
+						e.preventDefault();
+						e.stopPropagation();
+						this.openPopup(item, key, e);
+						return;
+					}
+
+					if (removeBtn) {
+						e.preventDefault();
+						e.stopPropagation();
+						this.removeLink(item, key, e);
+					}
+				});
 			}
 
 			let button;
@@ -696,8 +721,12 @@ class GeneralCustomHeaderFooterLinks extends Module {
 					} else {
 						description.value = editItem.data.description || '';
 						name.value = editItem.data.name;
-						icon.value = editItem.data.icon ? editItem.data.icon.match(/.+(fa-[a-z-]+)$/)?.[1] : '';
-						color.value = editItem.data.icon ? editItem.data.icon.match(/icon-(.+?)\s/)?.[1] : '';
+						const classList = editItem.data.icon?.split(/\s+/) || [];
+						const iconClass = classList.find(c => c.startsWith('fa-'));
+						const colorClass = classList.find(c => c.startsWith('icon-'));
+						
+						icon.value = iconClass || '';
+						color.value = colorClass ? colorClass.replace('icon-', '') : '';
 						url.value = editItem.data.url;
 					}
 
@@ -787,25 +816,31 @@ class GeneralCustomHeaderFooterLinks extends Module {
 			let newItem;
 
 			if (key === 'footer') {
-				newItem = Shared.footer.addLinkContainer({
-					icon: `fa ${item.icon}`,
+				const footerConfig = {
 					name: item.name,
 					side: 'right',
 					url: item.url,
-				});
+				};
 
+				if (item.icon) {
+					footerConfig.icon = `fa ${item.icon}`;
+				}
+				newItem = Shared.footer.addLinkContainer(footerConfig);
 				newItem.nodes.outer.dataset.linkId = item.id;
 				newItem.nodes.outer.dataset.linkKey = key;
 				newItem.nodes.outer.title = Shared.common.getFeatureTooltip('chfl');
 			} else {
-				newItem = Shared.header.addDropdownItem({
+				const dropdownConfig = {
 					buttonContainerId: source,
 					description: item.description,
-					icon: `fa fa-fw ${item.icon} ${item.color} icon-${item.color}`,
 					name: item.name,
 					url: item.url,
-				});
+				};
 
+				if (item.icon) {
+					dropdownConfig.icon = `fa fa-fw ${item.icon} ${item.color} icon-${item.color}`;
+				}
+				newItem = Shared.header.addDropdownItem(dropdownConfig);
 				newItem.nodes.outer.dataset.linkId = item.id;
 				newItem.nodes.outer.dataset.linkKey = key;
 				newItem.nodes.outer.title = Shared.common.getFeatureTooltip('chfl');

@@ -6,7 +6,7 @@ settings:
 
 patchedDependencies:
   jQuery-QueryBuilder@3.0.0:
-    hash: 9a0cbf4f969766ee1a192a86de0fd6f0043153ba9a9a5fa178555d2a9b7a05e6
+    hash: 555922213327a8c7fe9e032d64212603a41ff6c84bc4157038bf3c396b5ae6e5
     path: patches/jQuery-QueryBuilder@3.0.0.patch
 
 importers:
@@ -21,7 +21,7 @@ importers:
         version: 0.8.2
       jQuery-QueryBuilder:
         specifier: 3.0.0
-        version: 3.0.0(patch_hash=9a0cbf4f969766ee1a192a86de0fd6f0043153ba9a9a5fa178555d2a9b7a05e6)
+        version: 3.0.0(patch_hash=555922213327a8c7fe9e032d64212603a41ff6c84bc4157038bf3c396b5ae6e5)
       jquery:
         specifier: 4.0.0
         version: 4.0.0
@@ -3123,7 +3123,7 @@ snapshots:
 
   isobject@3.0.1: {}
 
-  jQuery-QueryBuilder@3.0.0(patch_hash=9a0cbf4f969766ee1a192a86de0fd6f0043153ba9a9a5fa178555d2a9b7a05e6):
+  jQuery-QueryBuilder@3.0.0(patch_hash=555922213327a8c7fe9e032d64212603a41ff6c84bc4157038bf3c396b5ae6e5):
     dependencies:
       '@popperjs/core': 2.11.8
       bootstrap: 5.3.8(@popperjs/core@2.11.8)

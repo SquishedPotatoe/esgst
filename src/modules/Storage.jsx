@@ -359,12 +359,20 @@ function loadDataManagement(type, isPopup, callback) {
 						type: 'span',
 					},
 					{
+						type: 'span',
 						attributes: {
-							class: 'esgst-clickable fa fa-refresh',
+							class: 'esgst-clickable',
 							title: 'Calculate/refresh data sizes',
 						},
-						type: 'i',
-					},
+						children: [
+							{
+								type: 'i',
+								attributes: {
+									class: 'fa fa-refresh',
+								},
+							},
+						],
+					}
 				],
 			},
 		]);

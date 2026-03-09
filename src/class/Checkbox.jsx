@@ -16,64 +16,60 @@ class Checkbox {
 			'afterbegin',
 			<span className="esgst-checkbox" ref={(ref) => (this.checkbox = ref)}>
 				<input className="esgst-hidden" type="checkbox" />
-				<i className="fa fa-square-o"></i>
-				<i className="fa fa-square" title={messages.select || ''}></i>
-				<i className="fa fa-check-square" title={messages.unselect || ''}></i>
+				<i className="fa esgst-checkbox-icon"></i>
 			</span>
 		);
-		this.input = this.checkbox.firstElementChild;
-		this.disabled = this.input.nextElementSibling;
-		this.none = this.disabled.nextElementSibling;
-		this.enabled = this.none.nextElementSibling;
+		this.input = this.checkbox.querySelector('input');
 		if (this.isThreeState) {
-			if (this.value === 'disabled') {
-				this.none.classList.add('esgst-hidden');
-				this.enabled.classList.add('esgst-hidden');
-			} else if (this.value === 'none') {
-				this.disabled.classList.add('esgst-hidden');
-				this.enabled.classList.add('esgst-hidden');
-			} else {
-				this.disabled.classList.add('esgst-hidden');
-				this.none.classList.add('esgst-hidden');
-			}
-			this.checkbox.addEventListener('click', (event) => this.change(false, null, null, event));
+			if (!this.value) this.value = 'disabled';
+			this.setIcon(this.value);
+			this.checkbox.addEventListener('click', (event) =>
+				this.change(false, null, null, event)
+			);
 		} else {
-			this.input.checked = this.value;
-			if (this.value) {
-				this.disabled.classList.add('esgst-hidden');
-				this.none.classList.add('esgst-hidden');
-			} else {
-				this.none.classList.add('esgst-hidden');
-				this.disabled.classList.add('esgst-hidden');
-			}
-			this.checkbox.addEventListener('click', (event) => this.change(true, null, null, event));
-			this.checkbox.addEventListener('mouseenter', () => this.showNone());
-			this.checkbox.addEventListener('mouseleave', () => this.hideNone());
-			this.change();
+			this.input.checked = !!this.value;
+			this.value = this.input.checked ? 'enabled' : 'disabled';
+			this.setIcon(this.value);
+			this.checkbox.addEventListener('click', (event) =>
+				this.change(true, null, null, event)
+			);
+		}
+	}
+
+	getIcon() {
+		return this.checkbox.querySelector('.esgst-checkbox-icon');
+	}
+
+	setIcon(state) {
+		const icon = this.getIcon();
+		if (!icon) return;
+		icon.classList.remove(
+			'fa-square-o',
+			'fa-square',
+			'fa-check-square'
+		);
+		if (state === 'disabled') {
+			icon.classList.add('fa-square-o');
+		} else if (state === 'none') {
+			icon.classList.add('fa-square');
+		} else {
+			icon.classList.add('fa-check-square');
 		}
 	}
 
 	change(toggle, value, callback, event) {
-		if (event) {
-			event.stopPropagation();
-		}
+		if (event) event.stopPropagation();
 		if (this.isThreeState) {
 			if ((this.value === 'disabled' && !value) || value === 'none') {
-				this.enabled.classList.add('esgst-hidden');
-				this.disabled.classList.add('esgst-hidden');
-				this.none.classList.remove('esgst-hidden');
 				this.value = 'none';
+
 			} else if ((this.value === 'none' && !value) || value === 'enabled') {
-				this.none.classList.add('esgst-hidden');
-				this.disabled.classList.add('esgst-hidden');
-				this.enabled.classList.remove('esgst-hidden');
+
 				this.value = 'enabled';
-			} else if (!value || value === 'disabled') {
-				this.enabled.classList.add('esgst-hidden');
-				this.none.classList.add('esgst-hidden');
-				this.disabled.classList.remove('esgst-hidden');
+			} else {
 				this.value = 'disabled';
 			}
+			this.setIcon(this.value);
 		} else {
 			if (toggle) {
 				this.preValue = this.input.checked = !this.input.checked;
@@ -84,10 +80,8 @@ class Checkbox {
 				if (this.onPreEnabled && !this.isBlocked) {
 					this.onPreEnabled(event);
 				}
-				this.value = this.preValue;
-				this.disabled.classList.add('esgst-hidden');
-				this.none.classList.add('esgst-hidden');
-				this.enabled.classList.remove('esgst-hidden');
+				this.value = 'enabled';
+				this.setIcon('enabled');
 				if (this.onEnabled && !this.isBlocked) {
 					this.onEnabled(event);
 				}
@@ -95,10 +89,8 @@ class Checkbox {
 				if (this.onPreDisabled && !this.isBlocked) {
 					this.onPreDisabled(event);
 				}
-				this.value = this.preValue;
-				this.enabled.classList.add('esgst-hidden');
-				this.none.classList.add('esgst-hidden');
-				this.disabled.classList.remove('esgst-hidden');
+				this.value = 'disabled';
+				this.setIcon('disabled');
 				if (this.onDisabled && !this.isBlocked) {
 					this.onDisabled(event);
 				}
@@ -109,23 +101,10 @@ class Checkbox {
 		}
 	}
 
-	showNone() {
-		if (!this.value) {
-			this.disabled.classList.add('esgst-hidden');
-			this.none.classList.remove('esgst-hidden');
-		}
-	}
-
-	hideNone() {
-		if (!this.value) {
-			this.disabled.classList.remove('esgst-hidden');
-			this.none.classList.add('esgst-hidden');
-		}
-	}
-
 	check(callback) {
 		this.preValue = this.input.checked = true;
-		this.change(false, null, callback);
+		this.value = 'enabled';
+		this.setIcon('enabled');
 		if (this.onChange) {
 			this.onChange();
 		}
@@ -133,7 +112,8 @@ class Checkbox {
 
 	uncheck(callback) {
 		this.preValue = this.input.checked = false;
-		this.change(false, null, callback);
+		this.value = 'disabled';
+		this.setIcon('disabled');
 		if (this.onChange) {
 			this.onChange();
 		}

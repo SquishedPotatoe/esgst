@@ -1,5 +1,5 @@
 diff --git a/dist/js/query-builder.standalone.js b/dist/js/query-builder.standalone.js
-index d8d6653598c78a14d7e0aab0294363438c5d9138..2bc5b641afa3b487708e5d1c408fc3f1c3132847 100644
+index d8d6653598c78a14d7e0aab0294363438c5d9138..147798625d9cdfbb49569ae06796197824b8d1c8 100644
 --- a/dist/js/query-builder.standalone.js
 +++ b/dist/js/query-builder.standalone.js
 @@ -62,8 +62,8 @@
@@ -130,7 +130,24 @@ index d8d6653598c78a14d7e0aab0294363438c5d9138..2bc5b641afa3b487708e5d1c408fc3f1
              newFilters = [newFilters];
          }
  
-@@ -5980,7 +5980,7 @@ QueryBuilder.extend(/** @lends module:plugins.SqlSupport.prototype */ {
+@@ -5185,7 +5185,7 @@ QueryBuilder.extend(/** @lends module:plugins.NotGroup.prototype */ {
+         var options = this.plugins['not-group'];
+         group.$el.find('>' + QueryBuilder.selectors.group_not)
+             .toggleClass('active', group.not)
+-            .find('i').attr('class', group.not ? options.icon_checked : options.icon_unchecked);
++            .find('i, svg').attr('class', group.not ? options.icon_checked : options.icon_unchecked);
+ 
+         /**
+          * After the group's not flag has been modified
+@@ -5194,7 +5194,6 @@ QueryBuilder.extend(/** @lends module:plugins.NotGroup.prototype */ {
+          * @param {Group} group
+          */
+         this.trigger('afterUpdateGroupNot', group);
+-
+         this.trigger('rulesChanged');
+     }
+ });
+@@ -5980,7 +5979,7 @@ QueryBuilder.extend(/** @lends module:plugins.SqlSupport.prototype */ {
  
                  // convert array
                  var value;
@@ -139,7 +156,7 @@ index d8d6653598c78a14d7e0aab0294363438c5d9138..2bc5b641afa3b487708e5d1c408fc3f1
                      value = data.right.value.map(function(v) {
                          return v.value;
                      });
-@@ -5991,7 +5991,7 @@ QueryBuilder.extend(/** @lends module:plugins.SqlSupport.prototype */ {
+@@ -5991,7 +5990,7 @@ QueryBuilder.extend(/** @lends module:plugins.SqlSupport.prototype */ {
  
                  // get actual values
                  if (stmt) {

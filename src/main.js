@@ -100,6 +100,13 @@ import { runSilentSync } from './modules/Sync';
 
 		let settingsChanged = false;
 
+		if (esgst.st && !Settings.get('esgst_st')) {
+			const script = document.createElement('script');
+			script.src = chrome.runtime.getURL('lib/script-fontawesome-icons.js');
+			script.defer = true;
+			document.head.appendChild(script);
+		}
+
 		if (esgst.sg) {
 			try {
 				const avatar = document

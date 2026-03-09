@@ -338,6 +338,10 @@ function addStyle() {
 		margin-right: 5px;
 	}
 
+	.esgst-tds.svg-inline--fa, .esgst-tds-item-actions > .esgst-clickable > svg {
+		font-size: larger;
+	}
+
 	.esgst-cdr-highlight {
 		color: #ff0000;
 		font-weight: bold;
@@ -720,8 +724,7 @@ function addStyle() {
 		flex: 1;
 		line-height: 25px;
 		margin: 2px;
-		padding-bottom: 0;
-		padding-top: 0;
+		gap: unset;
 	}
 
 	.esgst-mm-headings {
@@ -855,6 +858,10 @@ function addStyle() {
 
 	.esgst-nm-icon {
 		color: #ff0000 !important;
+	}
+
+	.esgst-nm-icon + span {
+		margin-left: 5px;
 	}
 
 	.esgst-disabled {
@@ -2006,6 +2013,20 @@ function addStyle() {
 		vertical-align: middle;
 	}
 
+	.esgst-search-error img {
+		height: 14px;
+		width: 14px;
+		vertical-align: middle;
+		background: none;
+		border: none!important;
+		padding: 0;
+		margin: 0 5px 0;
+	}
+
+	.icon_to_clipboard svg {
+	pointer-events: none;
+}
+
 	.nav__left-container .fa img {
 		vertical-align: baseline;
 	}
@@ -2102,7 +2123,7 @@ function addStyle() {
 		float: left;
 	}
 
-	.esgst-float-right {
+	.esgst-float-right, .pull-right {
 		float: right;
 	}
 

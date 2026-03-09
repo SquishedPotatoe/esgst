@@ -112,7 +112,7 @@ class GeneralTableSorter extends Module {
 				type: 'i',
 			},
 		]);
-		button.firstElementChild.addEventListener(
+		button.addEventListener(
 			'click',
 			this.ts_sortTable.bind(this, button, columnName, i, 'asc', table, tsTable)
 		);
@@ -131,7 +131,7 @@ class GeneralTableSorter extends Module {
 				type: 'i',
 			},
 		]);
-		button.firstElementChild.addEventListener(
+		button.addEventListener(
 			'click',
 			this.ts_sortTable.bind(this, button, columnName, i, 'desc', table, tsTable)
 		);
@@ -150,7 +150,7 @@ class GeneralTableSorter extends Module {
 				type: 'i',
 			},
 		]);
-		button.firstElementChild.addEventListener(
+		button.addEventListener(
 			'click',
 			this.ts_sortTable.bind(this, button, columnName, i, 'def', table, tsTable)
 		);

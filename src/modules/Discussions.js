@@ -241,28 +241,15 @@ class Discussions extends Module {
 					}
 					return;
 				}
-				discussion.info = discussion.headingColumn.nextElementSibling;
-				discussion.createdContainer = discussion.info.firstElementChild.firstElementChild.nextElementSibling;
-				discussion.reputationElement = discussion.info.querySelector('.reputation');
+				discussion.info = discussion.headingColumn?.nextElementSibling;
+				discussion.createdContainer = discussion.info?.firstElementChild?.firstElementChild?.nextElementSibling;
+				discussion.reputationElement = discussion.info?.querySelector('.reputation');
 
-				if (!discussion.reputationElement) {
-					break;
-				}
-				discussion.positiveReputationElement = discussion.reputationElement.querySelector(
-					'.is_positive'
-				);
-				discussion.negativeReputationElement = discussion.reputationElement.querySelector(
-					'.is_negative'
-				);
-				discussion.positiveReputation = parseInt(
-					discussion.positiveReputationElement.textContent.replace(/[^\d]/g, '')
-				);
-				if (!discussion.negativeReputationElement) {
-					break;
-				}
-				discussion.negativeReputation = parseInt(
-					discussion.negativeReputationElement.textContent.replace(/[^\d]/g, '')
-				);
+				const getReputation = (root, selector) =>
+					parseInt(root?.querySelector(selector)?.textContent.replace(/[^\d]/g, '') || '0', 10);
+
+				discussion.positiveReputation = getReputation(discussion.reputationElement, '.is_positive');
+				discussion.negativeReputation = getReputation(discussion.reputationElement, '.is_negative');
 				break;
 		}
 		discussion.bookmarked = !!discussion.bookmarkNode;

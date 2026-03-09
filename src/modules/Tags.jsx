@@ -356,13 +356,18 @@ class Tags extends Module {
 		createElements(obj.popup.description, 'beforeend', [
 			{
 				attributes: {
-					class: 'esgst-tag-list-button esgst-clickable fa fa-list',
+					class: 'esgst-tag-list-button esgst-clickable',
 					title: 'Select from existing tags',
 				},
-				type: 'i',
+				type: 'div',
+				children: [
+					{
+						attributes: { class: 'fa fa-list' },
+						type: 'i',
+					},
+				],
 			},
 		]).addEventListener('click', this.tags_showTagList.bind(this, obj));
-		const children = [];
 		if (Settings.get(`${obj.key}_s`)) {
 			obj.suggestions = createElements(obj.popup.description, 'beforeend', [
 				{
@@ -372,6 +377,7 @@ class Tags extends Module {
 					type: 'div',
 				},
 			]);
+			const children = [];
 			for (const tag of this.esgst[`${obj.key}Tags`]) {
 				children.push({
 					attributes: {
@@ -730,9 +736,6 @@ class Tags extends Module {
 		const input = tagContainer.nextElementSibling;
 		const colorInput = input.nextElementSibling;
 		const bgColorInput = colorInput.nextElementSibling;
-		const editButton = bgColorInput.nextElementSibling;
-		const deleteButton = editButton.nextElementSibling;
-		const resetButton = deleteButton.nextElementSibling;
 		const colors = obj.colorSetting[tag];
 		if (colors) {
 			colorInput.value = tagBox.style.color = colors.color;
@@ -753,15 +756,32 @@ class Tags extends Module {
 			'change',
 			this.tags_saveColor.bind(this, bgColorInput, 'backgroundColor', obj, 'bgColor', tagBox)
 		);
-		editButton.addEventListener(
-			'click',
-			this.tags_showEdit.bind(this, input, tagBox, tagContainer)
-		);
-		deleteButton.addEventListener('click', this.tags_deleteTag.bind(this, container, obj));
-		resetButton.addEventListener(
-			'click',
-			this.tags_resetColor.bind(this, bgColorInput, colorInput, obj, tagBox)
-		);
+		container.addEventListener('click', (e) => {
+			const target = e.target.closest('i, svg');
+			
+			if (!target) return;
+			if (
+				target.classList.contains('fa-edit') ||
+				(target.classList.contains('svg-inline--fa') && target.dataset.icon === 'edit')
+			) {
+				this.tags_showEdit(input, tagBox, tagContainer);
+				return;
+			}
+			if (
+				target.classList.contains('fa-trash') ||
+				(target.classList.contains('svg-inline--fa') && target.dataset.icon === 'trash')
+			) {
+				this.tags_deleteTag(container, obj);
+				return;
+			}
+			if (
+				target.classList.contains('fa-rotate-left') ||
+				(target.classList.contains('svg-inline--fa') && target.dataset.icon === 'rotate-left')
+			) {
+				this.tags_resetColor(bgColorInput, colorInput, obj, tagBox);
+				return;
+			}
+		});
 	}
 
 	tags_startDrag(container, obj, event) {
