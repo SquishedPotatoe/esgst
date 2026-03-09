@@ -52,6 +52,7 @@ class Common extends Module {
 			name: 'Common',
 			type: 'general',
 		};
+		this.clipboardCopy();
 	}
 
 	minimizePanel_add() {
@@ -4770,6 +4771,40 @@ class Common extends Module {
 		}
 	}
 
+	clipboardCopy() {
+		if (window.esgstClipboardFallback) return;
+		window.esgstClipboardFallback = true;
+
+		document.addEventListener('click', (e) => {
+			const el = e.target.closest('[data-clipboard-text]');
+			if (!el) return;
+			const text = el.dataset.clipboardText;
+
+			if (navigator.clipboard && navigator.clipboard.writeText) {
+				navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+			} else {
+				fallbackCopy(text);
+			}
+			el.classList.add('esgst-green');
+			setTimeout(() => el.classList.remove('esgst-green'), 2000);
+		});
+
+		function fallbackCopy(text) {
+			try {
+				const textarea = document.createElement('textarea');
+				textarea.value = text;
+				textarea.style.position = 'fixed';
+				textarea.style.top = '-9999px';
+				document.body.appendChild(textarea);
+				textarea.select();
+				document.execCommand('copy');
+				document.body.removeChild(textarea);
+			} catch (err) {
+				console.warn('Clipboard copy failed', err);
+			}
+		}
+	}
+
 	setMissingDiscussion(context) {
 		if (context) {
 			this.createElements(context.outerWrap, 'atinner', [
@@ -6039,14 +6074,14 @@ class Common extends Module {
 				},
 				{
 					description: "Check out what's coming in the next versions.",
-					icon: 'fa fa-fw fa-map-signs icon-blue blue',
+					icon: 'fa fa-fw fa-map-marker icon-blue blue',
 					name: 'Milestones',
 					openInNewTab: true,
 					url: 'https://github.com/SquishedPotatoe/esgst/milestones',
 				},
 				{
 					description: 'Visit the discussion page.',
-					icon: 'fa fa-fw fa-commenting icon-green green',
+					icon: 'fa fa-fw fa-comments icon-green green',
 					name: 'Discussion',
 					url: 'https://www.steamgifts.com/discussion/TDyzv/',
 				},
@@ -6059,7 +6094,7 @@ class Common extends Module {
 				},
 				{
 					description: 'Check out the changelog.',
-					icon: 'fa fa-fw fa-file-text-o icon-yellow yellow',
+					icon: 'fa fa-fw fa-file icon-yellow yellow',
 					name: 'Changelog',
 					openInNewTab: true,
 					url: 'https://github.com/SquishedPotatoe/esgst/releases',

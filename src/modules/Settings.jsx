@@ -198,7 +198,7 @@ class SettingsModule {
 				options: {
 					color: 'alternate-white',
 					tooltip: `Download settings (downloads your settings to your computer without your personal data so you can easily share them with other users)`,
-					icons: ['fa-gear', 'fa-arrow-circle-down'],
+					icons: ['fa-cog', 'fa-arrow-circle-down'],
 					onClick: () => Shared.common.exportSettings(),
 				},
 			},
@@ -668,14 +668,15 @@ class SettingsModule {
 					<fragment>
 						<div>
 							{numberPath}
-							<i
-								data-clipboard-text={numberPath}
-								className="icon_to_clipboard fa fa-fw fa-copy"
-							></i>
+							<span className="icon_to_clipboard" data-clipboard-text={numberPath}>
+  <i className="fa fa-fw fa-copy"></i>
+</span>
 						</div>
 						<div>
 							{url}
-							<i data-clipboard-text={url} className="icon_to_clipboard fa fa-fw fa-copy"></i>
+							<span className="icon_to_clipboard" data-clipboard-text={url}>
+  <i className="fa fa-fw fa-copy"></i>
+</span>
 						</div>
 					</fragment>
 				),
@@ -1434,10 +1435,18 @@ class SettingsModule {
 			.createElements(item.container, 'beforeend', [
 				{
 					attributes: {
-						class: 'fa fa-times-circle esgst-clickable',
+						class: 'esgst-clickable',
 						title: 'Remove',
 					},
-					type: 'i',
+					type: 'span',
+					children: [
+						{
+							attributes: {
+								class: 'fa fa-times-circle',
+							},
+							type: 'i',
+						},
+					],
 				},
 			])
 			.addEventListener('click', () => this.removePath(feature, item, key, obj));
@@ -1925,7 +1934,7 @@ class SettingsModule {
 							<input data-color-id={id} type="color" value={color.hex} />
 							Opacity:
 							<input max="1.0" min="0.0" step="0.1" type="number" value={color.alpha} />
-							<div className="form__saving-button">Reset</div>
+							<div className="form__saving-button btn_action white">Reset</div>
 						</div>
 					</fragment>
 				);
@@ -1995,10 +2004,18 @@ class SettingsModule {
 							type: 'input',
 						},
 						{
+							type: 'span',
 							attributes: {
-								class: 'fa fa-play-circle esgst-clickable',
+								class: 'esgst-clickable',
 							},
-							type: 'i',
+							children: [
+								{
+									type: 'i',
+									attributes: {
+										class: 'fa fa-play',
+									},
+								},
+							],
 						}
 					);
 				} else {
@@ -2187,7 +2204,7 @@ class SettingsModule {
 		const panel = (
 			<div className="esgst-sm-additional-option">
 				<div>
-					<div className="form__saving-button" ref={(ref) => (button = ref)}>
+					<div className="form__saving-button btn_action white" ref={(ref) => (button = ref)}>
 						<span>Add Color Setting</span>
 					</div>
 					<i
@@ -2268,18 +2285,26 @@ class SettingsModule {
 									attributes: {
 										type: 'color',
 										value: colors.bgColor,
-									},
-									type: 'input',
 								},
-						  ]
+								type: 'input',
+							},
+						]
 						: []),
 					{
 						attributes: {
-							class: 'esgst-clickable fa fa-times',
+							class: 'esgst-clickable',
 							title: 'Delete this setting',
 						},
-						type: 'i',
-					},
+						type: 'span',
+						children: [
+							{
+								attributes: {
+									class: 'fa fa-times',
+								},
+								type: 'i',
+							},
+						],
+					}
 				],
 			},
 		]);
@@ -2331,13 +2356,13 @@ class SettingsModule {
 				<div className="esgst-sm-additional-option">
 					<div>
 						<div
-							className="form__saving-button"
+							className="form__saving-button btn_action white"
 							onclick={() => this.addUlMenuItem(id, draggableArea)}
 						>
 							<span>Add Link</span>
 						</div>
 						<div
-							className="form__saving-button"
+							className="form__saving-button btn_action white"
 							onclick={() => {
 								this.preSave(id, Settings.defaultValues[id]);
 								draggableArea.innerHTML = '';
@@ -2347,7 +2372,7 @@ class SettingsModule {
 							<span>Reset</span>
 						</div>
 						<div
-							className="form__saving-button"
+							className="form__saving-button btn_action white"
 							title="This will merge your list with the default list, meaning that any new items in the default list will be added to your list. Also, if you previously deleted an item from the default list, it will come back."
 							onclick={() => this.mergeValues(id, draggableArea, this.addUlMenuItems.bind(this))}
 						>
@@ -2603,7 +2628,7 @@ class SettingsModule {
 		const panel = (
 			<div className="esgst-sm-additional-option">
 				<div>
-					<div className="form__saving-button" ref={(ref) => (button = ref)}>
+					<div className="form__saving-button btn_action white" ref={(ref) => (button = ref)}>
 						<span>Add Rating Setting</span>
 					</div>
 					<i
@@ -2653,7 +2678,7 @@ class SettingsModule {
 					<i className="fa fa-question-circle" ref={(ref) => (tooltip = ref)}></i>
 				</div>
 				<div>
-					<div className="form__saving-button" ref={(ref) => (remove = ref)}>
+					<div className="form__saving-button btn_action white" ref={(ref) => (remove = ref)}>
 						<span>Delete</span>
 					</div>
 				</div>
@@ -2702,7 +2727,7 @@ class SettingsModule {
 		const panel = (
 			<div className="esgst-sm-additional-option">
 				<div>
-					<div className="form__saving-button" ref={(ref) => (button = ref)}>
+					<div className="form__saving-button btn_action white" ref={(ref) => (button = ref)}>
 						<span>Add Custom Genre Setting</span>
 					</div>
 					<i
@@ -2746,7 +2771,7 @@ class SettingsModule {
 					<input type="color" value={colorSetting.bgColor} ref={(ref) => (bgColor = ref)} />
 				</div>
 				<div>
-					<div className="form__saving-button" ref={(ref) => (remove = ref)}>
+					<div className="form__saving-button btn_action white" ref={(ref) => (remove = ref)}>
 						<span>Delete</span>
 					</div>
 				</div>
@@ -2783,7 +2808,7 @@ class SettingsModule {
 		const panel = (
 			<div className="esgst-sm-additional-option">
 				<div>
-					<div className="form__saving-button" ref={(ref) => (button = ref)}>
+					<div className="form__saving-button btn_action white" ref={(ref) => (button = ref)}>
 						<span>Add Alt Account</span>
 					</div>
 				</div>
@@ -2875,7 +2900,7 @@ class SettingsModule {
 					/>
 				</div>
 				<div>
-					<div className="form__saving-button" ref={(ref) => (remove = ref)}>
+					<div className="form__saving-button btn_action white" ref={(ref) => (remove = ref)}>
 						<span>Delete</span>
 					</div>
 				</div>
@@ -2953,13 +2978,21 @@ class SettingsModule {
 								text: `${number}.`,
 								type: 'div',
 							},
-							{
-								attributes: {
-									class: 'icon_to_clipboard fa fa-fw fa-copy',
-									'data-clipboard-text': `https://www.steamgifts.com/account/settings/profile?esgst=settings&id=${type}`,
-								},
-								type: 'i',
-							},
+{
+	attributes: {
+		class: 'icon_to_clipboard',
+		'data-clipboard-text': `https://www.steamgifts.com/account/settings/profile?esgst=settings&id=${type}`,
+	},
+	type: 'span',
+	children: [
+		{
+			attributes: {
+				class: 'fa fa-fw fa-copy',
+			},
+			type: 'i',
+		},
+	],
+},
 							{
 								attributes: {
 									class: 'esgst-form-heading-text',
@@ -3091,14 +3124,14 @@ class SettingsModule {
 						element.classList.add('esgst-hidden');
 					}
 					if (value) {
-						expand = element.getElementsByClassName('fa-plus-square')[0];
-						if (expand) {
-							expand.click();
+						expand = element.querySelector('.fa-plus-square');
+						if (expand && expand.parentElement.classList.contains('esgst-clickable')) {
+							expand.parentElement.click();
 						}
 					} else {
-						collapse = element.getElementsByClassName('fa-minus-square')[0];
-						if (collapse) {
-							collapse.click();
+						collapse = element.querySelector('.fa-minus-square');
+						if (collapse && collapse.parentElement.classList.contains('esgst-clickable')) {
+							collapse.parentElement.click();
 						}
 					}
 				}
@@ -3113,14 +3146,14 @@ class SettingsModule {
 					element.classList.add('esgst-hidden');
 				}
 				if (value) {
-					expand = element.getElementsByClassName('fa-plus-square')[0];
-					if (expand) {
-						expand.click();
+					expand = element.querySelector('.fa-plus-square');
+					if (expand && expand.parentElement.classList.contains('esgst-clickable')) {
+						expand.parentElement.click();
 					}
 				} else {
-					collapse = element.getElementsByClassName('fa-minus-square')[0];
-					if (collapse) {
-						collapse.click();
+					collapse = element.querySelector('.fa-minus-square');
+					if (collapse && collapse.parentElement.classList.contains('esgst-clickable')) {
+						collapse.parentElement.click();
 					}
 				}
 			}

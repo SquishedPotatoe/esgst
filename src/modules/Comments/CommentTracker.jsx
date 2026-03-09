@@ -712,7 +712,7 @@ class CommentsCommentTracker extends Module {
 				<i className="fa fa-angle-up"></i>
 			</span>
 		);
-		button.firstElementChild.addEventListener(
+		button.addEventListener(
 			'click',
 			this.ct_readUntilHere.bind(this, button, comment)
 		);
@@ -754,7 +754,7 @@ class CommentsCommentTracker extends Module {
 				<i className="fa fa-angle-up"></i>
 			</span>
 		);
-		button.firstElementChild.addEventListener(
+		button.addEventListener(
 			'click',
 			this.ct_unreadUntilHere.bind(this, button, comment)
 		);
@@ -785,11 +785,14 @@ class CommentsCommentTracker extends Module {
 			button,
 			'atinner',
 			<fragment>
-				<i
-					className="fa fa-eye"
-					title={Shared.common.getFeatureTooltip('ct', 'Mark this comment as read')}
-				></i>
 				<span
+					className="ct-mark-read"
+					title={Shared.common.getFeatureTooltip('ct', 'Mark this comment as read')}
+				>
+					<i className="fa fa-eye"></i>
+				</span>
+				<span
+					className="ct-read-and-go"
 					title={Shared.common.getFeatureTooltip(
 						'ct',
 						'Mark this comment as read and go to the next unread comment'
@@ -800,11 +803,11 @@ class CommentsCommentTracker extends Module {
 				</span>
 			</fragment>
 		);
-		button.firstElementChild.addEventListener(
+		button.querySelector('.ct-mark-read').addEventListener(
 			'click',
 			this.ct_readComment.bind(this, button, comment)
 		);
-		button.lastElementChild.addEventListener(
+		button.querySelector('.ct-read-and-go').addEventListener(
 			'click',
 			this.ct_readCommentAndGo.bind(this, button, comment)
 		);
@@ -842,7 +845,7 @@ class CommentsCommentTracker extends Module {
 				title={Shared.common.getFeatureTooltip('ct', 'Mark comment as unread')}
 			></i>
 		);
-		button.firstElementChild.addEventListener(
+		button.addEventListener(
 			'click',
 			this.ct_unreadComment.bind(this, button, comment)
 		);

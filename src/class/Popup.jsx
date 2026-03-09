@@ -36,9 +36,8 @@ class Popup {
 							}`}
 						>
 							<i
-								className={`fa ${details.icon} esgst-popup-icon${
-									details.icon ? '' : ' esgst-hidden'
-								}`}
+								className={`esgst-popup-icon ${details.icon ? `fa ${details.icon}` : 'esgst-hidden'
+									}`}
 							></i>
 							<div className={`esgst-popup-title${details.title ? '' : ' esgst-hidden'}`}>
 								{details.title}

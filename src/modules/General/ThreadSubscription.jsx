@@ -225,17 +225,22 @@ class GeneralThreadSubscription extends Module {
 					</div>
 					<div className="esgst-tds-item-actions">
 						{item.diff ? (
-							<i
-								className="fa fa-eye"
+							<span
+								className="esgst-clickable"
 								title="Dismiss"
 								onclick={(event) => this.dismissItem(event, item)}
-							></i>
+							>
+								<i className="fa fa-eye"></i>
+							</span>
 						) : null}
-						<i
-							className="fa fa-bell"
+
+						<span
+							className="esgst-clickable"
 							title="Unsubscribe"
 							onclick={() => this.unsubscribeItem(element, item)}
-						></i>
+						>
+							<i className="fa fa-bell"></i>
+						</span>
 					</div>
 				</div>
 			);
@@ -247,17 +252,40 @@ class GeneralThreadSubscription extends Module {
 	}
 
 	updateButton() {
-		if (this.subscribedItems.filter((item) => item.diff).length) {
-			this.button.nodes.outer.classList.remove('nav__button-container--inactive');
-			this.button.nodes.outer.classList.add('nav__button-container--active');
-			this.button.nodes.buttonIcon.className = 'fa fa-bell';
-			this.button.nodes.buttonIcon.title = 'New comments in your subscriptions, click to see';
+		if (!this.button || !this.button.nodes) return;
+
+		const outer = this.button.nodes.outer;
+
+		let button;
+
+		if (Shared.esgst.st && Settings.get('esgst_st')) {
+			button = outer.querySelector('.nav_btn');
 		} else {
-			this.button.nodes.outer.classList.remove('nav__button-container--active');
-			this.button.nodes.outer.classList.add('nav__button-container--inactive');
-			this.button.nodes.buttonIcon.className = 'fa fa-bell-o';
-			this.button.nodes.buttonIcon.title = 'No new comments in your subscriptions';
+			button = outer.querySelector('.nav__button');
 		}
+
+		if (!button) return;
+
+		const icon = button.querySelector('i, svg');
+		if (icon) icon.remove();
+
+		const hasNew = this.subscribedItems.some((item) => item.diff);
+
+		DOM.insert(
+			button,
+			'atinner',
+			<i
+				className={`fa ${hasNew ? 'fa-bell' : 'fa-bell-o'} esgst-tds`}
+				title={
+					hasNew
+						? 'New comments in your subscriptions'
+						: 'No new comments in your subscriptions'
+				}
+			></i>
+		);
+
+		outer.classList.toggle('nav__button-container--active', hasNew);
+		outer.classList.toggle('nav__button-container--inactive', !hasNew);
 
 		this.updatePopout();
 	}

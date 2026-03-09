@@ -160,13 +160,10 @@ class Process {
 		} else {
 			this.context = this.popup.getScrollable(this.context);
 		}
+		const perLoad = this.urls.lockPerLoad ? this.urls.perLoad : Settings.get(`${this.urls.id}_perLoad`);
+
 		let i = 0;
-		while (
-			!this.isCanceled &&
-			(i < (this.urls.lockPerLoad ? this.urls.perLoad : Settings.get(`${this.urls.id}_perLoad`)) ||
-				(Settings.get(`es_${this.urls.id}`) &&
-					this.popup.scrollable.scrollHeight <= this.popup.scrollable.offsetHeight))
-		) {
+		while (!this.isCanceled && i < perLoad && this.index < this.total) {
 			let url = this.items[this.index];
 			if (!url) break;
 			url = url.url || url;

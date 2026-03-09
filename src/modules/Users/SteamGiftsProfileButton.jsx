@@ -51,7 +51,7 @@ class UsersSteamGiftsProfileButton extends Module {
 						children: [
 							{
 								attributes: {
-									class: 'fa',
+									class: 'esgst-sgpb-icon',
 								},
 								type: 'i',
 								children: [

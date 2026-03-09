@@ -126,10 +126,18 @@ class Filters extends Module {
 			},
 			{
 				attributes: {
-					class: 'fa fa-sliders',
+					class: 'esgst-sliders-icon',
 					title: getFeatureTooltip(obj.id, 'Manage presets'),
 				},
-				type: 'i',
+				type: 'span',
+				children: [
+					{
+						attributes: {
+							class: 'fa fa-sliders',
+						},
+						type: 'i',
+					}
+				],
 			},
 		]);
 		const toggleSwitch = new ToggleSwitch(
@@ -142,10 +150,12 @@ class Filters extends Module {
 			null,
 			Settings.get(`${obj.id}_enable${obj.type}`)
 		);
-		const presetButton = headingButton.lastElementChild;
+		const presetButtonWrapper = headingButton.querySelector('.esgst-sliders-icon');
+		const presetButton = presetButtonWrapper.firstElementChild;
 
 		toggleSwitch.onEnabled = this.filters_filter.bind(this, obj);
 		toggleSwitch.onDisabled = this.filters_filter.bind(this, obj, true);
+		presetButtonWrapper.addEventListener('click', this.filters_openPresetPopup.bind(this, obj));
 
 		obj.container = createElements(heading, 'afterend', [
 			{
@@ -2197,7 +2207,6 @@ class Filters extends Module {
 			]);
 			const renameInput = row.firstElementChild.firstElementChild;
 			const heading = renameInput.nextElementSibling;
-			const renameButton = row.firstElementChild.nextElementSibling.firstElementChild;
 
 			row.addEventListener('dragstart', this.filters_setSource.bind(this, obj, preset, row));
 			row.addEventListener('dragenter', this.filters_getSource.bind(this, obj, row, table));
@@ -2206,15 +2215,30 @@ class Filters extends Module {
 				'keypress',
 				this.filters_renamePreset.bind(this, obj, heading, preset)
 			);
-			heading.addEventListener('click', this.filters_applyPreset.bind(this, obj, popup, preset));
-			renameButton.addEventListener(
+
+			heading.addEventListener(
 				'click',
-				this.filters_showRenameInput.bind(this, heading, renameInput)
+				this.filters_applyPreset.bind(this, obj, popup, preset)
 			);
-			renameButton.nextElementSibling.addEventListener(
-				'click',
-				this.filters_deletePreset.bind(this, obj, deleted, preset, row, undoButton)
-			);
+			const actionPanel = row.querySelector('.esgst-clickable.esgst-float-right');
+			actionPanel.addEventListener('click', (e) => {
+				const target = e.target.closest('i, svg');
+				if (!target) return;
+				if (
+					target.classList.contains('fa-edit') ||
+					(target.classList.contains('svg-inline--fa') && target.dataset.icon === 'edit')
+				) {
+					this.filters_showRenameInput(heading, renameInput);
+					return;
+				}
+				if (
+					target.classList.contains('fa-trash') ||
+					(target.classList.contains('svg-inline--fa') && target.dataset.icon === 'trash')
+				) {
+					this.filters_deletePreset(obj, deleted, preset, row, undoButton, e);
+					return;
+				}
+			});
 		}
 		popup.open();
 	}

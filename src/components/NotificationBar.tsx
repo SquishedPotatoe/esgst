@@ -460,10 +460,10 @@ export class StNotificationBar extends NotificationBar {
 	};
 
 	removeIcons = (): NotificationBar => {
-		if (this._data.icons.length === 0) {
-			return this;
+		if (!this._nodes.outer) {
+			throw this.getError('failed to remove icons');
 		}
-		for (const iconNode of this._nodes.icons) {
+		for (const iconNode of this._nodes.outer.querySelectorAll('i, svg')) {
 			iconNode.remove();
 		}
 		this._data.icons = [];

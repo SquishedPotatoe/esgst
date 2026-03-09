@@ -14,6 +14,7 @@ import { Footer } from './components/Footer';
 import { Header } from './components/Header';
 import { addStyle } from './modules/Style';
 import { runSilentSync } from './modules/Sync';
+import { esgstIcons } from './lib/FontawesomeIcons';
 
 (() => {
 	const common = esgst.modules.common;
@@ -110,6 +111,10 @@ import { runSilentSync } from './modules/Sync';
 		esgst.bodyLoaded = true;
 
 		let settingsChanged = false;
+
+		if (esgst.st && !Settings.get('esgst_st')) {
+			esgstIcons();
+		}
 
 		if (esgst.sg) {
 			try {

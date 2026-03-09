@@ -224,7 +224,7 @@ class StFooter extends IFooter {
 			},
 		};
 
-		const iconNode = linkContainer.nodes.outer.querySelector('.fa');
+		const iconNode = linkContainer.nodes.outer.querySelector('.fa, svg-inline--fa');
 
 		if (iconNode) {
 			linkContainer.nodes.icon = iconNode;

@@ -97,7 +97,7 @@ class TradesTradeFilters extends Filters {
 									the sliders/checkboxes as explained in the previous item.
 								</li>
 								<li>Exception rules are the ones that you can change by clicking on the icon </li>
-								<i className="fa fa-gear"></i> in the filter panel. They are exceptions to the basic
+								<i className="fa fa-cog"></i> in the filter panel. They are exceptions to the basic
 								rules. For example, if you set the basic rule of the "Created" filter to "hide all"
 								and you add an exception rule for the "Comments" filter to the 0-50 range, none of
 								your created trades that have 0-50 comments will be hidden, because they apply to
@@ -298,8 +298,10 @@ class TradesTradeFilters extends Filters {
 		avatar.classList.remove('author_avatar');
 		avatar.classList.add('avatar');
 		const reputation = responseHtml.getElementsByClassName('author_small')[0];
-		reputation.classList.remove('author_small');
-		reputation.classList.add('reputation');
+		if (reputation) {
+			reputation.classList.remove('author_small');
+			reputation.classList.add('reputation');
+		}
 		createElements(obj.trades, 'beforeend', [
 			{
 				type: 'div',
@@ -381,7 +383,7 @@ class TradesTradeFilters extends Filters {
 														type: 'node',
 													},
 													{
-														context: reputation,
+														context: reputation|| null,
 													},
 												],
 											},
@@ -436,10 +438,10 @@ class TradesTradeFilters extends Filters {
 					],
 					className: 'esgst-df-button',
 					icons: [
-						'fa-eye-slash esgst-clickable',
-						'fa-circle-o-notch fa-spin',
-						'fa-eye esgst-clickable',
-						'fa-circle-o-notch fa-spin',
+						'fa-eye-slash fa-sm esgst-clickable',
+						'fa-circle-o-notch fa-sm fa-spin',
+						'fa-eye fa-sm esgst-clickable',
+						'fa-circle-o-notch fa-sm fa-spin',
 					],
 					id: 'tf_s',
 					index: trade.saved && trade.saved.hidden ? 2 : 0,
@@ -460,6 +462,7 @@ class TradesTradeFilters extends Filters {
 		await setValue('trades', JSON.stringify(trades));
 		await lock.unlock();
 		if (!main || !Shared.esgst.tradePath) {
+			await new Promise(r => setTimeout(r, 500));
 			trade.outerWrap.remove();
 		}
 		return true;

@@ -487,7 +487,9 @@ class SgHeader extends IHeader {
 		);
 
 		dropdownItem.data.url = dropdownItem.nodes.outer.getAttribute('href') || '';
-		dropdownItem.data.icon = dropdownItem.nodes.icon.className;
+		dropdownItem.data.icon = dropdownItem.nodes.icon
+			? dropdownItem.nodes.icon.getAttribute('class') || ''
+			: '';
 		dropdownItem.data.name = dropdownItem.nodes.name.textContent.trim();
 		dropdownItem.data.description = dropdownItem.nodes.description.textContent.trim();
 
@@ -674,7 +676,7 @@ class StHeader extends IHeader {
 						</span>
 					</a>
 					<div className="nav_btn nav_btn_right nav_btn_dropdown">
-						<i className="fa fa-angle-down"></i>
+						<i className="fas fa-angle-down"></i>
 					</div>
 				</div>
 			);
@@ -857,7 +859,7 @@ class StHeader extends IHeader {
 
 			buttonContainer.nodes.button = buttonContainer.nodes.outer.querySelector('.nav_btn_left');
 			buttonContainer.nodes.arrow = buttonContainer.nodes.outer.querySelector('.nav_btn_right');
-			buttonContainer.nodes.arrowIcon = buttonContainer.nodes.arrow.querySelector('.fa');
+			buttonContainer.nodes.arrowIcon = buttonContainer.nodes.arrow.querySelector('.svg-inline--fa');
 
 			const reputationNode = buttonContainer.nodes.button.querySelector('.is_faded');
 
@@ -900,7 +902,7 @@ class StHeader extends IHeader {
 				(!buttonContainer.data.isDropdown && buttonContainer.nodes.button.querySelector('span')) ||
 				buttonContainer.nodes.button;
 
-			const buttonIconNode = buttonContainer.nodes.button.querySelector('.fa');
+			const buttonIconNode = buttonContainer.nodes.button.querySelector('.fa, .svg-inline--fa');
 
 			if (buttonIconNode) {
 				buttonContainer.nodes.buttonIcon = buttonIconNode;
@@ -978,11 +980,12 @@ class StHeader extends IHeader {
 			},
 		};
 
-		dropdownItem.nodes.icon = dropdownItem.nodes.outer.querySelector('.fa');
+		dropdownItem.nodes.icon = dropdownItem.nodes.outer.querySelector('.svg-inline--fa');
 		dropdownItem.nodes.name = dropdownItem.nodes.outer.querySelector('span');
 
-		dropdownItem.data.url = dropdownItem.nodes.outer.getAttribute('href') || '';
-		dropdownItem.data.icon = dropdownItem.nodes.icon.className;
+		dropdownItem.data.icon = dropdownItem.nodes.icon
+			? dropdownItem.nodes.icon.getAttribute('class') || ''
+			: '';
 		dropdownItem.data.name = dropdownItem.nodes.name.textContent.trim();
 
 		dropdownItem.data.id = IHeader.generateId(dropdownItem.data.name);

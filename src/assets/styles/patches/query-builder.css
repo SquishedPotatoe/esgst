@@ -37,11 +37,15 @@
 }
 
 .query-builder .rule-container[data-esgst-paused="true"] [data-resume="rule"] {
-  display: block !important;
-  border-radius: 3px 0 0 3px !important;
+	display: block !important;
+	border-radius: 3px 0 0 3px !important;
 }
 
 .query-builder .rule-container[data-esgst-paused='true'],
 .query-builder .rules-group-container[data-esgst-paused='true'] {
 	opacity: 0.5 !important;
+}
+
+.query-builder .rule-container .rule-operator-container select {
+	padding: 4px 10px;
 }

@@ -18,21 +18,22 @@ class GiveawaysGiveawayErrorSearchLinks extends Module {
 						that allow you to search for the game elsewhere:
 					</li>
 					<ul>
-						<li>
-							A SteamGifts icon that allows you to search for open giveaways of the game on
-							SteamGifts.
+						<li><i className="esgst-search-error">
+								<img src={this.esgst.sgIcon} />
+							</i>{' '}
+							allows you to search for open giveaways of the game on SteamGifts.
 						</li>
 						<li>
 							<i className="fa fa-steam"></i> allows you to search for the game on Steam.
 						</li>
 						<li>
-							<i className="fa">
+							<i className="esgst-search-error">
 								<img src="https://steamdb.info/static/logos/16px.png"></img>
 							</i>{' '}
 							allows you to search for the game on SteamDB.
 						</li>
 						<li>
-							<i className="fa">
+							<i className="esgst-search-error">
 								<img src="https://bartervg.com/imgs/ico/barter/favicon-16x16.png"></img>
 							</i>{' '}
 							allows you to search for the game on Barter.vg.
@@ -68,7 +69,7 @@ class GiveawaysGiveawayErrorSearchLinks extends Module {
 							rel="noreferrer"
 							title="Search for active giveaways"
 						>
-							<i className="fa">
+							<i className="esgst-search-error">
 								<img src={this.esgst.sgIcon} />
 							</i>
 						</a>
@@ -86,7 +87,7 @@ class GiveawaysGiveawayErrorSearchLinks extends Module {
 							rel="noreferrer"
 							title="Search on SteamDB"
 						>
-							<i className="fa">
+							<i className="esgst-search-error">
 								<img src="https://steamdb.info/static/logos/16px.png" />
 							</i>
 						</a>
@@ -96,7 +97,7 @@ class GiveawaysGiveawayErrorSearchLinks extends Module {
 							rel="noreferrer"
 							title="Search on Barter.vg"
 						>
-							<i className="fa">
+							<i className="esgst-search-error">
 								<img src="https://bartervg.com/imgs/ico/barter/favicon-16x16.png" />
 							</i>
 						</a>
