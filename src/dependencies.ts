@@ -4,7 +4,7 @@ import 'jQuery-QueryBuilder/dist/js/query-builder.standalone';
 import 'bootstrap/dist/js/bootstrap';
 import 'jquery-ui/ui/widgets/progressbar';
 import 'jquery-ui/ui/widgets/slider';
-import JSZip from 'jszip';
+import JSZip from '@progress/jszip-esm';
 import VDF from 'simple-vdf';
 import * as emojisUtils from 'emojis-utils';
 

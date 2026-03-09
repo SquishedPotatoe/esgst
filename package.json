@@ -55,6 +55,7 @@
 	},
 	"dependencies": {
 		"@babel/runtime": "^7.11.2",
+		"@progress/jszip-esm": "1.0.4",
 		"awesome-bootstrap-checkbox": "^2.0.1",
 		"bootstrap": "^5.3.8",
 		"core-js": "^3.46.0",
@@ -63,9 +64,8 @@
 		"interactjs": "1.10.27",
 		"intersection-observer-polyfill": "^0.1.0",
 		"jQuery-QueryBuilder": "^3.0.0",
-		"jquery": "3.7.1",
-		"jquery-ui": "^1.14.1",
-		"jszip": "3.2.2",
+		"jquery": "4.0.0",
+		"jquery-ui": "^1.14.2",
 		"simple-vdf": "^1.1.1",
 		"webextension-polyfill": "^0.12.0"
 	},
@@ -101,6 +101,7 @@
 		"eslint-plugin-react": "^7.20.3",
 		"html-loader": "^1.1.0",
 		"jpm": "^1.3.1",
+		"jszip": "3.10.1",
 		"karma": "^5.1.0",
 		"karma-chai": "^0.1.0",
 		"karma-chrome-launcher": "^3.1.0",

@@ -1,4 +1,4 @@
-import JSZip from 'jszip';
+import JSZip from '@progress/jszip-esm';
 import { RequestQueue } from './class/Queue';
 
 const lastRequests = {};

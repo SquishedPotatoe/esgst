@@ -1,3 +1,4 @@
+import 'jQuery-QueryBuilder/dist/js/query-builder.standalone';
 import '../browser-gm';
 import '../main';
 

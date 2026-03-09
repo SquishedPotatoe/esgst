@@ -1,0 +1,159 @@
+diff --git a/dist/js/query-builder.standalone.js b/dist/js/query-builder.standalone.js
+index d8d6653598c78a14d7e0aab0294363438c5d9138..8342c6f2fa06abdccc22c15d8889dd5323c83c1a 100644
+--- a/dist/js/query-builder.standalone.js
++++ b/dist/js/query-builder.standalone.js
+@@ -62,8 +62,8 @@
+             // Only deal with non-null/undefined values
+             if ((options = arguments[i]) !== null) {
+                 // Special operations for arrays
+-                if ($.isArray(options) && arrayMode !== 'default') {
+-                    clone = target && $.isArray(target) ? target : [];
++                if (Array.isArray(options) && arrayMode !== 'default') {
++                    clone = target && Array.isArray(target) ? target : [];
+ 
+                     switch (arrayMode) {
+                     case 'concat':
+@@ -77,7 +77,7 @@
+                     case 'extend':
+                         options.forEach(function (e, i) {
+                             if (typeof e === 'object') {
+-                                var type = $.isArray(e) ? [] : {};
++                                var type = Array.isArray(e) ? [] : {};
+                                 clone[i] = $.extendext(deep, arrayMode, clone[i] || type, e);
+ 
+                             } else if (clone.indexOf(e) === -1) {
+@@ -101,7 +101,7 @@
+ 
+                         // Recurse if we're merging plain objects or arrays
+                         if (deep && copy && ( $.isPlainObject(copy) ||
+-                            (copyIsArray = $.isArray(copy)) )) {
++                            (copyIsArray = Array.isArray(copy)) )) {
+                             src = target[name];
+ 
+                             // Ensure proper type for the source value
+@@ -637,7 +637,7 @@ QueryBuilder.prototype.initPlugins = function() {
+         return;
+     }
+ 
+-    if ($.isArray(this.plugins)) {
++    if (Array.isArray(this.plugins)) {
+         var tmp = {};
+         this.plugins.forEach(function(plugin) {
+             tmp[plugin] = null;
+@@ -1392,7 +1392,7 @@ QueryBuilder.prototype.createRuleInput = function(rule) {
+     var filter = rule.filter;
+ 
+     for (var i = 0; i < rule.operator.nb_inputs; i++) {
+-        var $ruleInput = $($.parseHTML($.trim(this.getRuleInput(rule, i))));
++        var $ruleInput = $($.parseHTML(this.getRuleInput(rule, i).trim()));
+         if (i > 0) $valueContainer.append(this.settings.inputs_separator);
+         $valueContainer.append($ruleInput);
+         $inputs = $inputs.add($ruleInput);
+@@ -1654,7 +1654,7 @@ QueryBuilder.prototype.updateError = function(node) {
+  * @private
+  */
+ QueryBuilder.prototype.triggerValidationError = function(node, error, value) {
+-    if (!$.isArray(error)) {
++    if (!Array.isArray(error)) {
+         error = [error];
+     }
+ 
+@@ -2014,7 +2014,7 @@ QueryBuilder.prototype.setRules = function(data, options) {
+         allow_invalid: false
+     }, options);
+ 
+-    if ($.isArray(data)) {
++    if (Array.isArray(data)) {
+         data = {
+             condition: this.settings.default_condition,
+             rules: data
+@@ -2196,7 +2196,7 @@ QueryBuilder.prototype._validateValue = function(rule, value) {
+     }
+ 
+     for (var i = 0; i < operator.nb_inputs; i++) {
+-        if (!operator.multiple && $.isArray(value[i]) && value[i].length > 1) {
++        if (!operator.multiple && Array.isArray(value[i]) && value[i].length > 1) {
+             result = ['operator_not_multiple', operator.type, this.translate('operators', operator.type)];
+             break;
+         }
+@@ -2230,7 +2230,7 @@ QueryBuilder.prototype._validateValue = function(rule, value) {
+                 break;
+ 
+             default:
+-                tempValue = $.isArray(value[i]) ? value[i] : [value[i]];
++                tempValue = Array.isArray(value[i]) ? value[i] : [value[i]];
+ 
+                 for (var j = 0; j < tempValue.length; j++) {
+                     switch (QueryBuilder.types[filter.type]) {
+@@ -2563,7 +2563,7 @@ QueryBuilder.prototype.getRuleInputValue = function(rule) {
+                 val = val.split(filter.value_separator);
+             }
+ 
+-            if ($.isArray(val)) {
++            if (Array.isArray(val)) {
+                 return val.map(function(subval) {
+                     return Utils.changeType(subval, filter.type);
+                 });
+@@ -2629,7 +2629,7 @@ QueryBuilder.prototype.setRuleInputValue = function(rule, value) {
+                     break;
+ 
+                 case 'checkbox':
+-                    if (!$.isArray(value[i])) {
++                    if (!Array.isArray(value[i])) {
+                         value[i] = [value[i]];
+                     }
+                     value[i].forEach(function(value) {
+@@ -2638,7 +2638,7 @@ QueryBuilder.prototype.setRuleInputValue = function(rule, value) {
+                     break;
+ 
+                 default:
+-                    if (operator.multiple && filter.value_separator && $.isArray(value[i])) {
++                    if (operator.multiple && filter.value_separator && Array.isArray(value[i])) {
+                         value[i] = value[i].join(filter.value_separator);
+                     }
+                     $value.find('[name=' + name + ']').val(value[i]).trigger('change');
+@@ -3186,7 +3186,7 @@ QueryBuilder.utils = Utils;
+  */
+ Utils.iterateOptions = function(options, tpl) {
+     if (options) {
+-        if ($.isArray(options)) {
++        if (Array.isArray(options)) {
+             options.forEach(function(entry) {
+                 if ($.isPlainObject(entry)) {
+                     // array of elements
+@@ -4252,7 +4252,7 @@ QueryBuilder.extend(/** @lends module:plugins.ChangeFilters.prototype */ {
+             position = 0;
+         }
+ 
+-        if (!$.isArray(newFilters)) {
++        if (!Array.isArray(newFilters)) {
+             newFilters = [newFilters];
+         }
+ 
+@@ -5185,7 +5185,7 @@ QueryBuilder.extend(/** @lends module:plugins.NotGroup.prototype */ {
+         var options = this.plugins['not-group'];
+         group.$el.find('>' + QueryBuilder.selectors.group_not)
+             .toggleClass('active', group.not)
+-            .find('i').attr('class', group.not ? options.icon_checked : options.icon_unchecked);
++            .find('i,svg').attr('class', group.not ? options.icon_checked : options.icon_unchecked);
+ 
+         /**
+          * After the group's not flag has been modified
+@@ -5980,7 +5980,7 @@ QueryBuilder.extend(/** @lends module:plugins.SqlSupport.prototype */ {
+ 
+                 // convert array
+                 var value;
+-                if ($.isArray(data.right.value)) {
++                if (Array.isArray(data.right.value)) {
+                     value = data.right.value.map(function(v) {
+                         return v.value;
+                     });
+@@ -5991,7 +5991,7 @@ QueryBuilder.extend(/** @lends module:plugins.SqlSupport.prototype */ {
+ 
+                 // get actual values
+                 if (stmt) {
+-                    if ($.isArray(value)) {
++                    if (Array.isArray(value)) {
+                         value = value.map(stmt.parse);
+                     }
+                     else {

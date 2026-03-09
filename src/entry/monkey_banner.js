@@ -51,11 +51,10 @@
 // @grant GM.getResourceUrl
 // @require https://greasemonkey.github.io/gm4-polyfill/gm4-polyfill.js
 // @require https://cdn.jsdelivr.net/npm/interactjs@1.10.27/dist/interact.min.js
-// @require https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js
-// @require https://cdn.jsdelivr.net/npm/jQuery-QueryBuilder@3.0.0/dist/js/query-builder.standalone.js
+// @require https://cdn.jsdelivr.net/npm/jquery@4.0.0/dist/jquery.min.js
 // @require https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.min.js
-// @require https://cdn.jsdelivr.net/npm/jquery-ui@1.14.1/dist/jquery-ui.min.js
-// @require https://cdn.jsdelivr.net/npm/jszip@3.2.2/dist/jszip.min.js
+// @require https://cdn.jsdelivr.net/npm/jquery-ui@1.14.2/dist/jquery-ui.min.js
+// @require https://cdn.jsdelivr.net/npm/@progress/jszip-esm@1.0.4/dist/jszip.min.js
 // @require https://cdn.jsdelivr.net/gh/rossengeorgiev/vdf-parser@0d210ec51a2be4d6186777addf8f98df59f9eb53/vdf.js
 // @require https://cdn.jsdelivr.net/npm/emojis-utils@1.0.2/dist/emojis-utils.min.js
 // @resource awesome-bootstrap-checkbox https://cdn.jsdelivr.net/npm/awesome-bootstrap-checkbox@2.0.1/awesome-bootstrap-checkbox.css

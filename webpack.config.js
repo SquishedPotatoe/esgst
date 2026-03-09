@@ -334,7 +334,6 @@ function getUserscriptConfigs(env) {
 			'window.jQuery': 'jQuery',
 			'jquery-ui/ui/widgets/progressbar': 'jQuery',
 			'jquery-ui/ui/widgets/slider': 'jQuery',
-			'jQuery-QueryBuilder/dist/js/query-builder.standalone': 'jQuery',
 		},
 		module: {
 			rules: [
