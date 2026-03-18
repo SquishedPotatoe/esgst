@@ -150,12 +150,10 @@ class Filters extends Module {
 			null,
 			Settings.get(`${obj.id}_enable${obj.type}`)
 		);
-		const presetButtonWrapper = headingButton.querySelector('.esgst-sliders-icon');
-		const presetButton = presetButtonWrapper.firstElementChild;
+		const presetButton = headingButton.querySelector('.esgst-sliders-icon');
 
 		toggleSwitch.onEnabled = this.filters_filter.bind(this, obj);
 		toggleSwitch.onDisabled = this.filters_filter.bind(this, obj, true);
-		presetButtonWrapper.addEventListener('click', this.filters_openPresetPopup.bind(this, obj));
 
 		obj.container = createElements(heading, 'afterend', [
 			{
