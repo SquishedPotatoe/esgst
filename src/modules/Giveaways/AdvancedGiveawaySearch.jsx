@@ -8,7 +8,6 @@ import { DOM } from '../../class/DOM';
 const createElements = common.createElements.bind(common),
 	getFeatureTooltip = common.getFeatureTooltip.bind(common),
 	observeChange = common.observeChange.bind(common),
-	observeNumChange = common.observeNumChange.bind(common),
 	triggerOnEnter = common.triggerOnEnter.bind(common);
 class GiveawaysAdvancedGiveawaySearch extends Module {
 	constructor() {
@@ -32,25 +31,31 @@ class GiveawaysAdvancedGiveawaySearch extends Module {
 
 	init() {
 		let query = '';
-		if (this.esgst.giveawaysPath) {
-			query += `.sidebar__search-container, `;
-		}
-		if (Settings.get('qgs')) {
-			query += `.esgst-qgs-container, `;
-		}
+		if (this.esgst.giveawaysPath) query += `.sidebar__search-container, `;
+		if (Settings.get('qgs')) query += `.esgst-qgs-container, `;
 		if (!query) return;
+
 		const elements = document.querySelectorAll(query.slice(0, -2));
-		for (const element of elements) {
-			this.ags_addPanel(element);
-		}
+		for (const element of elements) this.ags_addPanel(element);
+	}
+
+	ags_parseUrlParams() {
+		const params = new URLSearchParams(window.location.search);
+		const result = {};
+		for (const [key, value] of params.entries()) result[key] = value;
+		return result;
 	}
 
 	ags_addPanel(context) {
 		const qgs = context.classList.contains('esgst-qgs-container');
-		let obj = {
+		const obj = {
 			qgs,
+			filters: [],
+			urlParams: this.ags_parseUrlParams()
 		};
+
 		context.firstElementChild.remove();
+
 		obj.input = createElements(context, 'afterbegin', [
 			{
 				attributes: {
@@ -61,136 +66,30 @@ class GiveawaysAdvancedGiveawaySearch extends Module {
 				type: 'input',
 			},
 		]);
-		let icon = obj.input.nextElementSibling;
+
+		const icon = obj.input.nextElementSibling;
 		icon.classList.add('esgst-clickable');
 		icon.title = getFeatureTooltip('ags', 'Use advanced search');
+
 		if (!qgs) {
-			let match = window.location.search.match(/q=(.*?)(&.*?)?$/);
-			if (match) {
-				obj.input.value = decodeURIComponent(match[1]);
-			}
+			const match = window.location.search.match(/q=(.*?)(&.*?)?$/);
+			if (match) obj.input.value = decodeURIComponent(match[1]);
 		}
-		if (
-			!qgs &&
-			((Settings.get('adots') && Settings.get('adots_index') === 0) || !Settings.get('adots'))
-		) {
-			obj.panel = createElements(context, 'afterend', [
-				{
-					attributes: {
-						class: 'esgst-ags-panel',
-					},
-					type: 'div',
-				},
-			]);
-		} else {
-			obj.panel = new Popout('esgst-ags-panel', context, 100).popout;
-		}
-		let filterDetails = [
-			{
-				key: 'ags_type',
-				parameter: 'type',
-				name: 'Type',
-				options: [
-					{
-						name: 'All',
-						value: '',
-					},
-					{
-						name: 'Wishlist',
-						value: 'wishlist',
-					},
-					{
-						name: 'Recommended',
-						value: 'recommended',
-					},
-					{
-						name: 'Group',
-						value: 'group',
-					},
-					{
-						name: 'New',
-						value: 'new',
-					},
-				],
-				type: 'select',
-			},
-			{
-				maxKey: 'ags_maxDate',
-				minKey: 'ags_minDate',
-				maxParameter: 'release_date_max',
-				minParameter: 'release_date_min',
-				name: 'Release Date',
-				type: 'input',
-			},
-			{
-				maxKey: 'ags_maxScore',
-				minKey: 'ags_minScore',
-				maxParameter: 'metascore_max',
-				minParameter: 'metascore_min',
-				name: 'Metascore',
-				type: 'input',
-			},
-			{
-				maxKey: 'ags_maxLevel',
-				minKey: 'ags_minLevel',
-				maxParameter: 'level_max',
-				minParameter: 'level_min',
-				name: 'Level',
-				type: 'select',
-			},
-			{
-				maxKey: 'ags_maxEntries',
-				minKey: 'ags_minEntries',
-				maxParameter: 'entry_max',
-				minParameter: 'entry_min',
-				name: 'Entries',
-				type: 'input',
-			},
-			{
-				maxKey: 'ags_maxCopies',
-				minKey: 'ags_minCopies',
-				maxParameter: 'copy_max',
-				minParameter: 'copy_min',
-				name: 'Copies',
-				type: 'input',
-			},
-			{
-				maxKey: 'ags_maxPoints',
-				minKey: 'ags_minPoints',
-				maxParameter: 'point_max',
-				minParameter: 'point_min',
-				name: 'Points',
-				type: 'input',
-			},
-			{
-				key: 'ags_regionRestricted',
-				name: 'Region Restricted',
-				parameter: 'region_restricted',
-				type: 'checkbox',
-			},
-			{
-				key: 'ags_dlc',
-				name: 'DLC',
-				parameter: 'dlc',
-				type: 'checkbox',
-			},
-			{
-				key: 'ags_app',
-				name: 'App',
-				parameter: 'app',
-				type: 'checkbox',
-			},
-			{
-				key: 'ags_sub',
-				name: 'Sub',
-				parameter: 'sub',
-				type: 'checkbox',
-			},
-		];
-		obj.filters = [];
-		for (let i = 0, n = filterDetails.length; i < n; ++i) {
-			this.ags_createFilter(obj, filterDetails[i]);
-		}
+
+		obj.panel =
+			!qgs && ((Settings.get('adots') && Settings.get('adots_index') === 0) || !Settings.get('adots'))
+				? createElements(context, 'afterend', [{ type: 'div', attributes: { class: 'esgst-ags-panel' } }])
+				: new Popout('esgst-ags-panel', context, 100).popout;
+
+		obj.typeContainer = createElements(obj.panel, 'afterbegin', [
+			{ type: 'div', attributes: { class: 'esgst-ags-type-container' } },
+		]);
+		obj.filtersContainer = createElements(obj.panel, 'beforeend', [
+			{ type: 'div', attributes: { class: 'esgst-ags-filters-grid' } },
+		]);
+
+		this.ags_buildFilters(obj);
+
 		obj.input.addEventListener(
 			'keydown',
 			triggerOnEnter.bind(common, this.ags_searchQuery.bind(this, obj))
@@ -198,193 +97,274 @@ class GiveawaysAdvancedGiveawaySearch extends Module {
 		icon.addEventListener('click', this.ags_searchQuery.bind(this, obj));
 	}
 
-	ags_createFilter(obj, details) {
-		if (details.key === 'ags_type' && !obj.qgs) {
-			return;
-		}
-		if (details.type === 'checkbox') {
-			let element = createElements(obj.panel, 'beforeend', [
-					{
-						attributes: {
-							class: 'esgst-ags-checkbox-filter',
-						},
-						type: 'div',
-						children: [
-							{
-								text: details.name,
-								type: 'span',
-							},
-						],
-					},
-				]),
-				filter = new Checkbox(element, Settings.get(details.key)).input;
-			observeChange(filter, details.key, true, 'checked', 'click');
-			obj.filters.push({
-				filter: filter,
-				key: 'checked',
-				parameter: details.parameter,
-			});
-		} else if (details.options) {
-			let html = [
-				{
-					type: 'select',
-					children: [],
-				},
-			];
-			details.options.forEach((option) => {
-				html[0].children.push({
-					attributes: {
-						value: option.value,
-					},
-					text: option.name,
-					type: 'option',
-				});
-			});
-			let element = createElements(obj.panel, 'beforeend', [
-					{
-						attributes: {
-							style: `display: block;`,
-						},
-						type: 'div',
-						children: [
-							{
-								text: `${details.name} `,
-								type: 'node',
-							},
-							{
-								attributes: {
-									class: 'esgst-ags-filter',
-								},
-								type: 'class',
-								children: html,
-							},
-						],
-					},
-				]),
-				filter = element.firstElementChild.firstElementChild;
-			filter.value = Settings.get(details.key);
-			observeNumChange(filter, details.key, true);
-			obj.filters.push({
-				filter: filter,
-				key: 'value',
-				parameter: details.parameter,
-			});
-		} else {
-			let items = [];
-			if (details.type === 'select') {
-				items.push({
-					type: 'select',
-					children: [
-						{
-							type: 'option',
-						},
-					],
-				});
-				for (let i = 0; i <= 10; ++i) {
-					items[0].children.push({
-						text: i,
-						type: 'option',
-					});
-				}
-			} else if (details.maxKey === 'ags_maxDate') {
-				items = [
-					{
-						attributes: {
-							type: 'date',
-						},
-						type: 'input',
-					},
-				];
-			} else {
-				items = [
-					{
-						attributes: {
-							type: 'text',
-						},
-						type: 'input',
-					},
-				];
-			}
-			let element = createElements(obj.panel, 'beforeend', [
-				{
-					type: 'div',
-					children: [
-						{
-							text: `${details.name} `,
-							type: 'node',
-						},
-						{
-							attributes: {
-								class: 'esgst-ags-filter',
-							},
-							type: 'div',
-							children: items,
-						},
-						{
-							attributes: {
-								class: 'esgst-ags-filter',
-							},
-							type: 'div',
-							children: items,
-						},
-					],
-				},
-			]);
-			let maxFilter = element.lastElementChild.lastElementChild;
-			maxFilter.value = Settings.get(details.maxKey);
-			observeNumChange(maxFilter, details.maxKey, true);
-			let minFilter = element.firstElementChild.lastElementChild;
-			minFilter.value = Settings.get(details.minKey);
-			observeNumChange(minFilter, details.minKey, true);
-			if (details.type === 'input') {
-				maxFilter.addEventListener(
-					'keypress',
-					triggerOnEnter.bind(common, this.ags_searchQuery.bind(this, obj))
-				);
-				minFilter.addEventListener(
-					'keypress',
-					triggerOnEnter.bind(common, this.ags_searchQuery.bind(this, obj))
-				);
-			}
-			obj.filters.push({
-				filter: minFilter,
-				key: 'value',
-				parameter: details.minParameter,
-			});
-			obj.filters.push({
-				filter: maxFilter,
-				key: 'value',
-				parameter: details.maxParameter,
-			});
+	ags_buildFilters(obj) {
+		const filterDefinitions = [
+			{
+				type: 'select',
+				key: 'ags_type',
+				label: 'Type',
+				parameter: 'type',
+				options: [
+					['', 'All'],
+					['wishlist', 'Wishlist'],
+					['recommended', 'Recommended'],
+					['group', 'Group'],
+					['new', 'New']
+				],
+				placeholder: 'Select Type'
+			},
+			{
+				type: 'range',
+				label: 'Release Date',
+				minKey: 'ags_minDate',
+				maxKey: 'ags_maxDate',
+				minParam: 'release_date_min',
+				maxParam: 'release_date_max',
+				inputType: 'date',
+				placeholderMin: 'From YYYY-MM-DD',
+				placeholderMax: 'To YYYY-MM-DD'
+			},
+			{
+				type: 'range',
+				label: 'Metascore',
+				minKey: 'ags_minScore',
+				maxKey: 'ags_maxScore',
+				minParam: 'metascore_min',
+				maxParam: 'metascore_max',
+				placeholderMin: 'Min',
+				placeholderMax: 'Max'
+			},
+			{
+				type: 'range',
+				label: 'Level',
+				minKey: 'ags_minLevel',
+				maxKey: 'ags_maxLevel',
+				minParam: 'level_min',
+				maxParam: 'level_max',
+				selectRange: true,
+				placeholderMin: 'Min',
+				placeholderMax: 'Max'
+			},
+			{
+				type: 'range',
+				label: 'Entries',
+				minKey: 'ags_minEntries',
+				maxKey: 'ags_maxEntries',
+				minParam: 'entry_min',
+				maxParam: 'entry_max',
+				placeholderMin: 'Min',
+				placeholderMax: 'Max'
+			},
+			{
+				type: 'range',
+				label: 'Copies',
+				minKey: 'ags_minCopies',
+				maxKey: 'ags_maxCopies',
+				minParam: 'copy_min',
+				maxParam: 'copy_max',
+				placeholderMin: 'Min',
+				placeholderMax: 'Max'
+			},
+			{
+				type: 'range',
+				label: 'Points',
+				minKey: 'ags_minPoints',
+				maxKey: 'ags_maxPoints',
+				minParam: 'point_min',
+				maxParam: 'point_max',
+				placeholderMin: 'Min',
+				placeholderMax: 'Max'
+			},
+			{ type: 'input', key: 'ags_app', label: 'App Id', parameter: 'app', placeholder: 'App ID' },
+			{ type: 'input', key: 'ags_sub', label: 'Sub Id', parameter: 'sub', placeholder: 'Sub ID' },
+			{ type: 'checkbox', key: 'ags_regionRestricted', label: 'Region Restricted', parameter: 'region_restricted' },
+			{ type: 'checkbox', key: 'ags_dlc', label: 'DLC', parameter: 'dlc' }
+		];
+
+		for (const def of filterDefinitions) this.ags_renderFilter(obj, def);
+	}
+
+	ags_renderFilter(obj, def) {
+		const parent = def.key === 'ags_type' ? obj.typeContainer : obj.filtersContainer;
+		switch (def.type) {
+			case 'select':
+				this.ags_renderSelect(parent, obj, def);
+				break;
+			case 'range':
+				this.ags_renderRange(parent, obj, def);
+				break;
+			case 'checkbox':
+				this.ags_renderCheckbox(parent, obj, def);
+				break;
+			case 'input':
+				this.ags_renderTextInput(parent, obj, def);
+				break;
 		}
 	}
 
+	ags_renderSelect(parent, obj, def) {
+		const element = createElements(parent, 'beforeend', [
+			{
+				type: 'div',
+				children: [
+					{ text: `${def.label} `, type: 'node' },
+					{
+						type: 'div',
+						attributes: { class: 'esgst-ags-filter' },
+						children: [
+							{
+								type: 'select',
+								children: [
+									{ type: 'option', text: def.placeholder ?? 'Select…', attributes: { disabled: true, selected: true } },
+									...def.options.map(([value, name]) => ({
+										type: 'option',
+										attributes: { value },
+										text: name
+									}))
+								]
+							}
+						]
+					}
+				]
+			}
+		]);
+
+		const select = element.querySelector('select');
+		select.value = obj.urlParams[def.parameter] ?? Settings.get(def.key) ?? '';
+		observeChange(select, def.key, true, 'value', 'change');
+		obj.filters.push({ element: select, property: 'value', parameter: def.parameter });
+	}
+
+	ags_renderRange(parent, obj, def) {
+		const createInput = () => {
+			if (def.selectRange) {
+				return {
+					type: 'select',
+					children: [
+						{ type: 'option', text: def.placeholderMin ?? 'Min', attributes: { disabled: true, selected: true } },
+						...Array.from({ length: 11 }, (_, i) => ({ type: 'option', text: i }))
+					]
+				};
+			}
+			return { type: 'input', attributes: { type: def.inputType || 'text', placeholder: def.placeholderMin } };
+		};
+
+		const element = createElements(parent, 'beforeend', [
+			{
+				type: 'div',
+				children: [
+					{ text: `${def.label} `, type: 'node' },
+					{ type: 'div', attributes: { class: 'esgst-ags-filter' }, children: [createInput()] },
+					{
+						type: 'div',
+						attributes: { class: 'esgst-ags-filter' },
+						children: [
+							def.selectRange
+								? {
+										type: 'select',
+										children: [
+											{ type: 'option', text: def.placeholderMax ?? 'Max', attributes: { disabled: true, selected: true } },
+											...Array.from({ length: 11 }, (_, i) => ({ type: 'option', text: i }))
+										]
+								  }
+								: { type: 'input', attributes: { type: def.inputType || 'text', placeholder: def.placeholderMax } }
+						]
+					}
+				]
+			}
+		]);
+
+		const filterDivs = element.querySelectorAll('.esgst-ags-filter');
+		const minEl = filterDivs[0].querySelector('input, select');
+		const maxEl = filterDivs[1].querySelector('input, select');
+
+		minEl.value = obj.urlParams[def.minParam] ?? Settings.get(def.minKey) ?? '';
+		maxEl.value = obj.urlParams[def.maxParam] ?? Settings.get(def.maxKey) ?? '';
+
+		const eventType = def.selectRange ? 'change' : 'input';
+		observeChange(minEl, def.minKey, true, 'value', eventType);
+		observeChange(maxEl, def.maxKey, true, 'value', eventType);
+
+		obj.filters.push({ element: minEl, property: 'value', parameter: def.minParam });
+		obj.filters.push({ element: maxEl, property: 'value', parameter: def.maxParam });
+	}
+
+	ags_renderCheckbox(parent, obj, def) {
+		const element = createElements(parent, 'beforeend', [
+			{
+				type: 'div',
+				attributes: { class: 'esgst-ags-checkbox-filter' },
+				children: [{ text: def.label, type: 'span' }]
+			}
+		]);
+
+		const checkedFromUrl = obj.urlParams[def.parameter];
+		const checkbox = new Checkbox(
+			element,
+			checkedFromUrl !== undefined ? checkedFromUrl === 'true' || checkedFromUrl === '1' : Settings.get(def.key)
+		).input;
+
+		observeChange(checkbox, def.key, true, 'checked', 'change');
+
+		obj.filters.push({ element: checkbox, property: 'checked', parameter: def.parameter });
+	}
+
+	ags_renderTextInput(parent, obj, def) {
+		let label = def.label;
+		if (def.parameter === 'app') label = 'App Id';
+		if (def.parameter === 'sub') label = 'Sub Id';
+
+		const element = createElements(parent, 'beforeend', [
+			{
+				type: 'div',
+				children: [
+					{ text: `${label} `, type: 'node' },
+					{
+						type: 'div',
+						attributes: { class: 'esgst-ags-filter' },
+						children: [
+							{
+								type: 'input',
+								attributes:
+									def.parameter === 'app' || def.parameter === 'sub'
+										? { type: 'number', min: 0, placeholder: def.placeholder }
+										: { type: 'text', placeholder: def.placeholder }
+							}
+						]
+					}
+				]
+			}
+		]);
+
+		const input = element.querySelector('input');
+		input.value = obj.urlParams[def.parameter] ?? Settings.get(def.key) ?? '';
+
+		if (def.parameter === 'app' || def.parameter === 'sub') {
+			input.addEventListener('input', () => {
+				input.value = input.value.replace(/\D/g, '');
+			});
+		}
+
+		observeChange(input, def.key, true, 'value', 'input');
+
+		obj.filters.push({ element: input, property: 'value', parameter: def.parameter });
+	}
+
 	ags_searchQuery(obj) {
-		let url;
-		if (Settings.get('ags_app') || Settings.get('ags_sub')) {
-			url = `https://www.steamgifts.com/giveaways/search?q=`;
-		} else {
-			url = `https://www.steamgifts.com/giveaways/search?q=${encodeURIComponent(obj.input.value)}`;
-		}
-		if (!obj.qgs) {
-			let match = window.location.search.match(/(type=.*?)(&.*?)?$/);
-			if (match) {
-				url += `&${match[1]}`;
+		let url = `https://www.steamgifts.com/giveaways/search?q=${encodeURIComponent(obj.input.value)}`;
+
+		for (const filter of obj.filters) {
+			let value = filter.element[filter.property];
+			if (value === null || value === undefined || value === '') continue;
+
+			if (filter.parameter === 'region_restricted' || filter.parameter === 'dlc') {
+				if (!value) continue;
+				value = 'true';
 			}
+
+			url += `&${filter.parameter}=${encodeURIComponent(value)}`;
 		}
-		for (let i = 0, n = obj.filters.length; i < n; ++i) {
-			let filter = obj.filters[i],
-				value = filter.filter[filter.key];
-			if (value) {
-				if (filter.parameter === 'app') {
-					url += `&app=${obj.input.value}`;
-				} else if (filter.parameter === 'sub') {
-					url += `&sub=${obj.input.value}`;
-				} else {
-					url += `&${filter.parameter}=${value}`;
-				}
-			}
-		}
+
 		window.location.href = url;
 	}
 }

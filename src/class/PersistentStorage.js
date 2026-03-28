@@ -7,7 +7,7 @@ import { LocalStorage } from './LocalStorage';
 
 class PersistentStorage {
 	constructor() {
-		this.currentVersion = 16;
+		this.currentVersion = 17;
 
 		this.defaultValues = {
 			decryptedGiveaways: '{}',
@@ -877,15 +877,39 @@ class PersistentStorage {
 			}
 		}
 
-		if (version < 16) {
-			window.console.log('Upgrading storage to version 16...');
-
+		const mv3CleanupVersion = storage.mv3CleanupVersion ?? 0;
+		if (mv3CleanupVersion < 1) {
 			toDelete.push(
 				'sgRequestLog_day_0_collapsed', 'sgRequestLog_day_1_collapsed',
 				'sgRequestLog_hour_0_collapsed', 'sgRequestLog_hour_1_collapsed',
 				'sgRequestLog_minute_0_collapsed', 'sgRequestLog_minute_1_collapsed',
 				'sgRequestLog_view', 'requestLog'
 			);
+
+			toSet.mv3CleanupVersion = 1;
+			storage.mv3CleanupVersion = 1;
+		}
+
+		if (version < 17) {
+			window.console.log('Upgrading storage to version 17...');
+
+			let settingsChanged = false;
+			const settings = JSON.parse(storage.settings);
+
+			if (typeof settings.ags_app === 'boolean') {
+				settings.ags_app = '';
+				settingsChanged = true;
+			}
+
+			if (typeof settings.ags_sub === 'boolean') {
+				settings.ags_sub = '';
+				settingsChanged = true;
+			}
+
+			if (settingsChanged) {
+				toSet.settings = JSON.stringify(settings);
+				storage.settings = toSet.settings;
+			}
 		}
 
 		for (const key of Object.keys(toSet)) {
