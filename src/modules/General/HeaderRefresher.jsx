@@ -467,6 +467,7 @@ class GeneralHeaderRefresher extends Module {
 			if (Settings.get('hr_g_n') && !firstRun) {
 				this.showNotification({
 					msg: 'You have new gifts delivered.',
+					url: 'https://www.steamgifts.com/giveaways/won',
 					won: true,
 				});
 			}
@@ -511,6 +512,9 @@ class GeneralHeaderRefresher extends Module {
 			if (difference > 0 && Settings.get('hr_m_n') && !firstRun) {
 				this.showNotification({
 					inbox: true,
+					url: Shared.esgst.st
+						? 'https://www.steamtrades.com/messages'
+						: 'https://www.steamgifts.com/messages',
 					msg: `You have ${difference} new messages.`,
 				});
 			}
@@ -525,6 +529,7 @@ class GeneralHeaderRefresher extends Module {
 		if (oldPoints < 400 && newPoints >= Settings.get('hr_fp_points') && Settings.get('hr_fp') && !firstRun) {
 			this.showNotification({
 				msg: `You have ${newPoints}P.`,
+				url: Shared.esgst.locationHref,
 				points: true,
 			});
 		}
@@ -544,6 +549,7 @@ class GeneralHeaderRefresher extends Module {
 							'hr_w_hours'
 					  )} hours.`
 					: `You have ${newWishlist} new wishlist giveaways.`,
+				url: 'https://www.steamgifts.com/giveaways/search?type=wishlist',
 				wishlist: true,
 			});
 		}
@@ -601,10 +607,11 @@ class GeneralHeaderRefresher extends Module {
 	}
 
 	async showNotification(details) {
-		const result = await window.Notification.requestPermission();
+		if (!window.Notification) return;
 
-		if (result !== 'granted') {
-			return;
+		if (window.Notification.permission !== 'granted') {
+			const result = await window.Notification.requestPermission();
+			if (result !== 'granted') return;
 		}
 
 		if (
@@ -662,27 +669,16 @@ class GeneralHeaderRefresher extends Module {
 			if (Settings.get('hr_a')) {
 				chrome.runtime.sendMessage({
 					action: 'tabs',
+					url: details.url,
 					any: !!Settings.get('hr_a_a'),
-					inbox_sg: Shared.esgst.sg && !!details.inbox,
-					inbox_st: Shared.esgst.st && !!details.inbox,
 					refresh: !!Settings.get('hr_a_r'),
-					wishlist: !!details.wishlist,
-					won: !!details.won,
 				}, (resp) => {
 					if (chrome.runtime.lastError) console.warn('sendMessage error', chrome.runtime.lastError);
 					else console.log('tabs message response', resp);
 				});
 			} else {
-				if (details.won) {
-					Tabs.open('https://www.steamgifts.com/giveaways/won');
-				}
-
-				if (details.inbox) {
-					Tabs.open('https://www.steamgifts.com/messages');
-				}
-
-				if (details.wishlist) {
-					Tabs.open('https://www.steamgifts.com/giveaways/search?type=wishlist');
+				if (details.url) {
+					Tabs.open(details.url);
 				}
 			}
 
