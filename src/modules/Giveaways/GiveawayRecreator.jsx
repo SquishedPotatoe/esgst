@@ -16,10 +16,13 @@ class GiveawaysGiveawayRecreator extends Module {
 			description: () => (
 				<ul>
 					<li>
-						Adds an icon (<i className="fa fa-rotate-left"></i>) next to the game name of a giveaway
-						created by yourself that ended with 0 entries (in any page) that opens the{' '}
-						<a href="https://www.steamgifts.com/giveaways/new">new giveaway</a> page with all of the
-						details of the giveaway prefilled so that you can quickly recreate the giveaway.
+						Adds an icon (<i className="fa fa-rotate-left"></i>) next to the game name of
+						a giveaway you created that has unused copies/keys or 0 entries (in any page) that
+						opens the <a href="https://www.steamgifts.com/giveaways/new">new giveaway</a> page
+						with all details prefilled so you can quickly recreate the giveaway.
+					</li>
+					<li>
+						If no key was provided for the giveaway, it will be recreated as a gift.
 					</li>
 				</ul>
 			),
@@ -127,18 +130,26 @@ class GiveawaysGiveawayRecreator extends Module {
 		}
 		keys = [];
 		if (giveaway.entries === 0 || giveaway.entries < giveaway.copies) {
-			context = DOM.parse(
-				(
-					await FetchRequest.post('/ajax.php', {
-						data: `xsrf_token=${Session.xsrfToken}&do=popup_keys&code=${giveaway.code}`,
-					})
-				).json.html
-			).getElementsByClassName('popup__keys__heading');
-			if (context) {
-				context = context[context.length - 1];
-				elements = context.nextElementSibling.nextElementSibling.children;
-				for (i = 0, n = elements.length; i < n; ++i) {
-					keys.push(elements[i].textContent);
+			let html;
+
+			try {
+				const response = await FetchRequest.post('/ajax.php', {
+					data: `xsrf_token=${Session.xsrfToken}&do=popup_keys&code=${giveaway.code}`,
+				});
+				html = response?.json?.html;
+			} catch (err) {
+				console.warn('Failed to fetch giveaway keys:', err);
+			}
+
+			if (html) {
+				const context = DOM.parse(html);
+				const keysList = context.querySelector('.popup__keys__list');
+
+				if (keysList) {
+					for (const el of keysList.children) {
+						const key = el.textContent.trim();
+						if (key) keys.push(key);
+					}
 				}
 			}
 		}
