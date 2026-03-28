@@ -5,6 +5,7 @@ import { Module } from '../../class/Module';
 import { permissions } from '../../class/Permissions';
 import { Popup } from '../../class/Popup';
 import { Shared } from '../../class/Shared';
+import { Settings } from '../../class/Settings';
 import { common } from '../Common';
 
 const createElements = common.createElements.bind(common),
@@ -14,6 +15,8 @@ const WHITELIST = {
 	borderlandsgameoftheyear: 'borderlandsgoty',
 	mafia2: 'mafiaii',
 };
+const HWLC_NO_NAME_MESSAGE =
+	"The user's owned / wishlisted games will not be identified by name, and wishlist matches will not be identified either.";
 
 class TradesHaveWantListChecker extends Module {
 	constructor() {
@@ -50,8 +53,9 @@ class TradesHaveWantListChecker extends Module {
 	}
 
 	async hwlc_openPopup(obj) {
-		if (!(await permissions.contains([['steamApi'], ['steamStore']]))) {
-			return;
+		obj.hasSteamApi = await permissions.contains([['steamApi']]);
+		if (!obj.hasSteamApi) {
+			window.alert(`${permissions.getMessage([['steamApi']])}\n\nAs a result, ${HWLC_NO_NAME_MESSAGE.toLowerCase()}`);
 		}
 
 		if (obj.popup) {
@@ -63,10 +67,13 @@ class TradesHaveWantListChecker extends Module {
 			title: 'Have/Want List Checker',
 			addScrollable: 'left',
 		});
+		obj.steamApiKey = Settings.get('steamApiKey');
 		this.hwlc_addPanel(obj);
 		obj.popup.open();
 		window.setTimeout(async () => {
-			await this.hwlc_getGames();
+			if (obj.hasSteamApi) {
+				await this.hwlc_getGames(obj.steamApiKey);
+			}
 			obj.games = {};
 			// noinspection JSIgnoredPromiseFromCall
 			this.hwlc_addGames(obj, 'have', Shared.esgst.appList);
@@ -199,33 +206,48 @@ class TradesHaveWantListChecker extends Module {
 		);
 	}
 
-	async hwlc_getGames(convertToObj) {
+	async hwlc_getGames(steamApiKey) {
 		if (Shared.esgst.appList) {
 			return;
 		}
 
 		try {
-			const response = await FetchRequest.get(
-				'https://api.steampowered.com/ISteamApps/GetAppList/v2/'
-			);
-
-			const appList = response.json;
-
-			if (convertToObj) {
-				// eslint-disable-next-line require-atomic-updates
-				Shared.esgst.appList = {};
-
-				for (const app of appList.applist.apps) {
-					Shared.esgst.appList[app.appid] = app.name;
+			const appList = {};
+			let lastAppId = 0;
+			for (;;) {
+				const response = await FetchRequest.get(
+					'https://api.steampowered.com/IStoreService/GetAppList/v1/',
+					{
+						queryParams: {
+							key: steamApiKey,
+							include_games: 'true',
+							max_results: '50000',
+							...(lastAppId ? { last_appid: `${lastAppId}` } : {}),
+						},
+					}
+				);
+				const items = response.json?.response?.apps || [];
+				if (!items.length) {
+					break;
 				}
-			} else {
-				// eslint-disable-next-line require-atomic-updates
-				Shared.esgst.appList = appList;
+				for (const app of items) {
+					const appId = app.appid ?? app.app_id ?? app.id;
+					const name = app.name ?? app.app_name ?? app.appName;
+					if (appId == null || !name) {
+						continue;
+					}
+					appList[appId] = name;
+				}
+				lastAppId = parseInt(items[items.length - 1].appid ?? items[items.length - 1].app_id ?? items[items.length - 1].id);
+				if (Number.isNaN(lastAppId) || items.length < 50000) {
+					break;
+				}
 			}
+			// eslint-disable-next-line require-atomic-updates
+			Shared.esgst.appList = appList;
 		} catch (error) {
 			window.console.log(error);
-
-			window.alert('Could not retrieve list of Steam games. Games will not be identified by name.');
+			window.alert(`Could not retrieve list of Steam games. ${HWLC_NO_NAME_MESSAGE}`);
 		}
 	}
 
@@ -234,7 +256,7 @@ class TradesHaveWantListChecker extends Module {
 	 * @param key
 	 * @returns {Promise<void>}
 	 */
-	async hwlc_addGames(obj, key, json) {
+	async hwlc_addGames(obj, key, appList) {
 		obj.games[key] = {
 			apps: [],
 			subs: [],
@@ -265,13 +287,14 @@ class TradesHaveWantListChecker extends Module {
 			if (!this.hwlc_tidyName(name)) {
 				continue;
 			}
-			if (json) {
-				const matches = json.applist.apps.filter(
-					(x) => this.hwlc_formatName(x.name) === this.hwlc_formatName(name)
+			if (appList) {
+				const match = Object.entries(appList).find(
+					([, appName]) => this.hwlc_formatName(appName) === this.hwlc_formatName(name)
 				);
-				if (matches.length) {
+				if (match) {
+					const [appId] = match;
 					obj.games[key].apps.push({
-						id: parseInt(matches[0].appid),
+						id: parseInt(appId),
 						name,
 						parent,
 					});
@@ -286,35 +309,37 @@ class TradesHaveWantListChecker extends Module {
 		}
 		if (key === 'want') {
 			try {
-				const steamId = document.querySelector('.author_name').getAttribute('href').match(/\d+/)[0];
-				const wishlistData = (
-					await FetchRequest.get(
-						`https://api.steampowered.com/IWishlistService/GetWishlist/v1/?steamid=${steamId}&format=json`
-					)
-				).json.response.items;
-				if (wishlistData) {
-					wishlistData.forEach((item) => {
-						const id = parseInt(item.appid);
-						const found = obj.games[key].apps.filter((x) => x.id === id)[0];
-						if (found) {
-							found.wishlisted = true;
-							return;
-						}
-						const app = json.applist.apps.filter((x) => parseInt(x.appid) === id)[0] || null;
-						if (app) {
-							obj.games[key].apps.push({
-								id,
-								name: app.name,
-								wishlisted: true,
-							});
-						} else {
-							obj.games[key].apps.push({
-								id,
-								name: `${id}`,
-								wishlisted: true,
-							});
-						}
-					});
+				if (obj.hasSteamApi) {
+					const steamId = document.querySelector('.author_name').getAttribute('href').match(/\d+/)[0];
+					const wishlistData = (
+						await FetchRequest.get(
+							`https://api.steampowered.com/IWishlistService/GetWishlist/v1/?key=${obj.steamApiKey}&steamid=${steamId}&format=json`
+						)
+					).json.response.items;
+					if (wishlistData) {
+						wishlistData.forEach((item) => {
+							const id = parseInt(item.appid);
+							const found = obj.games[key].apps.filter((x) => x.id === id)[0];
+							if (found) {
+								found.wishlisted = true;
+								return;
+							}
+							const appName = appList?.[id];
+							if (appName) {
+								obj.games[key].apps.push({
+									id,
+									name: appName,
+									wishlisted: true,
+								});
+							} else {
+								obj.games[key].apps.push({
+									id,
+									name: `${id}`,
+									wishlisted: true,
+								});
+							}
+						});
+					}
 				}
 			} catch (e) {
 				/**/

@@ -110,7 +110,8 @@ class Permissions {
 				messages: {
 					glwc:
 						"Required by Group Libraries / Wishlists Checker to retrieve the users' owned games.",
-					hwlc: "Required by Have / Want List Checker to retrieve the user's owned games.",
+					hwlc:
+						"Required by Have / Want List Checker to retrieve the user's owned / wishlisted games.",
 					sync: 'Required to sync owned / wishlisted / ignored games.',
 					ugd:
 						"Required by User Giveaway Data to retrieve the user's playtimes / achievement stats.",
@@ -136,7 +137,6 @@ class Permissions {
 					gc:
 						'Required by Game Categories to retrieve categories that need to be retrieved from Steam.',
 					glwc: "Required by Group Libraries / Wishlists Checker to retrieve the users' wishlists.",
-					hwlc: "Required by Have / Want List Checker to retrieve the user's wishlist.",
 					rcvc: "Required by Real CV Calculator to retrieve the game's price.",
 					sync: 'Required to sync owned / wishlisted / ignored games.',
 					ugd: 'Required by User Giveaway Data to get list of games in packages.',
