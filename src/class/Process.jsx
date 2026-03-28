@@ -90,13 +90,17 @@ class Process {
 				this.popup.buttons[0].onClick();
 			}
 			if (Settings.get(`es_${this.urls.id}`)) {
+				const startButton = this.popup.buttons[0];
 				this.popup.scrollable.addEventListener('scroll', () => {
+					if (!startButton?._nodes?.outer) {
+						return;
+					}
 					if (
 						this.popup.scrollable.scrollTop + this.popup.scrollable.offsetHeight >=
 							this.popup.scrollable.scrollHeight &&
-						!this.popup.buttons[0].isBusy
+						!startButton.isBusy
 					) {
-						this.popup.buttons[0].onClick();
+						startButton.onClick();
 					}
 				});
 			}
@@ -149,8 +153,11 @@ class Process {
 	}
 
 	async requestNextUrl(details) {
+		const startButton = this.popup.buttons[0];
 		if (!this.urls.doNotTrigger && this.index >= this.total) {
-			this.popup.buttons[0].destroy();
+			if (startButton?._nodes?.outer) {
+				startButton.destroy();
+			}
 			return;
 		}
 		this.popup.progressBar.setLoading('Loading more...').show();
@@ -179,8 +186,8 @@ class Process {
 			this.index += 1;
 			this.popup.overallProgressBar.setMessage(`${this.index} of ${this.total} loaded.`).show();
 		}
-		if (!this.urls.doNotTrigger && this.index >= this.total) {
-			this.popup.buttons[0].destroy();
+		if (!this.urls.doNotTrigger && this.index >= this.total && startButton?._nodes?.outer) {
+			startButton.destroy();
 		}
 		if (this.urls.restart) {
 			this.index = 0;
