@@ -876,7 +876,7 @@ function loadDataManagement(type, isPopup, callback) {
 				(
 					<fragment>
 						Backup to{' '}
-						<select>
+						<select className="esgst-select-large">
 							<option>Computer</option>
 							<option>Dropbox</option>
 							<option>Google Drive</option>

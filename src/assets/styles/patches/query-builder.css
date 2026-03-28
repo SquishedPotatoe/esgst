@@ -21,6 +21,7 @@
 }
 
 .query-builder .radio-default input {
+	box-shadow: none;
 	display: inline !important;
 }
 
