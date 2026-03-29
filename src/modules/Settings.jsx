@@ -369,14 +369,6 @@ class SettingsModule {
 				onClick: async () => {
 					try {
 						await Shared.common.lockAndSaveSettings(this.toSave);
-						const adareqlimChanged = Object.keys(this.toSave).some((key) =>
-							key.startsWith('customAdaReqLim')
-						);
-						if (adareqlimChanged) {
-							await chrome.runtime.sendMessage({
-								action: 'update_adareqlim',
-							});
-						}
 						this.toSave = {};
 
 						new Popup({

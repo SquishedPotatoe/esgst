@@ -494,7 +494,10 @@ class Common extends Module {
 
 	processEvent(functions, event) {
 		for (const fun of functions) {
-			fun(event);
+			try {
+				fun(event);
+			} catch (error) {
+			}
 		}
 	}
 
@@ -788,8 +791,19 @@ class Common extends Module {
 						sg: true,
 					},
 					useCustomAdaReqLim: {
-						name: 'Use custom adaptive request limits for SteamGifts.',
+						name: 'Adaptive request limits.',
+						description: () => (
+							<ul>
+								<li>
+									SteamTrades: Uses a built-in limiter that briefly pauses after rapid requests.
+								</li>
+								<li>
+									SteamGifts: Uses your custom adaptive request limits (set below).
+								</li>
+							</ul>
+						),
 						sg: true,
+						st: true,
 						inputItems: [
 							{
 								id: 'customAdaReqLim_default',
@@ -1436,10 +1450,9 @@ class Common extends Module {
 				<span ref={(ref) => (countdown = ref)}>{remaining}</span>s. <br /><br />
 				Too avoid this in the future consider enabling <br />
 				<a href={`https://www.steamgifts.com/account/settings/profile?esgst=settings&id=useCustomAdaReqLim`} className="table__column__secondary-link">
-					Use custom adaptive request limits for SteamGifts
+					Adaptive request limits
 				</a><br />
-				or raise the limits if you already have it enabled.<br /><br />
-				Note: some requests are redirected so they count twice towards the rate limit.
+				or raise the limits if you already have it enabled.
 			</fragment>,
 		});
 		popup.popup.classList.add('esgst-rate-limit');

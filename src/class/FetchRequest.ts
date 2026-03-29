@@ -55,6 +55,9 @@ export class FetchRequest {
 	static rateLimitUntil = 0;
 	static rateLimitPromise: Promise<void> | null = null;
 	static cooldownTimerId: number | null = null;
+	static get queueKey(): "sg" | "st" {
+		return Shared.esgst.sg ? "sg" : "st";
+	}
 
 	static async waitForCooldown() {
 		const now = Date.now();
@@ -116,19 +119,25 @@ export class FetchRequest {
 				lock = new Lock('request', {
 					threshold: typeof options.queue === 'number' ? options.queue : 1000,
 				});
+				chrome.runtime.sendMessage({
+					action: 'record_request',
+					key: FetchRequest.queueKey
+				});
 			} else if (isInternal && !options.doNotQueue) {
 				const res = await chrome.runtime.sendMessage({
 					action: 'queue_request',
-					key: 'sg',
+					key: FetchRequest.queueKey,
 				});
 				if (!res?.success) {
 					throw new Error(`queue_request failed: ${res?.error || 'unknown error'}`);
 				}
-			} else if (
-				url.match(/^https?:\/\/store.steampowered.com/) &&
-				Settings.get('limitSteamStore')
-			) {
-				lock = new Lock('steamStore', { threshold: 200 });
+			} else {
+				if (isInternal && options.doNotQueue) {
+					chrome.runtime.sendMessage({ action: 'record_request', key: FetchRequest.queueKey });
+				}
+				if (url.match(/^https?:\/\/store.steampowered.com/) && Settings.get('limitSteamStore')) {
+					lock = new Lock('steamStore', { threshold: 200 });
+				}
 			}
 
 			if (lock) {
@@ -176,7 +185,6 @@ export class FetchRequest {
 		const { fetchObj, fetchOptions } = await this.getFetchObj(options);
 		const globalTimeout = 2 * 60_000;
 		const startTime = Date.now();
-		const cooldownDuration = 70_000;
 
 		for (; ;) {
 			if (Date.now() - startTime > globalTimeout) {
@@ -200,15 +208,42 @@ export class FetchRequest {
 
 			if (response.status === 429) {
 				const now = Date.now();
+				let cooldown = 0;
+				const retryAfter = response.headers.get("Retry-After");
+
+				if (retryAfter) {
+					const seconds = Number(retryAfter);
+					if (!Number.isNaN(seconds)) cooldown = seconds * 1000;
+					else {
+						const retryDate = new Date(retryAfter).getTime();
+						if (!Number.isNaN(retryDate)) cooldown = Math.max(0, retryDate - now);
+					}
+				}
+				if (!cooldown) cooldown = this.queueKey === "sg" ? 60_000 : 15_000;
+				cooldown += 5000;
 
 				if (this.rateLimitUntil < now) {
-					this.rateLimitUntil = now + cooldownDuration;
-					window.dispatchEvent(new CustomEvent('rate_limit_hit', { detail: { cooldown: cooldownDuration } }));
+					this.rateLimitUntil = now + cooldown;
+
+					await chrome.runtime.sendMessage({
+						action: "rate_limit_hit",
+						key: this.queueKey,
+						cooldown
+					});
+
+					window.dispatchEvent(
+						new CustomEvent("rate_limit_hit", { detail: { cooldown } })
+					);
 				}
 				await this.waitForCooldown();
 				continue;
 			}
-
+			if (response.redirected) {
+				await chrome.runtime.sendMessage({
+					action: 'record_request',
+					key: FetchRequest.queueKey,
+				});
+			}
 			if (!response.ok) throw new Error(text);
 
 			return {
