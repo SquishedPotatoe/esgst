@@ -494,10 +494,7 @@ class Common extends Module {
 
 	processEvent(functions, event) {
 		for (const fun of functions) {
-			try {
 				fun(event);
-			} catch (error) {
-			}
 		}
 	}
 

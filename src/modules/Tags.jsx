@@ -109,7 +109,7 @@ class Tags extends Module {
 	}
 
 	tags_navigateSuggestions(event) {
-		if (!event.key.match(/^(ArrowDown|ArrowUp|Enter)$/) || event.repeat) {
+		if (typeof event.key !== 'string' || !event.key.match(/^(ArrowDown|ArrowUp|Enter)$/) || event.repeat) {
 			return;
 		}
 		const selected = document.querySelector('.esgst-tag-suggestion.esgst-selected');

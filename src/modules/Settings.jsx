@@ -2038,11 +2038,14 @@ class SettingsModule {
 						if (item.shortcutKey) {
 							event.preventDefault();
 							event.stopPropagation();
-							if (!event.repeat) {
-								value = '';
-								if (event.ctrlKey) {
-									value += 'ctrlKey + ';
-								} else if (event.shiftKey) {
+						if (!event.repeat) {
+							value = '';
+							if (typeof event.key !== 'string') {
+								return;
+							}
+							if (event.ctrlKey) {
+								value += 'ctrlKey + ';
+							} else if (event.shiftKey) {
 									value += 'shiftKey + ';
 								} else if (event.altKey) {
 									value += 'altKey + ';

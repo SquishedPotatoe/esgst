@@ -937,6 +937,9 @@ class GeneralCustomHeaderFooterLinks extends Module {
 
 	checkKey(event) {
 		try {
+			if (typeof event.key !== 'string') {
+				return;
+			}
 			let value = '';
 			if (event.ctrlKey) {
 				value += 'ctrlKey + ';

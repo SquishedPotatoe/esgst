@@ -301,6 +301,9 @@ class GeneralShortcutKeys extends Module {
 		}
 		if (Object.keys(methods).length > 0) {
 			this.esgst.documentEvents.keydown.add((event) => {
+				if (typeof event.key !== 'string') {
+					return;
+				}
 				let value = '';
 				if (event.ctrlKey) {
 					value += 'ctrlKey + ';
