@@ -954,7 +954,7 @@ class GeneralCustomHeaderFooterLinks extends Module {
 			const removedKey = this.removeButton();
 			this.addButton(removedKey);
 		} catch (error) {
-			Logger.logs(error.message);
+			Logger.error(error.message);
 		}
 	}
 }
