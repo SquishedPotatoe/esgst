@@ -128,6 +128,7 @@ import { giveawaysGiveawayPopup } from './Giveaways/GiveawayPopup';
 import { giveawaysEnterLeaveGiveawayButton } from './Giveaways/EnterLeaveGiveawayButton';
 import { giveawaysIsThereAnyDealInfo } from './Giveaways/IsThereAnyDealInfo';
 import { giveawaysUnhideGiveawayButton } from './Giveaways/UnhideGiveawayButton';
+import { gamesHideInTableButton } from './Games/HideInTableButton';
 import { giveawaysOneClickHideGiveawayButton } from './Giveaways/OneClickHideGiveawayButton';
 import { giveawaysVisibleInviteOnlyGiveaways } from './Giveaways/VisibleInviteOnlyGiveaways';
 import { giveawaysGiveawayWinnersLink } from './Giveaways/GiveawayWinnersLink';
@@ -297,6 +298,7 @@ const modules = {
 	giveawaysEnterLeaveGiveawayButton,
 	giveawaysIsThereAnyDealInfo,
 	giveawaysUnhideGiveawayButton,
+	gamesHideInTableButton,
 	giveawaysOneClickHideGiveawayButton,
 	giveawaysGiveawayWinnersLink,
 	giveawaysTimeToEnterCalculator,
