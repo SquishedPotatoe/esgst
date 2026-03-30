@@ -368,7 +368,7 @@ class SgHeader extends IHeader {
 				const user = User.create(Namespaces.SG);
 				user.nodes.outer = buttonContainer.nodes.outer;
 				user.nodes.avatarOuter = user.nodes.outer.querySelector('.nav__avatar-outer-wrap');
-				user.nodes.avatarInner = user.nodes.avatarOuter.querySelector('.nav__avatar-inner-wrap');
+				user.nodes.avatarInner = user.nodes.avatarOuter?.querySelector('.nav__avatar-inner-wrap') || null;
 				user.parseData();
 				user.parseExtraData();
 				buttonContainer.user = user;
