@@ -2,29 +2,51 @@ import { zip, unzipSync, strToU8, strFromU8 } from 'fflate';
 
 const locks = {};
 const SW_KEYS = [
-	'customAdaReqLim_default', 'customAdaReqLim_minute50', 'customAdaReqLim_minute75',
-	'customAdaReqLim_hourly75', 'customAdaReqLim_daily75', 'useCustomAdaReqLim_sg',
-	'useCustomAdaReqLim_st', 'hr_a_sg', 'hr_a_st', 'activateTab_sg', 'activateTab_st',
-	'lastNotifiedVersion', 'notifyNewVersion_sg', 'notifyNewVersion_st', 'updateCheckInterval'
+	'customAdaReqLim_default', 'customAdaReqLim_minute50', 'customAdaReqLim_minute75', 'customAdaReqLim_hourly75',
+	'customAdaReqLim_daily75', 'useCustomAdaReqLim_sg', 'useCustomAdaReqLim_st', 'hr_a_sg', 'hr_a_st',
+	'activateTab_sg', 'activateTab_st', 'lastNotifiedVersion', 'pendingUpdateNotification',
+	'notifyNewVersion_sg', 'notifyNewVersion_st', 'updateCheckInterval'
 ];
+const SW_DEFAULTS = {
+	customAdaReqLim_default: 0.25,
+	customAdaReqLim_minute50: 0.5,
+	customAdaReqLim_minute75: 1,
+	customAdaReqLim_hourly75: 1.5,
+	customAdaReqLim_daily75: 2,
+	useCustomAdaReqLim_sg: false,
+	useCustomAdaReqLim_st: false,
+	hr_a_sg: false,
+	hr_a_st: false,
+	activateTab_sg: false,
+	activateTab_st: false,
+	lastNotifiedVersion: null,
+	pendingUpdateNotification: null,
+	notifyNewVersion_sg: false,
+	notifyNewVersion_st: false,
+	updateCheckInterval: 7
+};
+
+function buildSwSettings(full) {
+	const filtered = { ...SW_DEFAULTS };
+	if (!full || typeof full !== 'object') return filtered;
+	for (const key of SW_KEYS) {
+		if (key in full) filtered[key] = full[key];
+	}
+	return filtered;
+}
 
 async function ServiceWorkerSettings() {
 	try {
 		const result = await chrome.storage.local.get(['swSettings', 'settings']);
-		if (result.swSettings) return;
-		if (!result.settings) return;
+		if (result.swSettings && Object.keys(result.swSettings).length > 0) return;
 
 		let parsed = {};
-		try {
-			parsed = JSON.parse(result.settings);
-		} catch (err) { console.warn('Failed to parse full settings', err); return; }
-
-		const Keys = [...SW_KEYS];
-
-		const filtered = {};
-		for (const key of Keys) {
-			if (key in parsed) filtered[key] = parsed[key];
+		if (result.settings) {
+			try {
+				parsed = typeof result.settings === 'string' ? JSON.parse(result.settings) : result.settings;
+			} catch (err) { console.warn('Failed to parse full settings', err); return; }
 		}
+		const filtered = buildSwSettings(parsed);
 
 		await chrome.storage.local.set({ swSettings: filtered });
 
@@ -57,20 +79,11 @@ const StorageManager = (() => {
 	const _updateLocks = {};
 
 	self.cache = {
-		settings: {},
+		settings: { ...SW_DEFAULTS },
 		lastRequests: {},
 		tdsData: [],
 		openTabs: []
 	};
-
-	function _filterSettings(full) {
-		const filtered = {};
-		if (!full || typeof full !== 'object') return filtered;
-		for (const key of SW_SETTINGS_KEYS) {
-			if (key in full) filtered[key] = full[key];
-		}
-		return filtered;
-	}
 
 	async function saveNow() {
 		if (!_isDirty) return;
@@ -173,7 +186,7 @@ const StorageManager = (() => {
 
 	async function load() {
 		const result = await chrome.storage.local.get([PERSIST_STORAGE_KEY, 'swSettings']);
-		self.cache.settings = result.swSettings || {};
+		self.cache.settings = buildSwSettings(result.swSettings);
 
 		if (result[PERSIST_STORAGE_KEY]) {
 			Object.assign(self.cache, result[PERSIST_STORAGE_KEY]);
@@ -190,7 +203,7 @@ const StorageManager = (() => {
 				let full = changes.settings.newValue || {};
 				if (typeof full === 'string') full = JSON.parse(full);
 
-				const filtered = _filterSettings(full);
+				const filtered = buildSwSettings(full);
 				self.cache.settings = filtered;
 				_dirtyKeys.add('settings');
 				scheduleSave();
@@ -288,7 +301,7 @@ const RequestQueue = (() => {
 	const loadThresholds = (key) => {
 		const q = queues[key];
 		if (!q) return;
-		const settings = StorageManager.get('swSettings') || StorageManager.get('settings') || {};
+		const settings = StorageManager.get('settings') || {};
 		const useCustom = settings[`useCustomAdaReqLim_${key}`];
 		q.Enabled = useCustom?.enabled || useCustom === true;
 
@@ -467,7 +480,7 @@ function isNewerVersion(a, b) {
 }
 
 async function scheduleUpdateChecks() {
-	const settings = StorageManager.get('swSettings') || {};
+	const settings = StorageManager.get('settings') || {};
 	const enabled = settings.notifyNewVersion_sg || settings.notifyNewVersion_st;
 
 	if (!enabled) {
@@ -482,7 +495,7 @@ async function scheduleUpdateChecks() {
 	if (!existing || existing.periodInMinutes !== periodMinutes) {
 		await chrome.alarms.clear('checkUpdates');
 		await chrome.alarms.create('checkUpdates', {
-			periodInMinutes
+			periodInMinutes: periodMinutes
 		});
 	}
 }
@@ -532,15 +545,15 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 
 			if (!latestVersion || !isNewVersion) return;
 
-			const storage = await chrome.storage.local.get([
-				'lastNotifiedVersion',
-				'pendingUpdateNotification'
-			]);
+			const { swSettings = {} } = await chrome.storage.local.get('swSettings');
 
-			if (storage.lastNotifiedVersion === latestVersion) return;
+			if (swSettings.lastNotifiedVersion === latestVersion) return;
 
 			await chrome.storage.local.set({
-				lastNotifiedVersion: latestVersion
+				swSettings: {
+					...swSettings,
+					lastNotifiedVersion: latestVersion
+				}
 			});
 
 			const openTabs = await getOpenTabs();
@@ -555,10 +568,12 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 					});
 				}
 
-				await chrome.storage.local.remove('pendingUpdateNotification');
+				delete swSettings.pendingUpdateNotification;
+				await chrome.storage.local.set({ swSettings });
 			} else {
+				swSettings.pendingUpdateNotification = latestVersion;
 				await chrome.storage.local.set({
-					pendingUpdateNotification: latestVersion
+					swSettings
 				});
 			}
 		} catch (err) {
@@ -811,7 +826,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 				case 'tabs': await manageTabs(request); sendResponse({ success: true }); break;
 				case 'open_tab': await openTab(request.url); sendResponse({ success: true }); break;
 				case 'pendingUpdateCheck': {
-					const { swSettings } = await chrome.storage.local.get('swSettings');
+					const { swSettings = {} } = await chrome.storage.local.get('swSettings');
 					const latestVersion = swSettings?.pendingUpdateNotification;
 
 					if (latestVersion && sender.tab?.id) {
@@ -832,7 +847,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 						if (latestVersion && isNewVersion && sender.tab?.id) {
 							const currentVersion = chrome.runtime.getManifest().version;
-							await chrome.storage.local.set({ lastNotifiedVersion: latestVersion });
+							const { swSettings = {} } = await chrome.storage.local.get('swSettings');
+							await chrome.storage.local.set({
+								swSettings: {
+									...swSettings,
+									lastNotifiedVersion: latestVersion
+								}
+							});
 							chrome.tabs.sendMessage(sender.tab.id, {
 								action: 'showUpdatePopup',
 								currentVersion,
@@ -851,7 +872,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 						sendResponse({ success: false, error: 'Missing version' });
 						break;
 					}
-					await chrome.storage.local.set({ lastNotifiedVersion: request.version });
+					const { swSettings = {} } = await chrome.storage.local.get('swSettings');
+					await chrome.storage.local.set({
+						swSettings: {
+							...swSettings,
+							lastNotifiedVersion: request.version
+						}
+					});
 					sendResponse({ success: true });
 					break;
 				}
@@ -950,14 +977,16 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
 
 async function manageTabs(request = {}) {
 	try {
-		const settings = StorageManager.get('swSettings') || {};
-		const activateTab_sg = request.activateTab_sg ?? !!settings.activateTab_sg?.enabled;
-		const activateTab_st = request.activateTab_st ?? !!settings.activateTab_st?.enabled;
+		const settings = StorageManager.get('settings') || {};
+		const hr_a_sg = !!settings.hr_a_sg?.enabled;
+		const hr_a_st = !!settings.hr_a_st?.enabled;
+		const activateTab_sg = request.activateTab_sg;
+		const activateTab_st = request.activateTab_st;
 		const refresh = request.refresh;
 		const any = request.any;
 		const openTabs = await getOpenTabs();
 
-		if (request.url) {
+		if (request.url && (hr_a_sg || hr_a_st)) {
 			await notificationTabs(request.url, openTabs, { refresh, any });
 		}
 
@@ -1020,7 +1049,7 @@ async function bootstrap() {
 	if (self._bootstrapped) return;
 	self._bootstrapped = true;
 
-	self.SW_VERSION = '4.0.0';
+	self.SW_VERSION = '4.0.1';
 
 	const originalLog = console.log;
 	const originalWarn = console.warn;
