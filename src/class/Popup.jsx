@@ -11,6 +11,7 @@ import { Shared } from './Shared';
  * @property {string} title
  * @property {import('../components/Button').ButtonOptions[]} buttons
  * @property {boolean} isTemp
+ * @property {string|string[]} [className]
  */
 
 class Popup {
@@ -65,6 +66,13 @@ class Popup {
 		this.onCloseByUser = details.onCloseByUser;
 		this.onClose = details.onClose;
 		this.popup = this.layer.firstElementChild;
+		if (details.className) {
+			const classes = Array.isArray(details.className)
+				? details.className
+				: [details.className];
+
+			this.popup.classList.add(...classes);
+		}
 		this.modal = this.layer.lastElementChild;
 		if (details.popup) {
 			this.popup.classList.add('esgst-popup');
