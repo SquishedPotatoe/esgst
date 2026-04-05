@@ -145,6 +145,7 @@ class TradesHaveWantListChecker extends Module {
 					},
 					{
 						attributes: {
+							class: key,
 							id: `esgst-hwlc-${key}-games`,
 						},
 						type: 'ul',
@@ -260,8 +261,8 @@ class TradesHaveWantListChecker extends Module {
 		obj.games[key] = {
 			apps: [],
 			subs: [],
+			unidentified: [],
 		};
-		const unidentified = [];
 		const elements = getTextNodesIn(obj[key]);
 		for (const element of elements) {
 			const parent = element.parentElement;
@@ -301,11 +302,11 @@ class TradesHaveWantListChecker extends Module {
 					continue;
 				}
 			}
-			if (unidentified.filter((x) => x.name === name).length) {
+			if (obj.games[key].unidentified.filter((x) => x.name === name).length) {
 				// Name has already been found (duplicate).
 				continue;
 			}
-			unidentified.push({ name, parent });
+			obj.games[key].unidentified.push({ name, parent });
 		}
 		if (key === 'want') {
 			try {
@@ -466,7 +467,7 @@ class TradesHaveWantListChecker extends Module {
 		}
 		createElements(obj.sections[key].games, 'beforeend', subItems);
 		const unidentifiedItems = [];
-		for (const game of unidentified) {
+		for (const game of obj.games[key].unidentified) {
 			unidentifiedItems.push({
 				text: game.name,
 				type: 'li',
@@ -532,6 +533,17 @@ class TradesHaveWantListChecker extends Module {
 						type: 'sub',
 					});
 				});
+			obj.games[key].unidentified
+				.filter((game) => game.name.toLowerCase().match(value))
+				.forEach((game) => {
+					if (found.filter((x) => x.name === game.name).length) {
+						return;
+					}
+					found.push({
+						name: game.name,
+						type: 'unidentified',
+					});
+				});
 		}
 		found = found.sort(this.hwlc_sortGames);
 		const items = [];
@@ -557,13 +569,18 @@ class TradesHaveWantListChecker extends Module {
 								type: 'i',
 						  }
 						: null,
-					{
-						attributes: {
-							href: `https://store.steampowered.com/${game.type}/${game.id}`,
-						},
-						text: game.name || game.id,
-						type: 'a',
-					},
+					game.type === 'unidentified'
+						? {
+								text: game.name,
+								type: 'node',
+						  }
+						: {
+								attributes: {
+									href: `https://store.steampowered.com/${game.type}/${game.id}`,
+								},
+								text: game.name || game.id,
+								type: 'a',
+						  },
 				],
 			});
 		}
