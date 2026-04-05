@@ -249,6 +249,7 @@ class TradesTradeFilters extends Filters {
 				title: 'Hidden Trades',
 				addProgress: true,
 				addScrollable: 'left',
+				className: 'esgst-tf-popup',
 			},
 			urls: {
 				id: 'tf',

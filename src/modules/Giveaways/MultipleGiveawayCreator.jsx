@@ -1198,8 +1198,8 @@ class GiveawaysMultipleGiveawayCreator extends Module {
 			icon: 'fa-arrow-up',
 			isTemp: true,
 			title: 'Import Giveaways',
+			className: ['esgst-mgc-import-popup', 'esgst-popup-large'],
 		});
-		popup.popup.classList.add('esgst-popup-large');
 		createElements(popup.description, 'afterbegin', [
 			{
 				attributes: {

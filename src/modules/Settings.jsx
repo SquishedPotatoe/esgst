@@ -58,8 +58,8 @@ class SettingsModule {
 				addScrollable: 'left',
 				settings: true,
 				isTemp: true,
+				className: ['esgst-settings-popup', 'esgst-text-left'],
 			});
-			popup.popup.classList.add('esgst-text-left');
 			Container = popup.description;
 			Context = popup.scrollable;
 		} else {

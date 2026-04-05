@@ -1451,8 +1451,8 @@ class Common extends Module {
 				</a><br />
 				or raise the limits if you already have it enabled.
 			</fragment>,
+			className: 'esgst-rate-limit-popup'
 		});
-		popup.popup.classList.add('esgst-rate-limit');
 		popup.open();
 
 		const interval = window.setInterval(() => {

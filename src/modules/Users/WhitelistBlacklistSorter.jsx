@@ -92,8 +92,7 @@ class UsersWhitelistBlacklistSorter extends Module {
 		}
 		users = Utils.sortArray(users, obj.isDescending, obj.dateKey);
 
-		let popup = new Popup({ addScrollable: true, icon: obj.icon, isTemp: true, title: obj.title });
-		popup.popup.classList.add('esgst-wbs-popup');
+		let popup = new Popup({ addScrollable: true, icon: obj.icon, isTemp: true, title: obj.title, className: 'esgst-wbs-popup' });
 		let table = createElements(popup.scrollable, 'beforeend', [
 			{
 				attributes: {
