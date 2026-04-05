@@ -18,7 +18,7 @@ class Permissions {
 			},
 			cookies: {
 				messages: {
-					manipulateCookies: 'Required if the option to manipulate cookies is enabled.',
+					manipulateCookies: 'Required if Temporarily modify Steam cookies during requests is enabled. Used by Game Categories to retrieve age gated content',
 				},
 				values: ['cookies'],
 			},
@@ -42,13 +42,6 @@ class Permissions {
 					storage: 'Required to back up / restore data to / from Google Drive.',
 				},
 				values: ['*://*.googleapis.com/*'],
-			},
-			googleWebApp: {
-				isOrigin: true,
-				messages: {
-					sync: 'Required to sync HLTB times.',
-				},
-				values: ['*://*.script.google.com/*', '*://*.script.googleusercontent.com/*'],
 			},
 			imgur: {
 				isOrigin: true,

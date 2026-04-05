@@ -896,7 +896,7 @@ class Common extends Module {
 							</ul>
 						),
 						name:
-							'Allow ESGST to read your cookies.',
+							'Temporarily modify Steam cookies during requests.',
 						sg: true,
 						st: true,
 						permissions: ['cookies'],
