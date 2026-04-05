@@ -891,19 +891,30 @@ async function sync(syncer) {
 			try {
 				syncer.jsx = [];
 				let apiResponse = null;
+				let apiFailed = false;
 				if (Settings.get('steamApiKey')) {
-					apiResponse = await FetchRequest.get(
-						`http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key=${Settings.get(
-							'steamApiKey'
-						)}&steamid=${Settings.get('steamId')}&format=json`
-					);
+					try {
+						apiResponse = await FetchRequest.get(
+							`https://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key=${Settings.get(
+								'steamApiKey'
+							)}&steamid=${Settings.get('steamId')}&format=json`
+						);
+					} catch (e) {
+						apiResponse = null;
+						apiFailed = true;
+					}
 				}
-				let storeResponse = await FetchRequest.get(
-					`http://store.steampowered.com/dynamicstore/userdata?${
-						Math.random().toString().split('.')[1]
-					}`
-				);
-				await syncGames(null, syncer, apiResponse, storeResponse);
+				let storeResponse = null;
+				try {
+					storeResponse = await FetchRequest.get(
+						`https://store.steampowered.com/dynamicstore/userdata?${
+							Math.random().toString().split('.')[1]
+						}`
+					);
+				} catch (e) {
+					storeResponse = null;
+				}
+				const syncedGames = await syncGames(null, syncer, apiResponse, storeResponse, apiFailed);
 				if (Settings.get('gc_o_a')) {
 					const altAccounts = Settings.get('gc_o_altAccounts');
 					if (altAccounts?.length > 0) {
@@ -912,12 +923,18 @@ async function sync(syncer) {
 								if (syncer.canceled) {
 									break;
 								}
-								apiResponse = await FetchRequest.get(
-									`http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key=${Settings.get(
-										'steamApiKey'
-									)}&steamid=${altAccount.steamId}&format=json`
-								);
-								await syncGames(altAccount, syncer, apiResponse);
+								let altApiFailed = false;
+								try {
+									apiResponse = await FetchRequest.get(
+										`https://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key=${Settings.get(
+											'steamApiKey'
+										)}&steamid=${altAccount.steamId}&format=json`
+									);
+								} catch (e) {
+									apiResponse = null;
+									altApiFailed = true;
+								}
+								await syncGames(altAccount, syncer, apiResponse, null, altApiFailed);
 							}
 							await Shared.common.setSetting('gc_o_altAccounts', altAccounts);
 						} else {
@@ -934,7 +951,11 @@ async function sync(syncer) {
 					syncer.results,
 					'beforeend',
 					<fragment>
-						<div>Owned/wishlisted/ignored games synced.</div>
+						<div>
+							{syncedGames
+								? 'Owned/wishlisted/ignored games synced.'
+								: 'Owned/wishlisted/ignored games were not synced.'}
+						</div>
 						{syncer.jsx}
 					</fragment>
 				);
@@ -947,7 +968,10 @@ async function sync(syncer) {
 				DOM.insert(
 					syncer.results,
 					'beforeend',
-					<div>Failed to sync your owned / wishlisted / ignored games. Try again later.</div>
+					<div>
+						Failed to sync your owned / wishlisted / ignored games.{' '}
+						{e && e.message ? e.message : 'Try again later.'}
+					</div>
 				);
 			}
 		} else {
@@ -1110,35 +1134,25 @@ async function sync(syncer) {
 		(syncer.parameters && syncer.parameters.HltbTimes) ||
 		(!syncer.parameters && Settings.get('syncHltbTimes'))
 	) {
-		const isPermitted = await permissions.contains([['googleWebApp']]);
-		if (isPermitted) {
-			syncer.progressBar.setMessage('Syncing HLTB times...');
-			const cache = JSON.parse(LocalStorage.get('gcCache', `{ "apps": {}, "subs": {}, "hltb": {}, "timestamp": 0, "version": 7 }`));
-			if (cache.version !== 7) {
-				cache.version = 7;
-				cache.timestamp = 0;
-				cache.apps = cache.apps || {};
-				cache.subs = cache.subs || {};
-				cache.hltb = cache.hltb || {};
-				LocalStorage.set('gcCache', JSON.stringify(cache));
-			}
-			DOM.insert(
-				syncer.results,
-				'beforeend',
-				<div style={{ color: 'red', marginTop: '10px', marginBottom: '10px', fontWeight: 'bold' }}>
-					The HowLongToBeat web app that powered HLTB Times is no longer available.
-					<br />
-					Syncing times will remain unavailable until a new data source is implemented.
-				</div>
-			);
-		} else {
-			syncer.failed.HltbTimes = true;
-			DOM.insert(
-				syncer.results,
-				'beforeend',
-				<div>{permissions.getMessage([['googleWebApp']])}</div>
-			);
+		syncer.progressBar.setMessage('Syncing HLTB times...');
+		const cache = JSON.parse(LocalStorage.get('gcCache', `{ "apps": {}, "subs": {}, "hltb": {}, "timestamp": 0, "version": 7 }`));
+		if (cache.version !== 7) {
+			cache.version = 7;
+			cache.timestamp = 0;
+			cache.apps = cache.apps || {};
+			cache.subs = cache.subs || {};
+			cache.hltb = cache.hltb || {};
+			LocalStorage.set('gcCache', JSON.stringify(cache));
 		}
+		DOM.insert(
+			syncer.results,
+			'beforeend',
+			<div style={{ color: 'red', marginTop: '10px', marginBottom: '10px', fontWeight: 'bold' }}>
+				The HowLongToBeat web app that powered HLTB Times is no longer available.
+				<br />
+				Syncing times will remain unavailable until a new data source is implemented.
+			</div>
+		);
 	}
 
 	// if sync has been canceled stop
@@ -1417,16 +1431,40 @@ async function syncWhitelistBlacklist(key, syncer, url) {
 	);
 }
 
-async function syncGames(altAccount, syncer, apiResponse, storeResponse) {
+async function syncGames(altAccount, syncer, apiResponse, storeResponse, apiFailed = false) {
 	const apiJson = apiResponse && apiResponse.json;
 	const storeJson = storeResponse && storeResponse.json;
-	/** @property storeJson.rgOwnedApps */
+	const getStoreIds = (jsonKey) => {
+		if (!storeJson || !Object.prototype.hasOwnProperty.call(storeJson, jsonKey)) {
+			return [];
+		}
+		if (Array.isArray(storeJson[jsonKey])) {
+			return storeJson[jsonKey];
+		}
+		if (storeJson[jsonKey] && typeof storeJson[jsonKey] === 'object') {
+			return Object.keys(storeJson[jsonKey]);
+		}
+		return [];
+	};
+	const hasStore =
+		!altAccount &&
+		storeJson &&
+		['rgWishlist', 'rgOwnedApps', 'rgOwnedPackages', 'rgIgnoredApps', 'rgIgnoredPackages'].some(
+			(jsonKey) => Object.prototype.hasOwnProperty.call(storeJson, jsonKey)
+		);
+	const hasStoreGameData =
+		getStoreIds('rgWishlist').length > 0 ||
+		getStoreIds('rgOwnedApps').length > 0 ||
+		getStoreIds('rgOwnedPackages').length > 0 ||
+		getStoreIds('rgIgnoredApps').length > 0 ||
+		getStoreIds('rgIgnoredPackages').length > 0;
+	const hasStoreOwned = getStoreIds('rgOwnedApps').length > 0 || getStoreIds('rgOwnedPackages').length > 0;
 	const hasApi =
-			apiJson && apiJson.response && apiJson.response.games && apiJson.response.games.length,
-		hasStore = storeJson && storeJson.rgOwnedApps && storeJson.rgOwnedApps.length;
+		apiJson && apiJson.response && apiJson.response.games && apiJson.response.games.length;
 	if (
-		((altAccount && !Settings.get('steamApiKey')) ||
-			(!altAccount && Settings.get('steamApiKey'))) &&
+		(apiFailed ||
+			((altAccount && !Settings.get('steamApiKey')) ||
+				(!altAccount && Settings.get('steamApiKey')))) &&
 		!hasApi
 	) {
 		syncer.jsx.push(
@@ -1442,10 +1480,17 @@ async function syncGames(altAccount, syncer, apiResponse, storeResponse) {
 		syncer.jsx.push(
 			'Unable to sync through the Steam store. Check if you are logged in to Steam on your current browser session. If you are, try again later. Some games may not be available through the Steam API (if you have a Steam API key set).'
 		);
+	} else if (!altAccount && !hasStoreGameData) {
+		syncer.jsx.push(
+			'Steam store sync returned no usable owned / wishlisted / ignored data. Check if you are logged in to the Steam store in this browser session and try again later.'
+		);
 	}
 	//Logger.info(hasApi, hasStore);
 	if ((!hasApi || !Settings.get('fallbackSteamApi')) && !hasStore) {
-		return;
+		return false;
+	}
+	if (!altAccount && !hasApi && !hasStoreGameData) {
+		return false;
 	}
 
 	// delete old data
@@ -1465,7 +1510,7 @@ async function syncGames(altAccount, syncer, apiResponse, storeResponse) {
 	};
 	for (const id in savedGames.apps) {
 		if (savedGames.apps.hasOwnProperty(id)) {
-			if (savedGames.apps[id].owned) {
+			if ((hasApi || hasStoreOwned) && savedGames.apps[id].owned) {
 				oldOwned.apps.push(id);
 				savedGames.apps[id].owned = null;
 			}
@@ -1484,7 +1529,7 @@ async function syncGames(altAccount, syncer, apiResponse, storeResponse) {
 	if (hasStore) {
 		for (const id in savedGames.subs) {
 			if (savedGames.subs.hasOwnProperty(id)) {
-				if (savedGames.subs[id].owned) {
+				if (hasStoreOwned && savedGames.subs[id].owned) {
 					oldOwned.subs.push(id);
 					savedGames.subs[id].owned = null;
 				}
@@ -1557,12 +1602,7 @@ async function syncGames(altAccount, syncer, apiResponse, storeResponse) {
 				const jsonKey = item.jsonKey;
 				const key = item.key;
 				const type = item.type;
-				let ids = [];
-				if (Array.isArray(storeJson[jsonKey])) {
-					ids = storeJson[jsonKey];
-				} else {
-					ids = Object.keys(storeJson[jsonKey]);
-				}
+				const ids = getStoreIds(jsonKey);
 				for (const id of ids) {
 					if (!savedGames[type][id]) {
 						savedGames[type][id] = {};
@@ -1650,10 +1690,11 @@ async function syncGames(altAccount, syncer, apiResponse, storeResponse) {
 				}
 			}
 		}
-		console.log(removedWishlisted);
 		if (!altAccount) {
 			for (const id of removedWishlisted[type]) {
-				savedGames[type][id].previouslyWishlisted = true;
+				if (savedGames[type][id]) {
+					savedGames[type][id].previouslyWishlisted = true;
+				}
 			}
 		}
 	}
@@ -1725,6 +1766,8 @@ async function syncGames(altAccount, syncer, apiResponse, storeResponse) {
 			</div>
 		);
 	}
+
+	return true;
 }
 
 export { runSilentSync, setSync, SYNC_KEYS };
