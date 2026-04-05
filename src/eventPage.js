@@ -1,6 +1,8 @@
 import { zip, unzipSync, strToU8, strFromU8 } from 'fflate';
 
 const locks = {};
+const notificationMap = new Map();
+let cachedPermissions = { permissions: new Set(), origins: new Set() };
 const SW_KEYS = [
 	'customAdaReqLim_default', 'customAdaReqLim_minute50', 'customAdaReqLim_minute75', 'customAdaReqLim_hourly75',
 	'customAdaReqLim_daily75', 'useCustomAdaReqLim_sg', 'useCustomAdaReqLim_st', 'hr_a_sg', 'hr_a_st',
@@ -615,7 +617,7 @@ async function doFetch(parameters, request, sender, callbackOrPort) {
 
 	if (request.manipulateCookies) {
 		try {
-			const hasPermission = await chrome.permissions.contains({ permissions: ['cookies'] });
+			const hasPermission = await runPermissionsAction('contains', { permissions: ['cookies'] });
 			if (!hasPermission) {
 				request.manipulateCookies = false;
 				if (isSteamStore) {
@@ -739,6 +741,87 @@ function update_lock(lock) { if (locks[lock.key] && locks[lock.key].uuid === loc
 
 function do_unlock(lock) { if (locks[lock.key] && locks[lock.key].uuid === lock.uuid) delete locks[lock.key]; }
 
+function getNotificationsApi() {
+	return chrome.notifications;
+}
+
+function normalizePermissionList(values) {
+	return Array.isArray(values) ? values.filter(Boolean) : [];
+}
+
+function setCachedPermissions({ permissions = [], origins = [] } = {}) {
+	cachedPermissions = {
+		permissions: new Set(normalizePermissionList(permissions)),
+		origins: new Set(normalizePermissionList(origins)),
+	};
+}
+
+async function refreshCachedPermissions() {
+	const allPermissions = await chrome.permissions.getAll();
+	setCachedPermissions(allPermissions);
+	return allPermissions;
+}
+
+function hasCachedPermissions({ permissions = [], origins = [] } = {}) {
+	for (const permission of normalizePermissionList(permissions)) {
+		if (!cachedPermissions.permissions.has(permission)) {
+			return false;
+		}
+	}
+
+	for (const origin of normalizePermissionList(origins)) {
+		if (!cachedPermissions.origins.has(origin)) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+async function runPermissionsAction(operation, permissions) {
+	const permissionApi = chrome.permissions;
+	if (!permissionApi?.[operation]) {
+		throw new Error(`Unsupported permissions operation: ${operation}`);
+	}
+
+	if (operation === 'contains') {
+		return hasCachedPermissions(permissions);
+	}
+
+	const result = await permissionApi[operation](permissions);
+	await refreshCachedPermissions();
+	return result;
+}
+
+function canUseNotifications() {
+	return !!getNotificationsApi() && hasCachedPermissions({ permissions: ['notifications'] });
+}
+
+async function createExtensionNotification(id, options) {
+	const notifications = getNotificationsApi();
+	if (!notifications) return false;
+	if (!canUseNotifications()) return false;
+
+	await notifications.create(id, options);
+	return true;
+}
+
+chrome.permissions.onAdded.addListener(async (permissions) => {
+	setCachedPermissions({
+		permissions: [...cachedPermissions.permissions, ...normalizePermissionList(permissions.permissions)],
+		origins: [...cachedPermissions.origins, ...normalizePermissionList(permissions.origins)],
+	});
+});
+
+chrome.permissions.onRemoved.addListener(async (permissions) => {
+	for (const permission of normalizePermissionList(permissions.permissions)) {
+		cachedPermissions.permissions.delete(permission);
+	}
+	for (const origin of normalizePermissionList(permissions.origins)) {
+		cachedPermissions.origins.delete(origin);
+	}
+});
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 	(async () => {
 		try {
@@ -787,9 +870,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 					break;
 				}
 				case 'flush': await StorageManager.saveNow(); sendResponse({ success: true }); break;
-				case 'permissions_contains': sendResponse({ success: true, result: await chrome.permissions.contains(request.permissions) }); break;
-				case 'permissions_request': sendResponse({ success: true, result: await chrome.permissions.request(request.permissions) }); break;
-				case 'permissions_remove': sendResponse({ success: true, result: await chrome.permissions.remove(request.permissions) }); break;
+				case 'permissions':
+					sendResponse({
+						success: true,
+						result: await runPermissionsAction(request.operation, request.permissions),
+					});
+					break;
 				case 'record_request':
 					RequestQueue.record(request.key);
 					sendResponse({ success: true });
@@ -831,6 +917,31 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 					return;
 				}
 				case 'reload': chrome.runtime.reload(); sendResponse({ success: true }); break;
+				case 'show_hr_notification': {
+					const id = `hr_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+					const created = await createExtensionNotification(id, {
+						type: 'basic',
+						iconUrl: chrome.runtime.getURL('icon.png'),
+						title: 'ESGST Notification',
+						message: request.message,
+						requireInteraction: !!request.requireInteraction,
+					});
+
+					if (!created) {
+						sendResponse({ success: false, error: 'Missing notifications permission' });
+						break;
+					}
+
+					notificationMap.set(id, {
+						url: request.url,
+						activateExisting: !!request.activateExisting,
+						any: !!request.any,
+						refresh: !!request.refresh,
+					});
+
+					sendResponse({ success: true, id });
+					break;
+				}
 				case 'tabs': await manageTabs(request); sendResponse({ success: true }); break;
 				case 'open_tab': await openTab(request.url); sendResponse({ success: true }); break;
 				case 'pendingUpdateCheck': {
@@ -928,15 +1039,13 @@ async function showTdsNotification(subscribedItems) {
 
 	const newest = updatedItems[updatedItems.length - 1];
 	const body = `${newest.name}: ${newest.diff} new ${newest.type === 'forum' ? 'threads' : 'comments'}`;
-	const permission = Notification.permission;
-	if (permission === 'granted') {
-		chrome.notifications.create('TDS', {
-			type: 'basic',
-			iconUrl: chrome.runtime.getURL("icon.png"),
-			title: 'ESGST Notification',
-			message: body,
-		});
-	}
+
+	await createExtensionNotification('TDS', {
+		type: 'basic',
+		iconUrl: chrome.runtime.getURL("icon.png"),
+		title: 'ESGST Notification',
+		message: body,
+	});
 }
 
 async function openTab(url) {
@@ -946,7 +1055,7 @@ async function openTab(url) {
 		const tab = activeTabs && activeTabs[0];
 		if (tab) {
 			options.index = tab.index + 1;
-			try { if (await chrome.permissions.contains({ permissions: ['cookies'] }) && tab.cookieStoreId) options.cookieStoreId = tab.cookieStoreId; } catch { }
+			try { if (await runPermissionsAction('contains', { permissions: ['cookies'] }) && tab.cookieStoreId) options.cookieStoreId = tab.cookieStoreId; } catch { }
 		}
 		return chrome.tabs.create(options);
 	} catch (e) { console.error('[SW] openTab failed', e); }
@@ -1035,6 +1144,36 @@ async function notificationTabs(url, openTabs, { refresh, any }) {
 	try { await chrome.tabs.create({ url }); } catch { }
 }
 
+const notifications = getNotificationsApi();
+
+if (notifications?.onClicked) {
+	notifications.onClicked.addListener(async (id) => {
+		const payload = notificationMap.get(id);
+		if (!payload) return;
+
+		try {
+			if (payload.activateExisting) {
+				await manageTabs({
+					url: payload.url,
+					any: payload.any,
+					refresh: payload.refresh,
+				});
+			} else if (payload.url) {
+				await openTab(payload.url);
+			}
+		} finally {
+			try { await notifications.clear(id); } catch { }
+			notificationMap.delete(id);
+		}
+	});
+}
+
+if (notifications?.onClosed) {
+	notifications.onClosed.addListener((id) => {
+		notificationMap.delete(id);
+	});
+}
+
 async function restoreTabs({ activateTab_sg, activateTab_st }) {
 	try {
 		const tabs = await chrome.tabs.query({});
@@ -1058,7 +1197,7 @@ async function bootstrap() {
 	if (self._bootstrapped) return;
 	self._bootstrapped = true;
 
-	self.SW_VERSION = '4.0.2';
+	self.SW_VERSION = '4.0.3';
 
 	const originalLog = console.log;
 	const originalWarn = console.warn;
@@ -1090,6 +1229,8 @@ async function bootstrap() {
 		debugLog('ServiceWorkerSettings initialized');
 		await StorageManager.load();
 		debugLog('StorageManager loaded');
+		await refreshCachedPermissions();
+		debugLog('Permissions cache loaded');
 
 		try {
 			const tabs = await chrome.tabs.query({});

@@ -4,6 +4,8 @@ export interface Permission {
 	values: string[];
 }
 
+type PermissionOperation = 'contains' | 'request' | 'remove';
+
 class Permissions {
 	permissions: Record<string, Permission>;
 
@@ -59,8 +61,10 @@ class Permissions {
 			},
 			Notification: {
 				messages: {
-					hr: 'Required by Header Refresher to show a notification when points reach a specified threshold.',
-					hr_m_n: 'Show the number of unread messages as a notification.',
+					hr_fp: 'Required by Header Refresher to show point notifications.',
+					hr_g_n: 'Required by Header Refresher to show delivered gifts notifications.',
+					hr_m_n: 'Required by Header Refresher to show unread message notifications.',
+					hr_w_n: 'Required by Header Refresher to show wishlist giveaway notifications.',
 					tds_n: 'Required by Thread Subscription to show a notification when there are new comments.',
 				},
 				values: ['notifications'],
@@ -151,11 +155,7 @@ class Permissions {
 		let result = false;
 
 		for (const keys of keyArrays) {
-			const { permissions, origins } = this.getValues(keys);
-			const response = await chrome.runtime.sendMessage({
-				action: 'permissions_contains',
-				permissions: { permissions, origins },
-			});
+			const response = await this.sendPermissionsMessage('contains', keys);
 			if (response?.success && response.result) {
 				result = true;
 				break;
@@ -166,11 +166,7 @@ class Permissions {
 	}
 
 	async request(keys: string[]): Promise<boolean> {
-		const { permissions, origins } = this.getValues(keys);
-		const response = await chrome.runtime.sendMessage({
-			action: 'permissions_request',
-			permissions: { permissions, origins },
-		});
+		const response = await this.sendPermissionsMessage('request', keys);
 
 		return response?.success && response.result;
 	}
@@ -180,15 +176,21 @@ class Permissions {
 
 		console.log('[Permissions] removing', { permissions, origins });
 
-		const response = await chrome.runtime.sendMessage({
-			action: 'permissions_remove',
-			permissions: { permissions, origins },
-		});
+		const response = await this.sendPermissionsMessage('remove', keys);
 
 		const removed = response?.success ? response.result : false;
 
 		if (callback) callback(removed);
 		return removed;
+	}
+
+	sendPermissionsMessage(operation: PermissionOperation, keys: string[] = []) {
+		const { permissions, origins } = this.getValues(keys);
+		return chrome.runtime.sendMessage({
+			action: 'permissions',
+			operation,
+			permissions: { permissions, origins },
+		});
 	}
 
 	getValues(keys) {

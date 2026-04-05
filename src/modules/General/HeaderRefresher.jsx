@@ -10,7 +10,6 @@ import { Session } from '../../class/Session';
 import { Shared } from '../../class/Shared';
 import { Header } from '../../components/Header';
 import { LocalStorage } from '../../class/LocalStorage';
-import { Tabs } from '../../class/Tabs';
 import { DOM } from '../../class/DOM';
 
 class GeneralHeaderRefresher extends Module {
@@ -607,11 +606,8 @@ class GeneralHeaderRefresher extends Module {
 	}
 
 	async showNotification(details) {
-		if (!window.Notification) return;
-
-		if (window.Notification.permission !== 'granted') {
-			const result = await window.Notification.requestPermission();
-			if (result !== 'granted') return;
+		if (!chrome.runtime?.sendMessage) {
+			return;
 		}
 
 		if (
@@ -658,32 +654,19 @@ class GeneralHeaderRefresher extends Module {
 			}
 		}
 
-		const notification = new Notification('ESGST Notification', {
-			body: details.msg,
-			icon: chrome.runtime.getURL("icon.png"),
+		chrome.runtime.sendMessage({
+			action: 'show_hr_notification',
+			message: details.msg,
+			url: details.url,
+			activateExisting: !!Settings.get('hr_a'),
+			any: !!Settings.get('hr_a_a'),
+			refresh: !!Settings.get('hr_a_r'),
 			requireInteraction: !!Settings.get('hr_c'),
-			tag: details.msg,
-		});
-
-		notification.onclick = () => {
-			if (Settings.get('hr_a')) {
-				chrome.runtime.sendMessage({
-					action: 'tabs',
-					url: details.url,
-					any: !!Settings.get('hr_a_a'),
-					refresh: !!Settings.get('hr_a_r'),
-				}, (resp) => {
-					if (chrome.runtime.lastError) console.warn('sendMessage error', chrome.runtime.lastError);
-					else console.log('tabs message response', resp);
-				});
-			} else {
-				if (details.url) {
-					Tabs.open(details.url);
-				}
+		}, () => {
+			if (chrome.runtime.lastError) {
+				console.warn('show_hr_notification sendMessage error', chrome.runtime.lastError);
 			}
-
-			notification.close();
-		};
+		});
 	}
 
 	async createPlayer(string) {
