@@ -217,7 +217,7 @@ const StorageManager = (() => {
 		}
 
 		if (changes.swSettings) {
-			self.cache.settings = { ...self.cache.settings, ...(changes.swSettings.newValue || {}) };
+			self.cache.settings = buildSwSettings(changes.swSettings.newValue || {});
 		}
 
 		if (changes[PERSIST_STORAGE_KEY]?.newValue) {
@@ -616,10 +616,18 @@ async function doFetch(parameters, request, sender, callbackOrPort) {
 	if (request.manipulateCookies) {
 		try {
 			const hasPermission = await chrome.permissions.contains({ permissions: ['cookies'] });
-			if (!hasPermission) request.manipulateCookies = false;
+			if (!hasPermission) {
+				request.manipulateCookies = false;
+				if (isSteamStore) {
+					parameters.credentials = 'include';
+				}
+			}
 		} catch (e) {
 			console.warn('[SW] permissions.contains failed', e);
 			request.manipulateCookies = false;
+			if (isSteamStore) {
+				parameters.credentials = 'include';
+			}
 		}
 	}
 
@@ -873,6 +881,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 						break;
 					}
 					const { swSettings = {} } = await chrome.storage.local.get('swSettings');
+					delete swSettings.pendingUpdateNotification;
 					await chrome.storage.local.set({
 						swSettings: {
 							...swSettings,
@@ -1049,7 +1058,7 @@ async function bootstrap() {
 	if (self._bootstrapped) return;
 	self._bootstrapped = true;
 
-	self.SW_VERSION = '4.0.1';
+	self.SW_VERSION = '4.0.2';
 
 	const originalLog = console.log;
 	const originalWarn = console.warn;

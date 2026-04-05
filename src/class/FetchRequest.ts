@@ -292,7 +292,7 @@ export class FetchRequest {
 	static getFetchOptions(options: FetchOptions, manipulateCookies = false): RequestInit {
 		return {
 			body: options.data,
-			credentials: options.anon || manipulateCookies ? 'omit' : 'include',
+			credentials: options.anon ? 'omit' : 'include',
 			headers: options.headers,
 			method: options.method,
 			redirect: 'follow',
