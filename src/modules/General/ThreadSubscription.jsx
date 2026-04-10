@@ -51,6 +51,7 @@ class GeneralThreadSubscription extends Module {
 		this.minutes = null;
 		this.popout = null;
 		this.subscribedItems = [];
+		this.nextRun = null;
 
 		this.forumCategories = {
 			'': 'All',
@@ -300,6 +301,21 @@ class GeneralThreadSubscription extends Module {
 		this.updateButton();
 	}
 
+	async loadSchedule() {
+		const result = await chrome.storage.local.get('tdsNextRun');
+		this.nextRun = typeof result.tdsNextRun === 'number' ? result.tdsNextRun : null;
+	}
+
+	async saveSchedule(nextRun) {
+		this.nextRun = nextRun;
+		await chrome.storage.local.set({ tdsNextRun: nextRun });
+	}
+
+	scheduleRun(time) {
+		const clampedTime = Math.max(45000, time);
+		window.setTimeout(this.runDaemon.bind(this, false), clampedTime);
+	}
+
 	async runDaemon(firstRun) {
 		//Logger.info('Running TDS daemon...');
 
@@ -406,7 +422,8 @@ class GeneralThreadSubscription extends Module {
 		this.updateButton();
 
 		// ---------------- Schedule next run ----------------
-		window.setTimeout(this.runDaemon.bind(this, false), this.minutes);
+		await this.saveSchedule(Date.now() + this.minutes);
+		this.scheduleRun(this.minutes);
 	}
 
 	async startDaemon() {
@@ -416,6 +433,8 @@ class GeneralThreadSubscription extends Module {
 			tryOnce: true,
 		});
 		await this.lock.lock();
+		await this.loadSchedule();
+		const isDue = !this.nextRun || this.nextRun <= Date.now();
 
 		if (!this.lock.isLocked) {
 			//Logger.info('TDS Daemon already running....');
@@ -424,6 +443,13 @@ class GeneralThreadSubscription extends Module {
 
 			return;
 		}
+		this.updateItems(await Shared.common.getTds());
+
+		if (!isDue) {
+			this.scheduleRun(this.nextRun - Date.now());
+			return;
+		}
+
 		await this.runDaemon(true);
 	}
 

@@ -859,7 +859,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 						await StorageManager.set("tdsData", subscribedItems);
 					} catch (e) { console.warn("[SW] Failed saving tdsData", e); }
 
-					if (itemsForSW.length) showTdsNotification(itemsForSW);
+					if (itemsForSW.length) await showTdsNotification(itemsForSW);
 
 					const openTabs = await getOpenTabs();
 					for (const { id, url } of openTabs) {

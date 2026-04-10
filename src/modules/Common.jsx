@@ -5807,7 +5807,7 @@ class Common extends Module {
 	}
 
 	async notifyTds(subscribedItems) {
-		if (!subscribedItems.length) return;
+		if (!Array.isArray(subscribedItems)) return;
 
 		const itemsForSW = subscribedItems
 			.filter(item => item.diff > 0)
