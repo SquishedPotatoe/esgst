@@ -6,8 +6,8 @@ let cachedPermissions = { permissions: new Set(), origins: new Set() };
 const SW_KEYS = [
 	'customAdaReqLim_default', 'customAdaReqLim_minute50', 'customAdaReqLim_minute75', 'customAdaReqLim_hourly75',
 	'customAdaReqLim_daily75', 'useCustomAdaReqLim_sg', 'useCustomAdaReqLim_st', 'hr_a_sg', 'hr_a_st',
-	'activateTab_sg', 'activateTab_st', 'lastNotifiedVersion', 'pendingUpdateNotification',
-	'notifyNewVersion_sg', 'notifyNewVersion_st', 'updateCheckInterval'
+	'activateTab_sg', 'activateTab_st', 'lastNotifiedVersion', 'pendingUpdateNotification', 'tds_n_sg',
+	'tds_n_st', 'notifyNewVersion_sg', 'notifyNewVersion_st', 'updateCheckInterval'
 ];
 const SW_DEFAULTS = {
 	customAdaReqLim_default: 0.25,
@@ -21,6 +21,8 @@ const SW_DEFAULTS = {
 	hr_a_st: false,
 	activateTab_sg: false,
 	activateTab_st: false,
+	tds_n_sg: false,
+	tds_n_st: false,
 	lastNotifiedVersion: null,
 	pendingUpdateNotification: null,
 	notifyNewVersion_sg: false,
@@ -844,6 +846,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 					const payload = request.values || {};
 					let subscribedItems = Array.isArray(payload.subscribedItems) ? payload.subscribedItems : [];
 					const itemsForSW = Array.isArray(payload.itemsForSW) ? payload.itemsForSW : [];
+					const swSettings = StorageManager.get('settings') || {};
+					const tdsNotifications = itemsForSW.some((item) =>
+						item.type === 'trades'
+							? !!swSettings.tds_n_st?.enabled
+							: !!swSettings.tds_n_sg?.enabled
+					);
 
 					subscribedItems = subscribedItems.map(item => ({ ...item, type: item.type || 'discussions' }));
 
@@ -859,7 +867,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 						await StorageManager.set("tdsData", subscribedItems);
 					} catch (e) { console.warn("[SW] Failed saving tdsData", e); }
 
-					if (itemsForSW.length) await showTdsNotification(itemsForSW);
+					if (tdsNotifications && itemsForSW.length) await showTdsNotification(itemsForSW);
 
 					const openTabs = await getOpenTabs();
 					for (const { id, url } of openTabs) {
