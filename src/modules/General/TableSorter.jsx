@@ -2,13 +2,12 @@ import { Module } from '../../class/Module';
 import { common } from '../Common';
 import { Settings } from '../../class/Settings';
 import { DOM } from '../../class/DOM';
-import dateFns_parse from 'date-fns/parse';
-import dateFns_isValid from 'date-fns/isValid';
+import { parse, isValid } from '../../lib/date';
 
 const createElements = common.createElements.bind(common),
 	getFeatureTooltip = common.getFeatureTooltip.bind(common),
 	sortContent = common.sortContent.bind(common),
-	dateRegex = /\b(?:\d{4}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}[-/]\d{1,2}[-/]\d{2,4}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2},?\s*\d{0,4}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*,?\s*\d{0,4}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}|\d{4}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*'\d{2})\b/i;
+	DATE_CLEAN_REGEX = /(\d{1,2}(st|nd|rd|th)?|\d{4})/g;
 
 class GeneralTableSorter extends Module {
 	constructor() {
@@ -173,34 +172,21 @@ class GeneralTableSorter extends Module {
 		}
 	}
 
-	ts_handleDate(dateString) {
-		if (typeof dateString !== 'string') return null;
-		const cleanedDate = dateString.replace(/(\d+)(st|nd|rd|th)|,/gi, '$1').replace(/\s+/g, ' ').trim();
-		const formats = [
-			'MMM d yyyy', 'MMMM d yyyy',
-			'd MMM yyyy', 'd MMMM yyyy',
-			'yyyy MMM d', 'yyyy MMMM d',
-			'yyyy-MM-dd',
-			'MM/dd/yyyy', 'dd/MM/yyyy',
-			'MMM d', 'd MMM', 'MMMM d', 'd MMMM',
-			'MMMM yyyy', 'MMM yyyy'
-		];
-		for (const fmt of formats) {
-			const parsed = dateFns_parse(cleanedDate, fmt, new Date());
-			if (dateFns_isValid(parsed)) {
-				if (!parsed.getFullYear()) parsed.setFullYear(new Date().getFullYear());
-				return parsed;
-			}
-		}
+	ts_extractDate(value) {
+		if (!value || typeof value !== 'string') return null;
+		if (!/\d/.test(value)) return null;
+		const cleaned = value
+			.replace(/,/g, '')
+			.replace(/\s+/g, ' ')
+			.trim();
+		let parsed = parse(cleaned);
+		if (isValid(parsed)) return parsed;
+		const matches = cleaned.match(DATE_CLEAN_REGEX);
+		if (!matches) return null;
+		const candidate = matches.join(' ');
+		parsed = parse(candidate);
+		if (isValid(parsed)) return parsed;
 		return null;
-	}
-
-	ts_getDateSubstring(value, regex, threshold = 0.7) {
-		const match = value.match(regex);
-		if (!match) return null;
-		const matchedStr = match[0];
-		const ratio = matchedStr.length / value.length;
-		return ratio >= threshold ? matchedStr : null;
 	}
 
 	ts_parseMiscValue(value, element) {
@@ -232,6 +218,7 @@ class GeneralTableSorter extends Module {
 				`.table__column--width-fill, .table__column--width-medium, .table__column--width-small, .column_flex, .column_medium, .column_small, td`
 			)[i];
 			value = column && column.textContent.trim();
+			const hasSortValue = column && column.hasAttribute('data-sort-value');
 			element = {
 				outerWrap: row,
 				sortIndex: 0,
@@ -243,8 +230,8 @@ class GeneralTableSorter extends Module {
 				element.sortIndex = j;
 				row.setAttribute('data-sort-index', j);
 			}
-			if ((value && value.length > 0) || columnName === 'Trending') {
-				if (column.hasAttribute('data-sort-value')) {
+			if (hasSortValue || (value && value.length > 0) || columnName === 'Trending') {
+				if (hasSortValue) {
 					element.value = parseFloat(column.getAttribute('data-sort-value'));
 				} else {
 					switch (columnName) {
@@ -285,10 +272,10 @@ class GeneralTableSorter extends Module {
 							if (!value || value === '―' || value === '-') {
 								element.value = '';
 							} else {
-								const dateSubstring = this.ts_getDateSubstring(value, dateRegex, 0.7);
-								if (dateSubstring) {
-									const parsedDate = this.ts_handleDate(dateSubstring);
-									isNumeric = parsedDate ? (element.value = parsedDate.getTime(), true) : this.ts_parseMiscValue(value, element);
+								const parsedDate = this.ts_extractDate(value);
+								if (parsedDate) {
+									element.value = parsedDate.getTime();
+									isNumeric = true;
 								} else {
 									isNumeric = this.ts_parseMiscValue(value, element);
 								}

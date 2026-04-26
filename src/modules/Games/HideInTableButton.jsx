@@ -83,15 +83,19 @@ function initTable(table, esgst) {
 	if (!theadRow) return;
 
 	const header = document.createElement('th');
-	header.className = 'esgst-hgitb-col esgst-clickable';
+	header.className = 'esgst-hgitb-col';
+
+	const control = document.createElement('span');
+	control.className = 'esgst-hgitb-header esgst-clickable';
 
 	const text = document.createElement('span');
 	const icon = document.createElement('i');
-	icon.style.marginLeft = '5px';
 
-	header.appendChild(text);
-	header.appendChild(icon);
+	control.appendChild(text);
+	control.appendChild(icon);
+	header.appendChild(control);
 
+	header._controlRef = control;
 	header._textRef = text;
 	header._iconRef = icon;
 
@@ -103,7 +107,7 @@ function initTable(table, esgst) {
 		.filter(Boolean);
 
 	updateHeader(state);
-	header.addEventListener('click', () => onHeaderClick(state));
+	control.addEventListener('click', () => onHeaderClick(state));
 
 	lookupUnknown(state);
 }
@@ -120,7 +124,12 @@ function initRow(tr, state) {
 
 	const cell = document.createElement('td');
 	cell.className = 'esgst-hgitb-cell';
-	cell.style.textAlign = 'center';
+	if (Settings.get('ts')) {
+		cell.setAttribute(
+			'data-sort-value',
+			String(getSortValue({ hidden: false, notFound: false, unknown: true }))
+		);
+	}
 	tr.appendChild(cell);
 
 	const saved = state.esgst.games[storageType][gameId];
@@ -236,11 +245,13 @@ function updateHeader(state) {
 
 	state.header._textRef.textContent = allHidden ? 'Unhide All' : 'Hide All';
 	state.header._iconRef.className = 'fa ' + (allHidden ? 'fa-eye' : 'fa-eye-slash');
-	state.header.title = allHidden ? 'Unhide all games' : 'Hide all games';
+	state.header._controlRef.title = allHidden ? 'Unhide all games' : 'Hide all games';
 }
 
 function applyHiddenState(g, hidden) {
 	g.hidden = hidden;
+	g.notFound = false;
+	g.unknown = false;
 	g.row.classList.toggle('esgst-faded', hidden);
 
 	const b = g.button;
@@ -248,22 +259,43 @@ function applyHiddenState(g, hidden) {
 	b.classList.add(hidden ? 'fa-eye' : 'fa-eye-slash');
 	b.title = hidden ? 'Unhide this game' : 'Hide this game';
 	applyColorState(b, hidden ? 'hidden' : 'visible');
+	updateSortValue(g);
 }
 
 function markNotFound(g) {
+	g.hidden = false;
 	g.notFound = true;
+	g.unknown = false;
 	const b = g.button;
 	b.className = 'fa esgst-clickable esgst-hgitb fa-question';
 	b.title = 'Game not found';
 	applyColorState(b, 'notfound');
+	updateSortValue(g);
 }
 
 function markUnknown(g) {
+	g.hidden = false;
 	g.notFound = false;
+	g.unknown = true;
 	const b = g.button;
 	b.className = 'fa esgst-clickable esgst-hgitb fa-question';
 	b.title = 'Game not yet resolved';
 	applyColorState(b, 'notfound');
+	updateSortValue(g);
+}
+
+function getSortValue(g) {
+	if (g.hidden) return 2;
+	if (g.notFound || g.unknown) return 1;
+	return 0;
+}
+
+function updateSortValue(g) {
+	if (!Settings.get('ts')) {
+		g.cell.removeAttribute('data-sort-value');
+		return;
+	}
+	g.cell.setAttribute('data-sort-value', String(getSortValue(g)));
 }
 
 async function runBatched(items, limit, worker) {
