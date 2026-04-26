@@ -12,7 +12,7 @@ import { ToggleSwitch } from '../../class/ToggleSwitch';
 import { Button } from '../../components/Button';
 import { NotificationBar } from '../../components/NotificationBar';
 import { PageHeading } from '../../components/PageHeading';
-import { Utils } from '../../lib/jsUtils';
+import { sortArray } from '../../lib/jsUtils';
 import { common } from '../Common';
 
 const createElements = common.createElements.bind(common),
@@ -742,10 +742,10 @@ class UsersWhitelistBlacklistChecker extends Module {
 					}
 				}
 			}
-			WBC.Users = Utils.sortArray(WBC.Users);
+		WBC.Users = sortArray(WBC.Users);
 			if (WBC.ShowResults) {
 				for (I = 0, N = WBC.Users.length; I < N; ++I) {
-					if (Utils.isSet(WBC.Users[I]) && !SavedUsers.users[SavedUsers.steamIds[WBC.Users[I]]]) {
+		if (WBC.Users[I] != null && !SavedUsers.users[SavedUsers.steamIds[WBC.Users[I]]]) {
 						continue;
 					}
 					let user = {
@@ -826,7 +826,7 @@ class UsersWhitelistBlacklistChecker extends Module {
 							},
 						}).insert(this.heading.nodes.outer, 'beforeend');
 
-						WBC.Users = Utils.sortArray(WBC.Users);
+		WBC.Users = sortArray(WBC.Users);
 						if (window.location.pathname.match(/^\/users/)) {
 							WBC.Users = WBC.Users.slice(0, 25);
 						}
@@ -844,7 +844,7 @@ class UsersWhitelistBlacklistChecker extends Module {
 					},
 				}).insert(this.heading.nodes.outer, 'beforeend');
 
-				WBC.Users = Utils.sortArray(WBC.Users);
+		WBC.Users = sortArray(WBC.Users);
 				if (window.location.pathname.match(/^\/users/)) {
 					WBC.Users = WBC.Users.slice(0, 25);
 				}

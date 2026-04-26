@@ -4,7 +4,6 @@ import { Settings } from '../../class/Settings';
 import { Shared } from '../../class/Shared';
 import { ToggleSwitch } from '../../class/ToggleSwitch';
 import { Button } from '../../components/Button';
-import { Utils } from '../../lib/jsUtils';
 import { common } from '../Common';
 import { Filters } from '../Filters';
 
@@ -259,7 +258,7 @@ class UsersUserFilters extends Filters {
 		if (!data) {
 			return;
 		}
-		if (Utils.isSet(data.posts)) {
+		if (data.posts != null) {
 			data.giveawayPosts = data.posts;
 			data.discussionPosts = data.posts;
 			delete data.posts;

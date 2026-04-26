@@ -4,7 +4,7 @@ import { Module } from '../class/Module';
 import { Popup } from '../class/Popup';
 import { Scope } from '../class/Scope';
 import { Settings } from '../class/Settings';
-import { Utils } from '../lib/jsUtils';
+import { sortArray } from '../lib/jsUtils';
 import { common } from './Common';
 
 const createElements = common.createElements.bind(common),
@@ -99,7 +99,7 @@ class Tags extends Module {
 				});
 			}
 		}
-		this.esgst[`${this.id}Tags`] = Utils.sortArray(this.esgst[`${this.id}Tags`], true, 'count').map(
+		this.esgst[`${this.id}Tags`] = sortArray(this.esgst[`${this.id}Tags`], true, 'count').map(
 			(x) => x.tag
 		);
 		if (Settings.get(`${this.id}_s`)) {
@@ -200,7 +200,7 @@ class Tags extends Module {
 			Users: 'ut',
 		}[this.id];
 		const obj = { items: [], key: this.id, colorSetting: Settings.get(`${this.id}_colors`) };
-		obj.items = Utils.sortArray(
+		obj.items = sortArray(
 			items.filter(
 				(item) =>
 					item.mm &&

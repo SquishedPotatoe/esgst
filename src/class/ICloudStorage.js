@@ -1,5 +1,4 @@
 import { Shared } from './Shared';
-import { Utils } from '../lib/jsUtils';
 
 class ICloudStorage {
 	static get REDIRECT_URL() {
@@ -14,7 +13,7 @@ class ICloudStorage {
 
 	static async checkToken(key, resolve, startTime = Date.now(), timeout = 60000) {
 		const token = await Shared.common.getValue(key);
-		if (Utils.isSet(token)) {
+		if (token != null) {
 			resolve(token);
 		} else if (startTime - Date.now() > timeout) {
 			resolve(null);

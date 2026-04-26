@@ -1,13 +1,12 @@
 import { DOM } from './class/DOM';
 import { permissions } from './class/Permissions';
-import { Utils } from './lib/jsUtils';
 
 const grantedPermissions = new Set<string>();
 const deniedPermissions = new Set<string>();
 let messageNode: HTMLElement | undefined;
 
 const loadPermissions = async (): Promise<void> => {
-	const params = Utils.getQueryParams();
+	const params = Object.fromEntries(new URLSearchParams(window.location.search));
 	const rows: JSX.Element[] = [];
 
 	const keys = params.keys

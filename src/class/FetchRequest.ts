@@ -1,4 +1,3 @@
-import { Utils } from '../lib/jsUtils';
 import { DOM } from './DOM';
 import { Lock } from './Lock';
 import { Settings } from './Settings';
@@ -269,7 +268,7 @@ export class FetchRequest {
 		};
 		const response = await chrome.runtime.sendMessage(messageOptions);
 
-		if (Utils.isSet(response.error)) {
+		if (response.error != null) {
 			throw new Error(response.error);
 		}
 

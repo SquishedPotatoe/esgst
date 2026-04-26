@@ -5,7 +5,6 @@ import { Module } from '../../class/Module';
 import { Popup } from '../../class/Popup';
 import { Settings } from '../../class/Settings';
 import { Shared } from '../../class/Shared';
-import { Utils } from '../../lib/jsUtils';
 
 class GiveawaysCreatedEnteredWonGiveawayDetails extends Module {
 	constructor() {
@@ -474,7 +473,7 @@ class GiveawaysCreatedEnteredWonGiveawayDetails extends Module {
 		if (Settings.get(`${this.currentId}_l`)) {
 			columnItems.push(
 				<div className="table__column--width-small text-center">
-					{details && Utils.isSet(giveaway.level) ? giveaway.level : '-'}
+											{details && giveaway.level != null ? giveaway.level : '-'}
 				</div>
 			);
 		}
@@ -518,7 +517,7 @@ class GiveawaysCreatedEnteredWonGiveawayDetails extends Module {
 		if (this.won && Settings.get(`${this.currentId}_e`)) {
 			columnItems.push(
 				<div className="table__column--width-small text-center">
-					{details && Utils.isSet(giveaway.entries) ? giveaway.entries : '-'}
+											{details && giveaway.entries != null ? giveaway.entries : '-'}
 				</div>
 			);
 		}

@@ -1,5 +1,4 @@
-import dateFns_format from 'date-fns/format';
-import dateFns_isSameDay from 'date-fns/isSameDay';
+import { format, isSameDay } from '../../lib/date';
 import { Module } from '../../class/Module';
 import { Popup } from '../../class/Popup';
 import { common } from '../Common';
@@ -103,7 +102,7 @@ class GiveawaysEntryTracker extends Module {
 					},
 				],
 			});
-			let date = dateFns_format(entry.timestamp, `MMM d, yyyy`);
+			let date = format(entry.timestamp, `MMM d, yyyy`);
 			let key = new Date(date).getTime();
 			if (!dates[key]) {
 				dates[key] = {
@@ -127,7 +126,7 @@ class GiveawaysEntryTracker extends Module {
 			currentDate = dateObj.getTime();
 			if (!dates[currentDate]) {
 				dates[currentDate] = {
-					date: dateFns_format(currentDate, `MMM d, yyyy`),
+					date: format(currentDate, `MMM d, yyyy`),
 					entered: 0,
 					left: 0,
 				};
@@ -395,7 +394,7 @@ class GiveawaysEntryTracker extends Module {
 		let entries = JSON.parse(getValue('entries', '[]'));
 		for (let i = entries.length - 1; i > -1; i--) {
 			let entry = entries[i];
-			if (!dateFns_isSameDay(date, entry.timestamp)) continue;
+			if (!isSameDay(date, entry.timestamp)) continue;
 			entries.splice(i, 1);
 		}
 		await setValue('entries', JSON.stringify(entries));

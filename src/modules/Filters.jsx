@@ -10,7 +10,6 @@ import { Settings } from '../class/Settings';
 import { Shared } from '../class/Shared';
 import { ToggleSwitch } from '../class/ToggleSwitch';
 import { Button } from '../components/Button';
-import { Utils } from '../lib/jsUtils';
 import { common } from './Common';
 import { SYNC_KEYS } from './Sync';
 import 'jQuery-QueryBuilder/dist/js/query-builder.standalone';
@@ -1251,7 +1250,7 @@ class Filters extends Module {
 			for (const subRule of rule.rules) {
 				usedFilters = this.getUsedFilters(subRule, usedFilters);
 			}
-		} else if (Utils.isSet(rule.id)) {
+				} else if (rule.id != null) {
 			usedFilters.add(rule.id);
 		}
 		return usedFilters;
@@ -2503,7 +2502,7 @@ class Filters extends Module {
 	filters_filterItem(filters, item, rules, notMain) {
 		if (
 			!rules ||
-			(!rules.id && (!rules.condition || (Utils.isSet(rules.valid) && !rules.valid))) ||
+			(!rules.id && (!rules.condition || (rules.valid != null && !rules.valid))) ||
 			(rules.id && !Settings.get(`${this.id}_${rules.id}`))
 		) {
 			return true;
@@ -2595,10 +2594,10 @@ class Filters extends Module {
 						filtered = value >= ruleValue;
 						break;
 					case 'is_null':
-						filtered = !Utils.isSet(value) || value < 0;
+						filtered = value == null || value < 0;
 						break;
 					case 'is_not_null':
-						filtered = Utils.isSet(value) && value > -1;
+						filtered = value != null && value > -1;
 						break;
 				}
 

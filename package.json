@@ -18,7 +18,6 @@
 		"build-dev": "webpack --env development"
 	},
 	"dependencies": {
-		"date-fns": "4.1.0",
 		"fflate": "^0.8.2",
 		"jQuery-QueryBuilder": "3.0.0",
 		"jquery": "4.0.0",

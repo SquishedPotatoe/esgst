@@ -1,5 +1,5 @@
 import { Module } from '../../class/Module';
-import dateFns_format from 'date-fns/format';
+import { format } from '../../lib/date';
 import { common } from '../Common';
 import { Settings } from '../../class/Settings';
 import { DOM } from '../../class/DOM';
@@ -37,7 +37,7 @@ class GeneralPageLoadTimestamp extends Module {
 	}
 
 	init() {
-		const timestamp = dateFns_format(
+		const timestamp = format(
 			Date.now(),
 			Settings.get('plt_format') || `MMM dd, yyyy, HH:mm:ss`
 		);

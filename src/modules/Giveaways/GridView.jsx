@@ -1,4 +1,4 @@
-import dateFns_formatDistanceStrict from 'date-fns/formatDistanceStrict';
+import { formatDistanceStrict } from '../../lib/date';
 import { Module } from '../../class/Module';
 import { Popout } from '../../class/Popout';
 import { common } from '../Common';
@@ -220,9 +220,7 @@ class GiveawaysGridView extends Module {
 										}`,
 									},
 									// @ts-ignore
-									text: dateFns_formatDistanceStrict(giveaway.endTime, now, {
-										locale: this.esgst.formatDistanceLocale,
-									}),
+									text: formatDistanceStrict(giveaway.endTime, now, { compact: true }),
 									type: 'span',
 								},
 								{
@@ -236,9 +234,7 @@ class GiveawaysGridView extends Module {
 										title: `Created ${giveaway.startTimeColumn.firstElementChild.textContent}`,
 									},
 									// @ts-ignore
-									text: dateFns_formatDistanceStrict(giveaway.startTime, now, {
-										locale: this.esgst.formatDistanceLocale,
-									}),
+									text: formatDistanceStrict(giveaway.startTime, now, { compact: true }),
 									type: 'span',
 								},
 							],

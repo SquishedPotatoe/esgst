@@ -7,7 +7,7 @@ import { Settings } from '../../class/Settings';
 import { Shared } from '../../class/Shared';
 import { Button } from '../../components/Button';
 import { PageHeading } from '../../components/PageHeading';
-import { Utils } from '../../lib/jsUtils';
+import { sortArray } from '../../lib/jsUtils';
 import { common } from '../Common';
 
 const buildGiveaway = common.buildGiveaway.bind(common),
@@ -260,7 +260,7 @@ class GiveawaysGiveawayEncrypterDecrypter extends Module {
 			if (ged.button) {
 				ged.button.nodes.outer.classList.remove('esgst-hidden');
 			}
-			ged.giveaways = Utils.sortArray(ged.giveaways, false, 'timestamp');
+		ged.giveaways = sortArray(ged.giveaways, false, 'timestamp');
 		}
 	}
 

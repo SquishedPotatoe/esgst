@@ -1,4 +1,3 @@
-import { Utils } from '../lib/jsUtils';
 import { Shared } from './Shared';
 
 class _Settings {
@@ -1121,7 +1120,7 @@ class _Settings {
 		for (const key of Object.keys(this.oldValues).concat(Object.keys(this.defaultValues))) {
 			const localKey = key.replace(new RegExp(`(.+?)_${Shared.esgst.name}$`), '$1');
 
-			if (!Utils.isSet(this.settings[localKey])) {
+			if (this.settings[localKey] == null) {
 				this.settings[key] = this.settings[localKey] = this.getSetting(key);
 			}
 		}

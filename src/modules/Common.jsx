@@ -1,5 +1,4 @@
-import dateFns_format from 'date-fns/format';
-import dateFns_isSameWeek from 'date-fns/isSameWeek';
+import {format, isSameWeek, formatDistanceStrict} from '../lib/date'
 import { DOM } from '../class/DOM';
 import { EventDispatcher } from '../class/EventDispatcher';
 import { FetchRequest } from '../class/FetchRequest';
@@ -23,7 +22,6 @@ import { NotificationBar } from '../components/NotificationBar';
 import { PageHeading } from '../components/PageHeading';
 import { ClassNames } from '../constants/ClassNames';
 import { Events } from '../constants/Events';
-import { Utils } from '../lib/jsUtils';
 import { settingsModule } from './Settings';
 import { loadDataCleaner, loadDataManagement } from './Storage';
 import { runSilentSync, setSync } from './Sync';
@@ -97,6 +95,22 @@ class Common extends Module {
 		this.esgst.minimizeList = this.esgst.minimizePanel.firstElementChild.lastElementChild;
 	}
 
+	minimizePanel_getItemTitle(popup) {
+		const popupTitle = popup.title?.textContent?.replace(/:$/, '').trim();
+		if (popupTitle) {
+			return popupTitle;
+		}
+
+		const pageHeadingTitle = popup.description
+			?.querySelector('.page__heading__breadcrumbs > :last-child, .page_heading_breadcrumbs > :last-child')
+			?.textContent?.trim();
+		if (pageHeadingTitle) {
+			return pageHeadingTitle;
+		}
+
+		return 'Untitled Popup';
+	}
+
 	minimizePanel_addItem(popup) {
 		if (!this.esgst.minimizeList) {
 			return;
@@ -113,7 +127,7 @@ class Common extends Module {
 						attributes: {
 							href: `javascript:void(0);`,
 						},
-						text: popup.title.textContent.replace(/:$/, ''),
+						text: this.minimizePanel_getItemTitle(popup),
 						type: 'a',
 					},
 				],
@@ -1055,9 +1069,9 @@ class Common extends Module {
 									popup.
 								</li>
 								<li>
-									With this option enabled, the sync/backup popups become non-temporary, which
+									With this option enabled, the sync popup become non-temporary, which
 									allows you to close them and keep navigating through the page while ESGST is
-									performing the sync/backup, without having to wait for it to finish.
+									performing the sync, without having to wait for it to finish.
 								</li>
 								<li>
 									Some popups will notify you when they are done. When this happens, a red bar will
@@ -4268,7 +4282,7 @@ class Common extends Module {
 	}
 
 	getTimestamp(seconds, is24Clock, isShowSeconds) {
-		return dateFns_format(
+		return format(
 			seconds,
 			`MMM d, yyyy, ${is24Clock ? 'H' : 'h'}:mm${isShowSeconds ? `:ss` : ''}${
 				is24Clock ? '' : ' a'
@@ -4282,30 +4296,12 @@ class Common extends Module {
 	 * @returns {string}
 	 */
 	getTimeSince(timestamp, until) {
-		let n, s;
-		s = Math.floor((until ? timestamp - Date.now() : Date.now() - timestamp) / 1000);
-		n = Math.floor(s / 31104000);
-		if (n >= 1) {
-			return `${n} year${n === 1 ? '' : 's'}`;
-		}
-		n = Math.floor(s / 2592000);
-		if (n >= 1) {
-			return `${n} month${n === 1 ? '' : 's'}`;
-		}
-		n = Math.floor(s / 86400);
-		if (n >= 1) {
-			return `${n} day${n === 1 ? '' : 's'}`;
-		}
-		n = Math.floor(s / 3600);
-		if (n >= 1) {
-			return `${n} hour${n === 1 ? '' : 's'}`;
-		}
-		n = Math.floor(s / 60);
-		if (n >= 1) {
-			return `${n} minute${n === 1 ? '' : 's'}`;
-		}
-		n = Math.floor(s);
-		return `${n} second${n === 1 ? '' : 's'}`;
+		const now = Date.now();
+		return formatDistanceStrict(
+			until ? timestamp : now,
+			until ? now : timestamp,
+			{ mode: 'exact' }
+		);
 	}
 
 	closeHeaderMenu(arrow, dropdown, menu, event) {
@@ -5280,7 +5276,7 @@ class Common extends Module {
 				<fragment>
 					<div className="sidebar__navigation__item__name">{item.name}</div>
 					<div className="sidebar__navigation__item__underline"></div>
-					{Utils.isSet(item.count) ? (
+					{item.count != null ? (
 						<div className="sidebar__navigation__item__count">{item.count}</div>
 					) : null}
 				</fragment>
@@ -5354,7 +5350,7 @@ class Common extends Module {
 			if (!item) {
 				continue;
 			}
-			if (Utils.isSet(item.context)) {
+		if (item.context != null) {
 				context.appendChild(item.context);
 				continue;
 			}
@@ -5364,20 +5360,20 @@ class Common extends Module {
 				continue;
 			}
 			const element = document.createElement(item.type);
-			if (Utils.isSet(item.attributes)) {
+		if (item.attributes != null) {
 				for (const key in item.attributes) {
 					if (item.attributes.hasOwnProperty(key)) {
 						element.setAttribute(key, item.attributes[key]);
 					}
 				}
 			}
-			if (Utils.isSet(item.text)) {
+		if (item.text != null) {
 				element.textContent = item.text;
 			}
-			if (Utils.isSet(item.children)) {
+		if (item.children != null) {
 				this.buildElements(element, item.children);
 			}
-			if (Utils.isSet(item.events)) {
+		if (item.events != null) {
 				for (const key in item.events) {
 					if (item.events.hasOwnProperty(key)) {
 						element.addEventListener(key, item.events[key]);
@@ -5696,7 +5692,7 @@ class Common extends Module {
 	async SgdbCache(update) {
 		const isUsingServer = await permissions.contains([['server']]);
 		let api = JSON.parse(this.getValue('sgdbCache', `{ "lastUpdate": 0 }`));
-		if (!dateFns_isSameWeek(Date.now(), api.lastUpdate)) {
+		if (!isSameWeek(Date.now(), api.lastUpdate)) {
 			if (isUsingServer) {
 				update && update('Updating API cache...');
 
@@ -5867,14 +5863,14 @@ class Common extends Module {
 	}
 
 	getValue(key, value) {
-		return Utils.isSet(this.esgst.storage[key]) ? this.esgst.storage[key] : value;
+		return this.esgst.storage[key] != null ? this.esgst.storage[key] : value;
 	}
 
 	getValues(values) {
 		const output = {};
 		for (const key in values) {
 			if (values.hasOwnProperty(key)) {
-				output[key] = Utils.isSet(this.esgst.storage[key]) ? this.esgst.storage[key] : values[key];
+				output[key] = this.esgst.storage[key] != null ? this.esgst.storage[key] : values[key];
 			}
 		}
 		return output;
@@ -6071,7 +6067,7 @@ class Common extends Module {
 				delete Shared.esgst.storage[key];
 				delete Shared.esgst[key];
 			}
-			if (!Utils.isSet(change.newValue)) {
+			if (change.newValue == null) {
 				continue;
 			}
 			Shared.esgst.storage[key] = change.newValue;

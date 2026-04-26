@@ -1,4 +1,4 @@
-import dateFns_formatDistanceStrict from 'date-fns/formatDistanceStrict';
+import { formatDistanceStrict } from '../lib/date';
 import { Checkbox } from '../class/Checkbox';
 import { DOM } from '../class/DOM';
 import { FetchRequest } from '../class/FetchRequest';
@@ -12,7 +12,6 @@ import { Shared } from '../class/Shared';
 import { Button } from '../components/Button';
 import { NotificationBar } from '../components/NotificationBar';
 import { PageHeading } from '../components/PageHeading';
-import { Utils } from '../lib/jsUtils';
 
 let toSave = {};
 
@@ -102,7 +101,9 @@ async function runSilentSync(parameters) {
 
 	Shared.esgst.parameters = {
 		...Shared.esgst.parameters,
-		...Utils.getQueryParams(`?autoSync=true&${parameters.replace(/&$/, '')}`),
+		...Object.fromEntries(
+			new URLSearchParams(`?autoSync=true&${parameters.replace(/&$/, '')}`)
+		),
 	};
 	const syncer = await setSync(false, true);
 	button.nodes.outer.addEventListener('click', () => syncer.popup.open());
@@ -146,6 +147,7 @@ async function setSync(isPopup = false, isSilent = false) {
 		syncer.popup = popup = new Popup({
 			addScrollable: 'left',
 			settings: true,
+			className: 'esgst-sync-popup'
 		});
 		containerr = popup.description;
 		context = popup.scrollable;
@@ -377,7 +379,7 @@ function addNotificationBars(syncer, info) {
 			<fragment>
 				Synced <span>{info.name}</span>{' '}
 				<span data-timestamp={timestamp / 1e3}>
-					{dateFns_formatDistanceStrict(timestamp, new Date())}
+					{formatDistanceStrict(timestamp, new Date())}
 				</span>
 				{' ago.'}
 			</fragment>
@@ -1326,6 +1328,9 @@ async function sync(syncer) {
 		await Shared.common.lockAndSaveSettings(toSave);
 		toSave = {};
 		syncer.progressBar.setSuccess('Synced!');
+		if (syncer.popup) {
+			syncer.popup.setDone();
+		}
 		LocalStorage.delete('isSyncing');
 	}
 	if (!syncer.isSilent) {

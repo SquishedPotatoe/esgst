@@ -8,7 +8,7 @@ import { Settings } from '../../class/Settings';
 import { Shared } from '../../class/Shared';
 import { Button } from '../../components/Button';
 import { PageHeading } from '../../components/PageHeading';
-import { Utils } from '../../lib/jsUtils';
+import { sortArray } from '../../lib/jsUtils';
 import { common } from '../Common';
 
 const createElements = common.createElements.bind(common),
@@ -391,7 +391,7 @@ class UsersNotActivatedMultipleWinChecker extends Module {
 		}
 
 		// check users
-		users = Utils.sortArray(users);
+		users = sortArray(users);
 		let steamIds = [];
 		let userElements = {
 			activated: {},

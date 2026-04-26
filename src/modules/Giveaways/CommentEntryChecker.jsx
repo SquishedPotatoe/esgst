@@ -6,7 +6,7 @@ import { Settings } from '../../class/Settings';
 import { Table } from '../../class/Table';
 import { NotificationBar } from '../../components/NotificationBar';
 import { PageHeading } from '../../components/PageHeading';
-import { Utils } from '../../lib/jsUtils';
+import { sortArray } from '../../lib/jsUtils';
 import { common } from '../Common';
 
 class GiveawaysCommentEntryChecker extends Module {
@@ -184,8 +184,8 @@ class GiveawaysCommentEntryChecker extends Module {
 		obj.progressBar.reset().hide();
 
 		// calculate data
-		comments = Utils.sortArray(Array.from(/** @type {ArrayLike} */ new Set(comments)));
-		entries = Utils.sortArray(Array.from(/** @type {ArrayLike} */ new Set(entries)));
+		comments = sortArray(Array.from(/** @type {ArrayLike} */ new Set(comments)));
+		entries = sortArray(Array.from(/** @type {ArrayLike} */ new Set(entries)));
 		let both = 0;
 		let commented = 0;
 		let entered = 0;

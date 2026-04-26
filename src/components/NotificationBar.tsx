@@ -4,7 +4,7 @@ import { Session } from '../class/Session';
 import { ClassNames, EsgstClassNames, NotificationColor } from '../constants/ClassNames';
 import { Events } from '../constants/Events';
 import { Namespaces } from '../constants/Namespaces';
-import { Utils } from '../lib/jsUtils';
+import { isDeepEqual } from '../lib/jsUtils';
 import { Base, BaseData, BaseNodes } from './Base';
 
 export interface NotificationBarData extends BaseData {
@@ -256,7 +256,7 @@ export class SgNotificationBar extends NotificationBar {
 		if (!this._nodes.outer) {
 			throw this.getError('failed to set content');
 		}
-		const areIconsEqual = this._hasBuilt && Utils.isDeepEqual(this._data.icons, icons);
+		const areIconsEqual = this._hasBuilt && isDeepEqual(this._data.icons, icons);
 		const isMessageEqual = this._hasBuilt && this._data.message === message;
 		if (!areIconsEqual && !isMessageEqual) {
 			this._nodes.outer.innerHTML = '';
@@ -274,7 +274,7 @@ export class SgNotificationBar extends NotificationBar {
 		if (!this._nodes.outer) {
 			throw this.getError('failed to set icons');
 		}
-		if (this._hasBuilt && Utils.isDeepEqual(this._data.icons, icons)) {
+		if (this._hasBuilt && isDeepEqual(this._data.icons, icons)) {
 			return this;
 		}
 		this.removeIcons();
@@ -429,7 +429,7 @@ export class StNotificationBar extends NotificationBar {
 		if (!this._nodes.outer) {
 			throw this.getError('failed to set icons');
 		}
-		if (this._hasBuilt && Utils.isDeepEqual(this._data.icons, icons)) {
+		if (this._hasBuilt && isDeepEqual(this._data.icons, icons)) {
 			return this;
 		}
 		this.removeIcons();

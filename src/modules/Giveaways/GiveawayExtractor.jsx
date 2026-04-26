@@ -1,4 +1,4 @@
-import dateFns_differenceInDays from 'date-fns/differenceInDays';
+import { differenceInDays } from '../../lib/date';
 import { DOM } from '../../class/DOM';
 import { EventDispatcher } from '../../class/EventDispatcher';
 import { FetchRequest } from '../../class/FetchRequest';
@@ -15,7 +15,6 @@ import { Button } from '../../components/Button';
 import { NotificationBar } from '../../components/NotificationBar';
 import { PageHeading } from '../../components/PageHeading';
 import { Events } from '../../constants/Events';
-import { Utils } from '../../lib/jsUtils';
 import { common } from '../Common';
 
 const buildGiveaway = common.buildGiveaway.bind(common),
@@ -131,7 +130,7 @@ class GiveawaysGiveawayExtractor extends Module {
 		} else if (Shared.common.isCurrentPath('Account') && this.esgst.parameters.esgst === 'ge') {
 			this.nextRegex = new RegExp(Settings.get('npth_nextRegex'));
 
-			const parameters = Utils.getQueryParams();
+			const parameters = Object.fromEntries(new URLSearchParams(window.location.search));
 			if (!parameters.url.match(/(^\/|www\.steamgifts\.com)/)) {
 				if (!(await permissions.contains([['allUrls']]))) {
 					window.alert('Giveaway Extractor: Not enough permissions to proceed.');
@@ -200,7 +199,7 @@ class GiveawaysGiveawayExtractor extends Module {
 		let changed = false;
 		ge.cache = JSON.parse(common.getValue('geCache', '{}'));
 		for (const id in ge.cache) {
-			if (dateFns_differenceInDays(now, ge.cache[id].timestamp) > 7) {
+			if (differenceInDays(now, ge.cache[id].timestamp) > 7) {
 				changed = true;
 				delete ge.cache[id];
 			}
@@ -809,7 +808,7 @@ class GiveawaysGiveawayExtractor extends Module {
 		];
 		let giveaways = [];
 		if (context === ge.context) {
-			let match = Utils.getQueryParams().url.match(/\/giveaway\/(.+?)\//);
+			let match = this.esgst.parameters.url.match(/\/giveaway\/(.+?)\//);
 			if (match) {
 				giveaways.push(match[1]);
 			}

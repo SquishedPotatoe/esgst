@@ -1,4 +1,4 @@
-import dateFns_format from 'date-fns/format';
+import { format } from '../../lib/date';
 import { DOM } from '../../class/DOM';
 import { FetchRequest } from '../../class/FetchRequest';
 import { LocalStorage } from '../../class/LocalStorage';
@@ -9,7 +9,7 @@ import { Settings } from '../../class/Settings';
 import { Shared } from '../../class/Shared';
 import { Table } from '../../class/Table';
 import { PageHeading } from '../../components/PageHeading';
-import { Utils } from '../../lib/jsUtils';
+import { sortArray } from '../../lib/jsUtils';
 import { common } from '../Common';
 
 const createElements = common.createElements.bind(common),
@@ -147,7 +147,7 @@ class UsersUserGiveawayData extends Module {
 				<div className="esgst-ugd featured__table__row" title={getFeatureTooltip('ugd')}>
 					<div className="featured__table__row__left"></div>
 					<div className="featured__table__row__right">
-						<span className="esgst-italic">{`Last checked ${dateFns_format(
+						<span className="esgst-italic">{`Last checked ${format(
 							ugdCache.lastCheck,
 							`MMM dd, yyyy, HH:mm:ss`
 						)}.`}</span>
@@ -350,7 +350,7 @@ class UsersUserGiveawayData extends Module {
 				addScrollable: 'left',
 				scrollableContent:
 					!mainPopup && ugdCache ? (
-						<span className="esgst-italic">{`Last checked ${dateFns_format(
+						<span className="esgst-italic">{`Last checked ${format(
 							ugdCache.lastCheck,
 							`MMM dd, yyyy, HH:mm:ss`
 						)}.`}</span>
@@ -751,7 +751,7 @@ class UsersUserGiveawayData extends Module {
 						array.push(item);
 					}
 				}
-				list.values = Utils.sortArray(array, true, 'value');
+		list.values = sortArray(array, true, 'value');
 			}
 		}
 

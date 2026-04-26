@@ -1,5 +1,4 @@
 import { IHeader } from '../components/Header';
-import { Utils } from '../lib/jsUtils';
 import { generalCustomHeaderFooterLinks } from '../modules/General/CustomHeaderFooterLinks';
 import { Settings } from './Settings';
 import { Shared } from './Shared';
@@ -32,7 +31,7 @@ class PersistentStorage {
 	}
 
 	async upgrade(storage, version, isRestoring) {
-		if (!Utils.isSet(storage)) {
+		if (storage == null) {
 			return;
 		}
 
@@ -60,11 +59,11 @@ class PersistentStorage {
 		if (version < 2) {
 			window.console.log('Upgrading storage to version 2...');
 
-			if (!Utils.isSet(storage.delistedGames)) {
+			if (storage.delistedGames == null) {
 				toSet.delistedGames = this.defaultValues.delistedGames;
 			}
 
-			if (Utils.isSet(storage.emojis)) {
+			if (storage.emojis != null) {
 				const fixedEmojis = Shared.common.fixEmojis(storage.emojis);
 
 				if (storage.emojis !== fixedEmojis) {
@@ -75,16 +74,16 @@ class PersistentStorage {
 			} else {
 				toDelete.push('Emojis');
 
-				toSet.emojis = Utils.isSet(storage.Emojis)
+				toSet.emojis = storage.Emojis != null
 					? Shared.common.fixEmojis(storage.Emojis)
 					: this.defaultValues.emojis;
 			}
 
-			if (!Utils.isSet(storage.games)) {
+			if (storage.games == null) {
 				toSet.games = this.defaultValues.games;
 			}
 
-			if (!Utils.isSet(storage[`${Shared.esgst.name}RfiCache`])) {
+			if (storage[`${Shared.esgst.name}RfiCache`] == null) {
 				toSet[`${Shared.esgst.name}RfiCache`] = LocalStorage.get(
 					'replies',
 					this.defaultValues.rfiCache
@@ -92,7 +91,7 @@ class PersistentStorage {
 				LocalStorage.delete('replies');
 			}
 
-			if (Utils.isSet(storage.users)) {
+			if (storage.users != null) {
 				let usersChanged = false;
 
 				const users = JSON.parse(storage.users);
@@ -115,7 +114,7 @@ class PersistentStorage {
 			}
 
 			if (Shared.esgst.sg) {
-				if (Utils.isSet(storage.decryptedGiveaways)) {
+				if (storage.decryptedGiveaways != null) {
 					if (typeof storage.decryptedGiveaways !== 'string') {
 						toSet.decryptedGiveaways = JSON.stringify(storage.decryptedGiveaways);
 					}
@@ -123,32 +122,32 @@ class PersistentStorage {
 					toSet.decryptedGiveaways = this.defaultValues.decryptedGiveaways;
 				}
 
-				if (!Utils.isSet(storage.discussions)) {
+				if (storage.discussions == null) {
 					toSet.discussions = LocalStorage.get('discussions', this.defaultValues.discussions);
 					LocalStorage.delete('discussions');
 				}
 
-				if (!Utils.isSet(storage.entries)) {
+				if (storage.entries == null) {
 					toSet.entries = LocalStorage.get('entries', this.defaultValues.entries);
 					LocalStorage.delete('entries');
 				}
 
-				if (!Utils.isSet(storage.giveaways)) {
+				if (storage.giveaways == null) {
 					toSet.giveaways = LocalStorage.get('giveaways', this.defaultValues.giveaways);
 					LocalStorage.delete('giveaways');
 				}
 
-				if (!Utils.isSet(storage.groups)) {
+				if (storage.groups == null) {
 					toSet.groups = LocalStorage.get('groups', this.defaultValues.groups);
 					LocalStorage.delete('groups');
 				}
 
-				if (!Utils.isSet(storage.rerolls)) {
+				if (storage.rerolls == null) {
 					toSet.rerolls = LocalStorage.get('rerolls', this.defaultValues.rerolls);
 					LocalStorage.delete('rerolls');
 				}
 
-				if (!Utils.isSet(storage.stickiedCountries)) {
+				if (storage.stickiedCountries == null) {
 					toSet.stickiedCountries = LocalStorage.get(
 						'stickiedCountries',
 						this.defaultValues.stickiedCountries
@@ -156,17 +155,17 @@ class PersistentStorage {
 					LocalStorage.delete('stickiedCountries');
 				}
 
-				if (!Utils.isSet(storage.templates)) {
+				if (storage.templates == null) {
 					toSet.templates = LocalStorage.get('templates', this.defaultValues.templates);
 					LocalStorage.delete('templates');
 				}
 
-				if (!Utils.isSet(storage.tickets)) {
+				if (storage.tickets == null) {
 					toSet.tickets = LocalStorage.get('tickets', this.defaultValues.tickets);
 					LocalStorage.delete('tickets');
 				}
 
-				if (!Utils.isSet(storage.winners)) {
+				if (storage.winners == null) {
 					toSet.winners = LocalStorage.get('winners', this.defaultValues.winners);
 					LocalStorage.delete('winners');
 				}
@@ -175,7 +174,7 @@ class PersistentStorage {
 				LocalStorage.delete('gFix');
 				LocalStorage.delete('tFix');
 			} else {
-				if (!Utils.isSet(storage.trades)) {
+				if (storage.trades == null) {
 					toSet.trades = LocalStorage.get('trades', this.defaultValues.trades);
 					LocalStorage.delete('trades');
 				}
@@ -183,7 +182,7 @@ class PersistentStorage {
 				LocalStorage.delete('tFix');
 			}
 
-			if (!Utils.isSet(storage.settings)) {
+			if (storage.settings == null) {
 				toSet.settings = this.defaultValues.settings;
 				storage.settings = toSet.settings;
 			}
@@ -210,7 +209,7 @@ class PersistentStorage {
 				settingsChanged = true;
 			}
 
-			if (Utils.isSet(storage.filterPresets)) {
+			if (storage.filterPresets != null) {
 				const presets = (settings.gf_presets || Settings.defaultValues.gf_presets).concat(
 					Shared.esgst.modules.giveawaysGiveawayFilters.filters_convert(
 						JSON.parse(storage.filterPresets)
@@ -225,7 +224,7 @@ class PersistentStorage {
 				toSet.old_gf_presets = storage.filterPresets;
 			}
 
-			if (Utils.isSet(storage.dfPresets)) {
+			if (storage.dfPresets != null) {
 				const presets = (settings.df_presets || Settings.defaultValues.df_presets).concat(
 					Shared.esgst.modules.giveawaysGiveawayFilters.filters_convert(
 						JSON.parse(storage.dfPresets)
@@ -240,31 +239,31 @@ class PersistentStorage {
 				toSet.old_df_presets = storage.dfPresets;
 			}
 
-			if (Utils.isSet(settings.comments)) {
+			if (settings.comments != null) {
 				delete settings.comments;
 
 				settingsChanged = true;
 			}
 
-			if (Utils.isSet(settings.giveaways)) {
+			if (settings.giveaways != null) {
 				delete settings.giveaways;
 
 				settingsChanged = true;
 			}
 
-			if (Utils.isSet(settings.groups)) {
+			if (settings.groups != null) {
 				delete settings.groups;
 
 				settingsChanged = true;
 			}
 
-			if (Utils.isSet(settings.users)) {
+			if (settings.users != null) {
 				delete settings.users;
 
 				settingsChanged = true;
 			}
 
-			if (Utils.isSet(settings.gc_categories_ids)) {
+			if (settings.gc_categories_ids != null) {
 				if (!settings.gc_categories_ids.includes('gc_f')) {
 					settings.gc_categories_ids.push('gc_f');
 
@@ -285,7 +284,7 @@ class PersistentStorage {
 			}
 
 			['gc_categories', 'gc_categories_gv', 'gc_categories_ids'].forEach((key) => {
-				if (!Utils.isSet(settings[key])) {
+				if (settings[key] == null) {
 					return;
 				}
 
@@ -299,18 +298,18 @@ class PersistentStorage {
 			});
 
 			if (settings.elementOrdering !== '1') {
-				if (Utils.isSet(settings.leftButtonIds)) {
+				if (settings.leftButtonIds != null) {
 					for (let i = settings.leftButtonIds.length - 1; i > -1; i--) {
 						const id = settings.leftButtonIds[i];
 
 						if (!settings[`hideButtons_${id}_sg`]) {
-							if (Utils.isSet(settings.leftMainPageHeadingIds)) {
+							if (settings.leftMainPageHeadingIds != null) {
 								settings.leftMainPageHeadingIds.push(id);
 							}
 
 							settings.leftButtonIds.splice(i, 1);
 						} else if (
-							Utils.isSet(settings.rightButtonsIds) &&
+							settings.rightButtonsIds != null &&
 							settings.rightButtonIds.includes(id)
 						) {
 							settings.leftButtonIds.splice(i, 1);
@@ -318,34 +317,34 @@ class PersistentStorage {
 					}
 				}
 
-				if (Utils.isSet(settings.rightButtonIds)) {
+				if (settings.rightButtonIds != null) {
 					for (let i = settings.rightButtonIds.length - 1; i > -1; i--) {
 						const id = settings.rightButtonIds[i];
 
 						if (!settings[`hideButtons_${id}_sg`]) {
-							if (Utils.isSet(settings.rightMainPageHeadingIds)) {
+							if (settings.rightMainPageHeadingIds != null) {
 								settings.rightMainPageHeadingIds.push(id);
 							}
 
 							settings.rightButtonIds.splice(i, 1);
-						} else if (Utils.isSet(settings.leftButtonIds) && settings.leftButtonIds.includes(id)) {
+						} else if (settings.leftButtonIds != null && settings.leftButtonIds.includes(id)) {
 							settings.rightButtonIds.splice(i, 1);
 						}
 					}
 				}
 
-				if (Utils.isSet(settings.leftMainPageHeadingIds)) {
+				if (settings.leftMainPageHeadingIds != null) {
 					for (let i = settings.leftMainPageHeadingIds.length - 1; i > -1; i--) {
 						const id = settings.leftMainPageHeadingIds[i];
 
 						if (!settings[`hideButtons_${id}_sg`]) {
-							if (Utils.isSet(settings.leftButtonIds)) {
+							if (settings.leftButtonIds != null) {
 								settings.leftButtonIds.push(id);
 							}
 
 							settings.leftMainPageHeadingIds.splice(i, 1);
 						} else if (
-							Utils.isSet(settings.rightMainPageHeadingIds) &&
+							settings.rightMainPageHeadingIds != null &&
 							settings.rightMainPageHeadingIds.includes(id)
 						) {
 							settings.leftMainPageHeadingIds.splice(i, 1);
@@ -353,18 +352,18 @@ class PersistentStorage {
 					}
 				}
 
-				if (Utils.isSet(settings.rightMainPageHeadingIds)) {
+				if (settings.rightMainPageHeadingIds != null) {
 					for (let i = settings.rightMainPageHeadingIds.length - 1; i > -1; i--) {
 						const id = settings.rightMainPageHeadingIds[i];
 
 						if (!settings[`hideButtons_${id}_sg`]) {
-							if (Utils.isSet(settings.rightButtonIds)) {
+							if (settings.rightButtonIds != null) {
 								settings.rightButtonIds.push(id);
 							}
 
 							settings.rightMainPageHeadingIds.splice(i, 1);
 						} else if (
-							Utils.isSet(settings.leftMainPageHeadingIds) &&
+							settings.leftMainPageHeadingIds != null &&
 							settings.leftMainPageHeadingIds.includes(id)
 						) {
 							settings.rightMainPageHeadingIds.splice(i, 1);
@@ -383,10 +382,10 @@ class PersistentStorage {
 			}
 
 			if (
-				Utils.isSet(settings.leftButtonIds) &&
-				Utils.isSet(settings.rightButtonIds) &&
-				Utils.isSet(settings.leftMainPageHeadingIds) &&
-				Utils.isSet(settings.rightMainPageHeadingIds)
+				settings.leftButtonIds != null &&
+				settings.rightButtonIds != null &&
+				settings.leftMainPageHeadingIds != null &&
+				settings.rightMainPageHeadingIds != null
 			) {
 				[
 					{ id: 'cec', side: 'left' },
@@ -417,7 +416,7 @@ class PersistentStorage {
 				});
 			}
 
-			if (Utils.isSet(settings.chfl_discussions_sg)) {
+			if (settings.chfl_discussions_sg != null) {
 				settings.chfl_discussions_sg = settings.chfl_discussions_sg.filter(
 					(x) => ((typeof x === 'string' && x) || x.id) !== 'categorize-discussions'
 				);
@@ -425,12 +424,12 @@ class PersistentStorage {
 				settingsChanged = true;
 			}
 
-			if (Utils.isSet(settings.chfl_footer_sg)) {
+			if (settings.chfl_footer_sg != null) {
 				const privacyPolicyIndex = settings.chfl_footer_sg
 					.map((x, i) => (((typeof x === 'string' && x) || x.id) === 'privacy-policy' ? i : null))
-					.filter((x) => Utils.isSet(x))[0];
+					.filter((x) => x != null)[0];
 
-				if (Utils.isSet(privacyPolicyIndex)) {
+				if (privacyPolicyIndex != null) {
 					settings.chfl_footer_sg.splice(privacyPolicyIndex + 1, 0, 'cookie-policy');
 				} else {
 					settings.chfl_footer_sg.push('cookie-policy');
@@ -438,9 +437,9 @@ class PersistentStorage {
 
 				const termsOfServiceIndex = settings.chfl_footer_sg
 					.map((x, i) => (((typeof x === 'string' && x) || x.id) === 'terms-of-service' ? i : null))
-					.filter((x) => Utils.isSet(x))[0];
+					.filter((x) => x != null)[0];
 
-				if (Utils.isSet(termsOfServiceIndex)) {
+				if (termsOfServiceIndex != null) {
 					settings.chfl_footer_sg.splice(termsOfServiceIndex + 1, 0, 'advertising');
 				} else {
 					settings.chfl_footer_sg.push('advertising');
@@ -462,7 +461,7 @@ class PersistentStorage {
 
 			const settings = JSON.parse(storage.settings);
 
-			if (Utils.isSet(settings.chfl_discussions_sg)) {
+			if (settings.chfl_discussions_sg != null) {
 				const index = settings.chfl_discussions_sg.indexOf('created');
 
 				if (index > -1) {
@@ -502,7 +501,7 @@ class PersistentStorage {
 			for (const key of keys) {
 				const source = key.match(/(.+?)_/)[1];
 
-				if (Utils.isSet(settings[`chfl_${key}`])) {
+				if (settings[`chfl_${key}`] != null) {
 					settings[`chfl_${key}`] = settings[`chfl_${key}`].map((item) => {
 						if (item.id) {
 							item.id = IHeader.generateId(item.name);
@@ -517,7 +516,7 @@ class PersistentStorage {
 				}
 			}
 
-			if (Utils.isSet(settings.chfl_account_st)) {
+			if (settings.chfl_account_st != null) {
 				const index = settings.chfl_account_st.indexOf('reviews');
 
 				if (index > -1) {
@@ -529,7 +528,7 @@ class PersistentStorage {
 				settingsChanged = true;
 			}
 
-			if (Utils.isSet(settings.chfl_footer_st)) {
+			if (settings.chfl_footer_st != null) {
 				let index = settings.chfl_footer_st.indexOf('privacyPolicy');
 
 				if (index > -1) {
@@ -592,14 +591,14 @@ class PersistentStorage {
 
 			const settings = JSON.parse(storage.settings);
 
-			if (Utils.isSet(settings.chfl_giveaways_sg)) {
+			if (settings.chfl_giveaways_sg != null) {
 				const wishlistGiveawaysIndex = settings.chfl_giveaways_sg
 					.map((x, i) =>
 						((typeof x === 'string' && x) || x.id) === 'browseWishlistGiveaways' ? i : null
 					)
-					.filter((x) => Utils.isSet(x))[0];
+					.filter((x) => x != null)[0];
 
-				if (Utils.isSet(wishlistGiveawaysIndex)) {
+				if (wishlistGiveawaysIndex != null) {
 					settings.chfl_giveaways_sg.splice(wishlistGiveawaysIndex + 1, 0, {
 						id: `browseFollowedGiveaways`,
 						name: 'Browse Followed Giveaways',
@@ -629,7 +628,7 @@ class PersistentStorage {
 
 			const settings = JSON.parse(storage.settings);
 
-			if (Utils.isSet(settings.chfl_discussions_sg)) {
+			if (settings.chfl_discussions_sg != null) {
 				settings.chfl_discussions_sg = settings.chfl_discussions_sg.map((item) => {
 					if (typeof item === 'string') {
 						return item;
@@ -703,9 +702,9 @@ class PersistentStorage {
 				for (const item of newItems) {
 					const index = settings.chfl_discussions_sg
 						.map((x, i) => (((typeof x === 'string' && x) || x.id) === item.reference ? i : null))
-						.filter((x) => Utils.isSet(x))[0];
+						.filter((x) => x != null)[0];
 
-					if (Utils.isSet(index)) {
+					if (index != null) {
 						settings.chfl_discussions_sg.splice(
 							index + 1,
 							0,
@@ -732,7 +731,7 @@ class PersistentStorage {
 
 			const settings = JSON.parse(storage.settings);
 
-			if (Utils.isSet(settings.giveawayHeading)) {
+			if (settings.giveawayHeading != null) {
 				const index = settings.giveawayHeading.indexOf('steam');
 
 				if (index > -1) {
@@ -744,7 +743,7 @@ class PersistentStorage {
 				settingsChanged = true;
 			}
 
-			if (Utils.isSet(settings.giveawayHeading_gv)) {
+			if (settings.giveawayHeading_gv != null) {
 				const index = settings.giveawayHeading_gv.indexOf('steam');
 
 				if (index > -1) {
@@ -824,7 +823,7 @@ class PersistentStorage {
 
 			const settings = JSON.parse(storage.settings);
 
-			if (Utils.isSet(settings.chfl_footer_st)) {
+			if (settings.chfl_footer_st != null) {
 				settings.chfl_footer_st.push('steamtrades', 'steamgifts');
 
 				settingsChanged = true;
@@ -843,7 +842,7 @@ class PersistentStorage {
 
 			const settings = JSON.parse(storage.settings);
 
-			if (Utils.isSet(settings.chfl_discussions_sg)) {
+			if (settings.chfl_discussions_sg != null) {
 				settings.chfl_discussions_sg = settings.chfl_discussions_sg.map((item) => {
 					if (typeof item === 'string') {
 						return item;
@@ -917,7 +916,7 @@ class PersistentStorage {
 		}
 
 		for (const key of Object.keys(this.defaultValues)) {
-			if (!Utils.isSet(storage[key])) {
+			if (storage[key] == null) {
 				toSet[key] = this.defaultValues[key];
 				storage[key] = toSet[key];
 			}

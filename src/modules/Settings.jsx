@@ -8,7 +8,7 @@ import { Shared } from '../class/Shared';
 import { ToggleSwitch } from '../class/ToggleSwitch';
 import { Button } from '../components/Button';
 import { PageHeading } from '../components/PageHeading';
-import { Utils } from '../lib/jsUtils';
+import { hex2Rgba, rgba2Hex } from '../lib/jsUtils';
 import { setSync } from './Sync';
 
 class SettingsModule {
@@ -1528,8 +1528,8 @@ class SettingsModule {
 		]);
 		let isMainNew =
 			Settings.get('dismissedOptions').indexOf(featureId) < 0 &&
-			!Utils.isSet(Shared.esgst.settings[`${featureId}_sg`]) &&
-			!Utils.isSet(Shared.esgst.settings[`${featureId}_st`]);
+				Shared.esgst.settings[`${featureId}_sg`] == null &&
+				Shared.esgst.settings[`${featureId}_st`] == null;
 		if (isMainNew) {
 			feature.isNew = true;
 			Shared.common
@@ -1826,10 +1826,10 @@ class SettingsModule {
 	}
 
 	resetColor(hexInput, alphaInput, id, colorId) {
-		const color = Utils.rgba2Hex(Settings.defaultValues[`${id}_${colorId}`]);
+		const color = rgba2Hex(Settings.defaultValues[`${id}_${colorId}`]);
 		hexInput.value = color.hex;
 		alphaInput.value = color.alpha;
-		this.preSave(`${id}_${colorId}`, Utils.hex2Rgba(hexInput.value, alphaInput.value));
+		this.preSave(`${id}_${colorId}`, hex2Rgba(hexInput.value, alphaInput.value));
 	}
 
 	getSmFeatureAdditionalOptions(Feature, ID) {
@@ -1873,7 +1873,7 @@ class SettingsModule {
 			}
 			const children = [];
 			for (const id in Feature.colors) {
-				const color = Utils.rgba2Hex(Settings.get(`${ID}_${id}`));
+				const color = rgba2Hex(Settings.get(`${ID}_${id}`));
 				children.push(
 					<fragment>
 						<div>
@@ -2898,11 +2898,11 @@ class SettingsModule {
 	addColorObserver(hexInput, alphaInput, id, colorId) {
 		hexInput.addEventListener('change', () => {
 			// noinspection JSIgnoredPromiseFromCall
-			this.preSave(`${id}_${colorId}`, Utils.hex2Rgba(hexInput.value, alphaInput.value));
+			this.preSave(`${id}_${colorId}`, hex2Rgba(hexInput.value, alphaInput.value));
 		});
 		alphaInput.addEventListener('change', () => {
 			// noinspection JSIgnoredPromiseFromCall
-			this.preSave(`${id}_${colorId}`, Utils.hex2Rgba(hexInput.value, alphaInput.value));
+			this.preSave(`${id}_${colorId}`, hex2Rgba(hexInput.value, alphaInput.value));
 		});
 	}
 

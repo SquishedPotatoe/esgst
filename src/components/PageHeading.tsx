@@ -4,7 +4,7 @@ import { Session } from '../class/Session';
 import { ClassNames } from '../constants/ClassNames';
 import { Events } from '../constants/Events';
 import { Namespaces } from '../constants/Namespaces';
-import { Utils } from '../lib/jsUtils';
+import { isDeepEqual } from '../lib/jsUtils';
 import { Base, BaseData, BaseNodes } from './Base';
 
 export type PageHeadingOptions = Partial<PageHeadingData> | PageHeadingBreadcrumb[];
@@ -132,7 +132,7 @@ export abstract class PageHeading extends Base<PageHeading, PageHeadingData, Pag
 		if (!this._nodes.breadcrumbsContainer) {
 			throw this.getError('failed to set breadcrumbs');
 		}
-		if (this._hasBuilt && Utils.isDeepEqual(this._data.breadcrumbs, breadcrumbs)) {
+		if (this._hasBuilt && isDeepEqual(this._data.breadcrumbs, breadcrumbs)) {
 			return this;
 		}
 		this._data.breadcrumbs = breadcrumbs;

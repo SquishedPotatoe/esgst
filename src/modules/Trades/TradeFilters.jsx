@@ -4,7 +4,7 @@ import { Lock } from '../../class/Lock';
 import { Process } from '../../class/Process';
 import { Settings } from '../../class/Settings';
 import { Shared } from '../../class/Shared';
-import { Utils } from '../../lib/jsUtils';
+import { sortArray } from '../../lib/jsUtils';
 import { common } from '../Common';
 import { Filters } from '../Filters';
 
@@ -284,7 +284,7 @@ class TradesTradeFilters extends Filters {
 				}
 			}
 		}
-		hidden = Utils.sortArray(hidden, true, 'hidden');
+		hidden = sortArray(hidden, true, 'hidden');
 		obj.ids = [];
 		for (const trade of hidden) {
 			obj.ids.push(trade.code);

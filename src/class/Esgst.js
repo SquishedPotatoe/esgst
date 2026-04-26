@@ -1,4 +1,3 @@
-import { Utils } from '../lib/jsUtils';
 import { Parsedown } from '../lib/parsedown';
 import { modules } from '../modules';
 import { LocalStorage } from './LocalStorage';
@@ -238,25 +237,6 @@ class Esgst {
 				{ name: 'Legal - Terms Of Service', pattern: '^/legal/terms-of-service' },
 			],
 		};
-		this.formatDistanceLocale = {
-			formatDistance: (token, count) => {
-				switch (token) {
-					case 'xSeconds':
-						return `${count}s`;
-					case 'xMinutes':
-						return `${count}m`;
-					case 'xHours':
-						return `${count}h`;
-					case 'xDays':
-						return `${count}d`;
-					case 'xMonths':
-						return `${count}mo`;
-					case 'xYears':
-						return `${count}y`;
-				}
-			},
-		};
-		this.newGiveawayDateFormat = `MMM d, yyyy h:mm a`;
 
 		this.documentEvents = {
 			click: null,
@@ -532,7 +512,7 @@ class Esgst {
 		Scope.create('main', document);
 		Scope.setCurrent('main');
 
-		this.parameters = Utils.getQueryParams();
+		this.parameters = Object.fromEntries(new URLSearchParams(window.location.search));
 
 		this.locationHref = window.location.href;
 

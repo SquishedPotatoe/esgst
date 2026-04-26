@@ -3,7 +3,7 @@ import { FetchRequest } from '../class/FetchRequest';
 import { Session } from '../class/Session';
 import { Shared } from '../class/Shared';
 import { Namespaces } from '../constants/Namespaces';
-import { Utils } from '../lib/jsUtils';
+import { getPlural } from '../lib/jsUtils';
 import { Base, BaseData, BaseNodes } from './Base';
 import { Game } from './Game';
 import { User } from './User';
@@ -720,14 +720,14 @@ class SgGiveaway extends Giveaway {
 							<i className="fa fa-tag"></i>{' '}
 							<span>
 								{this.data.entries.toLocaleString('en-US')}{' '}
-								{Utils.getPlural(this.data.entries, 'entry', 'entries')}
+									{getPlural(this.data.entries, 'entry', 'entries')}
 							</span>
 						</a>
 						<a href={this.data.url && `${this.data.url}/comments`}>
 							<i className="fa fa-comment"></i>{' '}
 							<span>
 								{this.data.comments.toLocaleString('en-US')}{' '}
-								{Utils.getPlural(this.data.comments, 'comment')}
+									{getPlural(this.data.comments, 'comment')}
 							</span>
 						</a>
 					</div>

@@ -1,4 +1,4 @@
-import dateFns_format from 'date-fns/format';
+import { format } from '../../lib/date';
 import { Checkbox } from '../../class/Checkbox';
 import { DOM } from '../../class/DOM';
 import { FetchRequest } from '../../class/FetchRequest';
@@ -13,7 +13,7 @@ import { Tabs } from '../../class/Tabs';
 import { ToggleSwitch } from '../../class/ToggleSwitch';
 import { Button } from '../../components/Button';
 import { NotificationBar } from '../../components/NotificationBar';
-import { Utils } from '../../lib/jsUtils';
+import { sortArray } from '../../lib/jsUtils';
 import { common } from '../Common';
 import VDF from 'simple-vdf';
 
@@ -1250,7 +1250,7 @@ class GeneralMultiManager extends Module {
 				break;
 		}
 		if (sorting) {
-			links = Utils.sortArray(links, sorting === '-desc');
+			links = sortArray(links, sorting === '-desc');
 		}
 		obj[`textArea${key}`].value = obj[`textArea${key}`].value.replace(
 			/\[LINE.*?].+\[\/LINE]/i,
@@ -1259,7 +1259,7 @@ class GeneralMultiManager extends Module {
 	}
 
 	mm_formatDate(timestamp, match, p1) {
-		return escapeMarkdown(dateFns_format(timestamp, p1));
+		return escapeMarkdown(format(timestamp, p1));
 	}
 
 	mm_initUrls(obj, items) {

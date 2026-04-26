@@ -1,4 +1,4 @@
-import dateFns_format from 'date-fns/format';
+import { format } from '../../lib/date';
 import { DOM } from '../../class/DOM';
 import { FetchRequest } from '../../class/FetchRequest';
 import { LocalStorage } from '../../class/LocalStorage';
@@ -11,7 +11,6 @@ import { Tabs } from '../../class/Tabs';
 import { ToggleSwitch } from '../../class/ToggleSwitch';
 import { Button } from '../../components/Button';
 import { PageHeading } from '../../components/PageHeading';
-import { Utils } from '../../lib/jsUtils';
 import { common } from '../Common';
 import 'jquery-ui/ui/widgets/progressbar';
 
@@ -1093,7 +1092,7 @@ class GiveawaysMultipleGiveawayCreator extends Module {
 		}&group_item_string=${encodeURIComponent(values.groups)}&contributor_level=${
 			values.level
 		}&description=${encodeURIComponent(values.description)}`;
-		if (Utils.isSet(editPos)) {
+		if (editPos != null) {
 			mgc.datas[editPos] = data;
 			mgc.values[editPos] = values;
 			mgc.giveaways.children[editPos].title = details;
@@ -2209,7 +2208,7 @@ class GiveawaysMultipleGiveawayCreator extends Module {
 		const offsetTime = Date.now() + 5000;
 		if (new Date(decodeURIComponent(match1)).getTime() < offsetTime) {
 			return `start_time=${encodeURIComponent(
-				dateFns_format(offsetTime, this.esgst.newGiveawayDateFormat)
+				format(offsetTime, 'MMM d, yyyy h:mm a')
 			)}&`;
 		} else {
 			return fullMatch;

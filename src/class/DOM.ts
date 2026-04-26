@@ -1,5 +1,3 @@
-import { Utils } from '../lib/jsUtils';
-
 export type ExtendedInsertPosition = InsertPosition | 'atouter' | 'atinner';
 
 export type ElementAttributes<T extends ElementTag> = {
@@ -73,7 +71,7 @@ class _DOM {
 		element: HTMLElement,
 		attributes: ElementAttributes<T>
 	) => {
-		const filteredAttributes = Object.entries(attributes).filter(([, value]) => Utils.isSet(value));
+		const filteredAttributes = Object.entries(attributes).filter(([, value]) => value != null);
 		for (const [key, value] of filteredAttributes) {
 			if (key === 'attrs' && typeof value === 'object') {
 				this.setCustomElementAttributes(element, value);
@@ -99,7 +97,7 @@ class _DOM {
 		element: HTMLElement,
 		attributes: ElementAttributes<T>
 	) => {
-		const filteredAttributes = Object.entries(attributes).filter(([, value]) => Utils.isSet(value));
+		const filteredAttributes = Object.entries(attributes).filter(([, value]) => value != null);
 		for (const [key, value] of filteredAttributes) {
 			element.setAttribute(key, value);
 		}
@@ -110,7 +108,7 @@ class _DOM {
 		attribute: string,
 		properties: Record<string, unknown>
 	) => {
-		const filteredProperties = Object.entries(properties).filter(([, value]) => Utils.isSet(value));
+		const filteredProperties = Object.entries(properties).filter(([, value]) => value != null);
 		for (const [key, value] of filteredProperties) {
 			// @ts-ignore
 			element[attribute][key] = value;

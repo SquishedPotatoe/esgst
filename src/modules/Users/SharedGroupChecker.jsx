@@ -5,7 +5,7 @@ import { permissions } from '../../class/Permissions';
 import { Popup } from '../../class/Popup';
 import { Settings } from '../../class/Settings';
 import { Shared } from '../../class/Shared';
-import { Utils } from '../../lib/jsUtils';
+import { sortArray } from '../../lib/jsUtils';
 import { common } from '../Common';
 
 const createElements = common.createElements.bind(common),
@@ -274,7 +274,7 @@ class UsersSharedGroupChecker extends Module {
 		const n2 = privateGroups.length;
 		if (n1 || n2) {
 			if (n1 > 0) {
-				Utils.sortArray(publicGroups, false, 'name').map((x) => {
+		sortArray(publicGroups, false, 'name').map((x) => {
 					createElements(profile.sgcPublicResults, 'beforeend', x.html).getElementsByClassName(
 						'table__column__heading'
 					)[0].textContent = x.name;
@@ -289,7 +289,7 @@ class UsersSharedGroupChecker extends Module {
 				]);
 			}
 			if (n2 > 0) {
-				Utils.sortArray(privateGroups, false, 'name').map((x) => {
+		sortArray(privateGroups, false, 'name').map((x) => {
 					createElements(profile.sgcPrivateResults, 'beforeend', x.html).getElementsByClassName(
 						'table__column__heading'
 					)[0].textContent = x.name;

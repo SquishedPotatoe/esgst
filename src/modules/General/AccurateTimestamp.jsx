@@ -1,7 +1,5 @@
 import { Module } from '../../class/Module';
-import dateFns_format from 'date-fns/format';
-import dateFns_differenceInHours from 'date-fns/differenceInHours';
-import dateFns_isSameYear from 'date-fns/isSameYear';
+import { format, differenceInHours, isSameYear } from '../../lib/date';
 import { Settings } from '../../class/Settings';
 import { DOM } from '../../class/DOM';
 
@@ -68,14 +66,12 @@ class GeneralAccurateTimestamp extends Module {
 	}
 
 	at_formatTimestamp(seconds) {
-		return dateFns_format(
+		const now = Date.now();
+		return format(
 			seconds,
 			(Settings.get('at_format') || `MMM dd, yyyy, HH:mm:ss`)
-				.replace(
-					/DM\{(.+?)}/,
-					Math.abs(dateFns_differenceInHours(Date.now(), seconds)) < 24 ? '' : `$1`
-				)
-				.replace(/Y\{(.+?)}/, dateFns_isSameYear(Date.now(), seconds) ? '' : `$1`)
+				.replace(/DM\{(.+?)}/, Math.abs(differenceInHours(now, seconds)) < 24 ? '' : `$1`)
+				.replace(/Y\{(.+?)}/, isSameYear(now, seconds) ? '' : `$1`)
 				.replace(/S\{(.+?)}/, new Date(seconds).getSeconds() === 0 ? '' : `$1`)
 		);
 	}

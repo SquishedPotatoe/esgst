@@ -7,7 +7,7 @@ import { Shared } from '../../class/Shared';
 import { ToggleSwitch } from '../../class/ToggleSwitch';
 import { Button } from '../../components/Button';
 import { NotificationBar } from '../../components/NotificationBar';
-import { Utils } from '../../lib/jsUtils';
+import { sortArray } from '../../lib/jsUtils';
 
 class UsersUserSuspensionChecker extends Module {
 	constructor() {
@@ -335,7 +335,7 @@ class UsersUserSuspensionChecker extends Module {
 			) {
 				await this.getUsers(uscObj);
 			}
-			uscObj.users = Utils.sortArray(uscObj.users);
+		uscObj.users = sortArray(uscObj.users);
 			if (window.location.pathname.match(/^\/users/)) {
 				uscObj.users = uscObj.users.slice(0, 25);
 			}

@@ -8,7 +8,7 @@ import { Shared } from '../class/Shared';
 import { ToggleSwitch } from '../class/ToggleSwitch';
 import { Button } from '../components/Button';
 import { PageHeading } from '../components/PageHeading';
-import { Utils } from '../lib/jsUtils';
+import { is, sortArray } from '../lib/jsUtils';
 import { CloudStorage } from './CloudStorage';
 import { settingsModule } from './Settings';
 
@@ -1681,7 +1681,7 @@ async function manageData(dm, storageType, space, callback) {
 			const stringified = [];
 
 			for (const key of Object.keys(dm.data)) {
-				if (Utils.is(dm.data[key], 'object') || Array.isArray(dm.data[key])) {
+			if (is(dm.data[key], 'object') || Array.isArray(dm.data[key])) {
 					dm.data[key] = JSON.stringify(dm.data[key]);
 
 					stringified.push(key);
@@ -2053,7 +2053,7 @@ async function manageData(dm, storageType, space, callback) {
 									}
 								}
 								if (optionKey === 'entries') {
-									mergedData = Utils.sortArray(mergedData, false, 'timestamp');
+			mergedData = sortArray(mergedData, false, 'timestamp');
 								}
 								await Shared.common.setValue(optionKey, JSON.stringify(mergedData));
 							} else {

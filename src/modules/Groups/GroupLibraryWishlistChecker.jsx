@@ -10,7 +10,6 @@ import { ToggleSwitch } from '../../class/ToggleSwitch';
 import { Button } from '../../components/Button';
 import { NotificationBar } from '../../components/NotificationBar';
 import { PageHeading } from '../../components/PageHeading';
-import { Utils } from '../../lib/jsUtils';
 import { common } from '../Common';
 
 /**
@@ -181,7 +180,7 @@ class GroupsGroupLibraryWishlistChecker extends Module {
 					type: 'div',
 				},
 			]);
-			parameters = Utils.getQueryParams();
+			parameters = Object.fromEntries(new URLSearchParams(window.location.search));
 			glwc.id = parameters.id;
 			glwc.url = parameters.url;
 			glwc.users = parameters.users

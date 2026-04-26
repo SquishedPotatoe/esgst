@@ -4,7 +4,7 @@ import { Session } from '../class/Session';
 import { ButtonColor, ClassNames, EsgstClassNames } from '../constants/ClassNames';
 import { Events } from '../constants/Events';
 import { Namespaces } from '../constants/Namespaces';
-import { Utils } from '../lib/jsUtils';
+import { isDeepEqual } from '../lib/jsUtils';
 import { Base, BaseData, BaseNodes } from './Base';
 
 export type ButtonOptions =
@@ -488,7 +488,7 @@ export class SgButton extends Button {
 		if (!this._nodes.outer) {
 			throw this.getError('failed to set icons');
 		}
-		if (this._hasBuilt && Utils.isDeepEqual(this._data.icons, icons)) {
+		if (this._hasBuilt && isDeepEqual(this._data.icons, icons)) {
 			return this;
 		}
 		this.removeIcons();
@@ -588,7 +588,7 @@ export class StButton extends Button {
 		if (!this._nodes.outer) {
 			throw this.getError('failed to set icons');
 		}
-		if (this._hasBuilt && Utils.isDeepEqual(this._data.icons, icons)) {
+		if (this._hasBuilt && isDeepEqual(this._data.icons, icons)) {
 			return this;
 		}
 		this.removeIcons();

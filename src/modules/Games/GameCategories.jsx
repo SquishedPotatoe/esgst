@@ -8,7 +8,7 @@ import { permissions } from '../../class/Permissions';
 import { Scope } from '../../class/Scope';
 import { Settings } from '../../class/Settings';
 import { Shared } from '../../class/Shared';
-import { Utils } from '../../lib/jsUtils';
+import { getProperty, sortArray } from '../../lib/jsUtils';
 import { common } from '../Common';
 
 const createElements = common.createElements.bind(common),
@@ -828,7 +828,7 @@ class GamesGameCategories extends Module {
 
 							priority = this.PRIORITIES.ALMOST_OUTDATED;
 						} else if (
-							!Utils.isSet(gc.cache.apps[id].learning) &&
+						gc.cache.apps[id].learning == null &&
 							(!gc.cache.apps[id].removed || gc.cache.apps[id].removed === -1) &&
 							now - gc.cache.apps[id].lastCheck > 86400000
 						) {
@@ -1257,7 +1257,7 @@ class GamesGameCategories extends Module {
 			free: data.price === 0,
 			genres: '',
 			lastCheck: last_update,
-			learning: Utils.isSet(data.learning) ? (data.learning ? 1 : 0) : null,
+					learning: data.learning != null ? (data.learning ? 1 : 0) : null,
 			linux: data.linux ? 1 : 0,
 			mac: data.mac ? 1 : 0,
 			multiplayer: data.multiplayer ? 1 : 0,
@@ -1702,14 +1702,14 @@ class GamesGameCategories extends Module {
 			}
 			if (
 				game.owned ||
-				(game.alias && Utils.getProperty(Shared.esgst.games.apps, [game.alias, 'owned']))
+							(game.alias && getProperty(Shared.esgst.games.apps, [game.alias, 'owned']))
 			) {
 				count.num += 1;
 			}
 			if (!savedGame.wishlisted) {
 				savedGame.wishlisted =
 					game.wishlisted ||
-					(game.alias && Utils.getProperty(Shared.esgst.games.apps, [game.alias, 'wishlisted']));
+							(game.alias && getProperty(Shared.esgst.games.apps, [game.alias, 'wishlisted']));
 			}
 		}
 		if (count.num === count.total) {
@@ -1751,14 +1751,14 @@ class GamesGameCategories extends Module {
 				if (
 					!savedGame.owned &&
 					savedGame.alias &&
-					Utils.getProperty(Shared.esgst.games.apps, [savedGame.alias, 'owned'])
+							getProperty(Shared.esgst.games.apps, [savedGame.alias, 'owned'])
 				) {
 					savedGame.owned = true;
 				}
 				if (
 					!savedGame.wishlisted &&
 					savedGame.alias &&
-					Utils.getProperty(Shared.esgst.games.apps, [savedGame.alias, 'wishlisted'])
+							getProperty(Shared.esgst.games.apps, [savedGame.alias, 'wishlisted'])
 				) {
 					savedGame.wishlisted = true;
 				}
@@ -2297,7 +2297,7 @@ class GamesGameCategories extends Module {
 						}
 						break;
 					case 'gc_gi':
-						if (cache && Utils.isSet(cache.price)) {
+		if (cache && cache.price != null) {
 							let price = cache.price;
 							const heading = games[0].heading;
 							if (heading) {
@@ -3227,7 +3227,7 @@ class GamesGameCategories extends Module {
 						}
 						if (genres) {
 							let filters;
-							genreList = Utils.sortArray(Array.from(new Set(genres.split(/,\s/))));
+		genreList = sortArray(Array.from(new Set(genres.split(/,\s/))));
 							genres = genreList.join(`, `);
 							if (Settings.get('gc_g_filters').trim()) {
 								filters = Settings.get('gc_g_filters')
