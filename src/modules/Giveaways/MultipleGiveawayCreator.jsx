@@ -12,7 +12,6 @@ import { ToggleSwitch } from '../../class/ToggleSwitch';
 import { Button } from '../../components/Button';
 import { PageHeading } from '../../components/PageHeading';
 import { common } from '../Common';
-import 'jquery-ui/ui/widgets/progressbar';
 
 const buildGiveaway = common.buildGiveaway.bind(common),
 	copyValue = common.copyValue.bind(common),
@@ -1416,6 +1415,45 @@ class GiveawaysMultipleGiveawayCreator extends Module {
 		}, 250);
 	}
 
+	mgc_getProgressBarState(progressBar) {
+		return {
+			max: parseInt(progressBar.dataset.esgstProgressMax, 10) || 0,
+			value: parseInt(progressBar.dataset.esgstProgressValue, 10) || 0,
+		};
+	}
+
+	mgc_setProgressBar(progressBar, max, value = 0) {
+		let fill = progressBar.firstElementChild;
+		if (!fill) {
+			fill = createElements(progressBar, 'beforeend', [
+				{
+					attributes: {
+						class: 'ui-progressbar-value',
+					},
+					type: 'div',
+				},
+			]);
+		}
+		progressBar.dataset.esgstProgressMax = `${Math.max(max, 0)}`;
+		progressBar.dataset.esgstProgressValue = `${Math.max(Math.min(value, max), 0)}`;
+		this.mgc_renderProgressBar(progressBar);
+	}
+
+	mgc_updateProgressBarValue(progressBar, value) {
+		const { max } = this.mgc_getProgressBarState(progressBar);
+		progressBar.dataset.esgstProgressValue = `${Math.max(Math.min(value, max), 0)}`;
+		this.mgc_renderProgressBar(progressBar);
+	}
+
+	mgc_renderProgressBar(progressBar) {
+		const fill = progressBar.firstElementChild;
+		if (!fill) {
+			return;
+		}
+		const { max, value } = this.mgc_getProgressBarState(progressBar);
+		fill.style.width = max > 0 ? `${(value / max) * 100}%` : '0%';
+	}
+
 	mgc_getGiveaways(mgc, popup, progress, textArea, callback) {
 		let giveaways, lines, max, n, value;
 		this.esgst.busy = true;
@@ -1429,20 +1467,14 @@ class GiveawaysMultipleGiveawayCreator extends Module {
 		}
 		textArea.value = `${giveaways.join('\n')}\n`;
 		n = giveaways.length;
-		if ($(progress.bar).progressbar('instance')) {
-			max = $(progress.bar).progressbar('option', 'max');
-			value = $(progress.bar).progressbar('option', 'value');
+		({ max, value } = this.mgc_getProgressBarState(progress.bar));
+		if (max > 0) {
 			if (value + n !== max) {
-				$(progress.bar).progressbar({
-					max: value + n,
-					value: value,
-				});
+				this.mgc_setProgressBar(progress.bar, value + n, value);
 				progress.total.textContent = value + n;
 			}
 		} else {
-			$(progress.bar).progressbar({
-				max: n,
-			});
+			this.mgc_setProgressBar(progress.bar, n);
 			progress.total.textContent = n;
 		}
 		// noinspection JSIgnoredPromiseFromCall
@@ -1743,8 +1775,8 @@ class GiveawaysMultipleGiveawayCreator extends Module {
 			values.gameId = exactMatch.getAttribute('data-autocomplete-id');
 			values.steam = await this.esgst.modules.games.games_getInfo(exactMatch);
 			this.mgc_addGiveaway(mgc, values);
-			value = $(progress.bar).progressbar('option', 'value') + toRemove.length;
-			$(progress.bar).progressbar('option', 'value', value);
+			value = this.mgc_getProgressBarState(progress.bar).value + toRemove.length;
+			this.mgc_updateProgressBarValue(progress.bar, value);
 			progress.current.textContent = value;
 			toRemove.forEach((line) => {
 				textArea.value = textArea.value.replace(`${line}\n`, '');
@@ -1789,8 +1821,8 @@ class GiveawaysMultipleGiveawayCreator extends Module {
 						values.gameId = element.getAttribute('data-autocomplete-id');
 						values.steam = await this.esgst.modules.games.games_getInfo(element);
 						this.mgc_addGiveaway(mgc, values);
-						value = $(progress.bar).progressbar('option', 'value') + toRemove.length;
-						$(progress.bar).progressbar('option', 'value', value);
+						value = this.mgc_getProgressBarState(progress.bar).value + toRemove.length;
+						this.mgc_updateProgressBarValue(progress.bar, value);
 						progress.current.textContent = value;
 						toRemove.forEach((line) => {
 							textArea.value = textArea.value.replace(`${line}\n`, '');
