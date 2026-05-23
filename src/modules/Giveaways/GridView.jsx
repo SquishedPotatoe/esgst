@@ -198,6 +198,14 @@ class GiveawaysGridView extends Module {
 			}
 			giveaway.innerWrap.classList.add('esgst-gv-box');
 			const now = Date.now();
+			const endTimeText =
+				giveaway.endTimeColumn?.querySelector('[data-timestamp]')?.textContent ??
+				giveaway.endTimeColumn?.textContent?.trim() ??
+				'';
+			const startTimeText =
+				giveaway.startTimeColumn?.querySelector('[data-timestamp]')?.textContent ??
+				giveaway.startTimeColumn?.textContent?.trim() ??
+				'';
 			giveaway.gvIcons = createElements(giveaway.innerWrap, 'afterbegin', [
 				{
 					attributes: {
@@ -215,9 +223,7 @@ class GiveawaysGridView extends Module {
 							children: [
 								{
 									attributes: {
-										title: `${giveaway.started ? 'Ends' : 'Starts'} ${
-											giveaway.endTimeColumn.lastElementChild.textContent
-										}`,
+										title: `${giveaway.started ? 'Ends' : 'Starts'} ${endTimeText}`.trim(),
 									},
 									// @ts-ignore
 									text: formatDistanceStrict(giveaway.endTime, now, { compact: true }),
@@ -231,7 +237,7 @@ class GiveawaysGridView extends Module {
 								},
 								{
 									attributes: {
-										title: `Created ${giveaway.startTimeColumn.firstElementChild.textContent}`,
+										title: `Created ${startTimeText}`.trim(),
 									},
 									// @ts-ignore
 									text: formatDistanceStrict(giveaway.startTime, now, { compact: true }),
@@ -278,12 +284,20 @@ class GiveawaysGridView extends Module {
 				giveaway.creatorContainer = (<a className="giveaway__username" href={`/user/${username}`}> {username}</a>);
 				giveaway.avatar = (<a href={`/user/${username}`} className="giveaway_image_avatar" style={`background-image:url(${avatar});`}></a>);
 			}
-			temp.firstElementChild.firstElementChild.appendChild(giveaway.creatorContainer);
+			if (giveaway.creatorContainer instanceof Node) {
+				temp.firstElementChild.firstElementChild.appendChild(giveaway.creatorContainer);
+			}
 			temp.firstElementChild.appendChild(giveaway.links);
-			temp.appendChild(giveaway.avatar);
-			temp.after(giveaway.endTimeColumn.nextElementSibling);
+			if (giveaway.avatar instanceof Node) {
+				temp.appendChild(giveaway.avatar);
+			}
+			if (giveaway.endTimeColumn?.nextElementSibling) {
+				temp.after(giveaway.endTimeColumn.nextElementSibling);
+			}
 			giveaway.endTimeColumn.classList.add('esgst-hidden');
-			giveaway.startTimeColumn.classList.add('esgst-hidden');
+			if (giveaway.startTimeColumn) {
+				giveaway.startTimeColumn.classList.add('esgst-hidden');
+			}
 			giveaway.entriesLink.lastElementChild.textContent = giveaway.entriesLink.textContent.replace(
 				/[^\d,]+/g,
 				''

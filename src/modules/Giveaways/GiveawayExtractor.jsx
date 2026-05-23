@@ -154,18 +154,24 @@ class GiveawaysGiveawayExtractor extends Module {
 	}
 
 	updateCache = async (giveaway) => {
-		if (!this.ge || !this.ge.cacheId) return;
+		if (!this.ge?.cacheId || !giveaway?.code) return;
 		this.ge.cache = JSON.parse(common.getValue('geCache', '{}'));
-		if (giveaway.code in this.ge.cache[this.ge.cacheId].giveaways) {
-			const cacheGiveaway = this.ge.cache[this.ge.cacheId].giveaways[giveaway.code];
+		if (!this.ge.cache[this.ge.cacheId]) {
+			this.ge.cache[this.ge.cacheId] = { codes: [], giveaways: {} };
+		}
+		if (!this.ge.cache[this.ge.cacheId].giveaways) {
+			this.ge.cache[this.ge.cacheId].giveaways = {};
+		}
+		const cacheGiveaway = this.ge.cache[this.ge.cacheId].giveaways[giveaway.code];
+		if (cacheGiveaway && typeof cacheGiveaway.html === 'string') {
 			if (giveaway.entered) {
 				cacheGiveaway.html = cacheGiveaway.html
-					.replace(/"giveaway__row-outer-wrap"/, '"giveaway__row-outer-wrap" data-entered="true"')
-					.replace(/"giveaway__row-inner-wrap\s?"/, '"giveaway__row-inner-wrap is-faded"');
+					.replace(/(class="giveaway__row-outer-wrap")(?! data-entered)/, '$1 data-entered="true"')
+					.replace(/class="([^"]*giveaway__row-inner-wrap(?!.*\bis-faded\b)[^"]*)"/, 'class="$1 is-faded"');
 			} else {
 				cacheGiveaway.html = cacheGiveaway.html
-					.replace(/\sdata-entered="true"/, '')
-					.replace(/"giveaway__row-inner-wrap\sis-faded"/, '"giveaway__row-inner-wrap"');
+					.replace(/\s?data-entered="true"/g, '')
+					.replace(/\s?\bis-faded\b/g, '');
 			}
 			await common.setValue('geCache', JSON.stringify(this.ge.cache));
 		}
@@ -1016,7 +1022,9 @@ class GiveawaysGiveawayExtractor extends Module {
 			text: `${ge.points}P required to enter all giveaways.`,
 			type: 'node',
 		});
-		for (const link of [...ge.cache[ge.cacheId].ithLinks, ...ge.cache[ge.cacheId].jigidiLinks]) {
+		const ithLinks = ge.cache?.[ge.cacheId]?.ithLinks ?? [];
+		const jigidiLinks = ge.cache?.[ge.cacheId]?.jigidiLinks ?? [];
+		for (const link of [...ithLinks, ...jigidiLinks]) {
 			items[0].children.push(
 				{
 					type: 'br',
@@ -1036,11 +1044,15 @@ class GiveawaysGiveawayExtractor extends Module {
 		ge.reExtract = true;
 		ge.isComplete = true;
 		if (!ge.isCanceled && !ge.extractOnward) {
-			ge.cache[ge.cacheId].ithLinks = Array.from(ge.cache[ge.cacheId].ithLinks);
-			ge.cache[ge.cacheId].jigidiLinks = Array.from(ge.cache[ge.cacheId].jigidiLinks);
+			if (!ge.cache[ge.cacheId]) {
+				ge.cache[ge.cacheId] = {};
+			}
+			ge.cache[ge.cacheId].ithLinks = Array.from(ge.cache?.[ge.cacheId]?.ithLinks ?? []);
+			ge.cache[ge.cacheId].jigidiLinks = Array.from(ge.cache?.[ge.cacheId]?.jigidiLinks ?? []);
 			await common.setValue('geCache', JSON.stringify(ge.cache));
 		}
-		$('.esgst-gv-icons [data-draggable-id]').removeClass('featured__column');
+		document.querySelectorAll('.esgst-gv-icons [data-draggable-id]')
+			.forEach(el => el.classList.remove('featured__column'));
 	}
 
 	extractJigidiId(url) {
