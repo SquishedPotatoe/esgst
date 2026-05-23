@@ -109,6 +109,19 @@ class GamesGameCategories extends Module {
 					name: 'Color enter button of giveaways if game ownership cannot be checked.',
 					sg: true,
 				},
+				gc_row: {
+					background: true,
+					description: () => (
+						<ul>
+							<li>
+								The table row of game links will be colored with the desired color because the game
+								cannot be checked.
+							</li>
+						</ul>
+					),
+					name: 'Color table rows of Fanatical games.',
+					sg: true,
+				},
 				gc_lp_gv: {
 					description: () => (
 						<ul>

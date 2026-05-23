@@ -235,12 +235,23 @@ class Games extends Module {
 	}
 
 	async games_getInfo(context, main) {
+		let id, type;
 		if (!context) {
 			return null;
 		}
 		const link = context.querySelector(
-			`[href*="store.steampowered.com/app/"], [href*="store.steampowered.com/sub/"], [href*="store.steampowered.com/bundle/"], [href*="steamcommunity.com/app/"], [href*="steamcommunity.com/sub/"], [href*="steamcommunity.com/bundle/"]`
+			`[href*="store.steampowered.com/app/"], [href*="store.steampowered.com/sub/"], [href*="store.steampowered.com/bundle/"], [href*="steamcommunity.com/app/"], [href*="steamcommunity.com/sub/"], [href*="steamcommunity.com/bundle/"], [href*="s.team/a/"]`
 		);
+		if (!link && Settings.get('gc_row')) {
+			const fanatical = context.querySelector(`[href*="fanatical.com/"]`);
+			if (fanatical) {
+				const row = context.closest('tr');
+				if (row) {
+					row.style.backgroundColor = Settings.get('gc_row_bgColor');
+					row.title = 'ESGST cannot check this game';
+				}
+			}
+		}
 		const image = context.querySelector(
 			`[style*="/apps/"], [style*="/subs/"], [style*="/bundles/"]`
 		);
@@ -249,17 +260,14 @@ class Games extends Module {
 			if (!url) {
 				return null;
 			}
-			const info = url.match(/\/(app|sub|bundle)s?\/(\d+)/);
-			if (info[1] === 'bundle') {
-				return {
-					id: `SteamBundle${info[2]}`,
-					type: 'subs',
-				};
+			const info = url.match(/\/(app|sub|bundle)s?\/(\d+)/) || url.match(/s\.team\/a\/(\d+)/);
+
+			if (!info) {
+				return null;
 			}
-			return {
-				id: info[2],
-				type: `${info[1]}s`,
-			};
+			id = url.includes('s.team/a/') ? info[1] : info[2];
+			type = url.includes('s.team/a/') ? 'apps' : `${info[1]}s`;
+			return { id, type: type === 'bundles' ? 'subs' : type };
 		}
 		const gameId = context.getAttribute('data-game-id');
 		if (gameId && WHITELIST[gameId]) {

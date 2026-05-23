@@ -89,6 +89,7 @@ class _Settings {
 			gc_e_color: '#a59d7c',
 			gc_e_bColor: '#e0e0a8',
 			gc_e_bgColor: '#e9e9ca',
+			gc_row_bgColor: '#ff0000',
 			at_format: `MMM d, yyyy, H:mm:ss`,
 			plt_format: `MMM d, yyyy, H:mm:ss`,
 			vgb_index: 1,
