@@ -313,7 +313,7 @@ function addStyle() {
 	}
 
 	.esgst-tds-item-active {
-		background-color: #eee;
+		background-color: rgba(150, 196, 104, 0.2);
 	}
 
 	.esgst-tds-item-name {
