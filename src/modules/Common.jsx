@@ -1,4 +1,4 @@
-import {format, isSameWeek, formatDistanceStrict} from '../lib/date'
+import { format, isSameWeek, formatDistanceStrict} from '../lib/date'
 import { DOM } from '../class/DOM';
 import { EventDispatcher } from '../class/EventDispatcher';
 import { FetchRequest } from '../class/FetchRequest';
@@ -25,7 +25,7 @@ import { Events } from '../constants/Events';
 import { settingsModule } from './Settings';
 import { loadDataCleaner, loadDataManagement } from './Storage';
 import { runSilentSync, setSync } from './Sync';
-import { zip, unzipSync, strToU8, strFromU8 } from 'fflate';
+import { getZip, readZip } from '../lib/compression.js';
 
 const SHORT_MONTHS = [
 	'Jan',
@@ -3385,54 +3385,43 @@ class Common extends Module {
 	}
 
 	async downloadZip(data, fileName, zipName) {
-		this.downloadFile(null, zipName, await this.getZip(JSON.stringify(data), fileName));
+		const blob = await this.getZip(JSON.stringify(data), fileName);
+		this.downloadFile(null, zipName, blob);
 	}
 
 	async getZip(data, fileName, type = 'blob') {
-		return new Promise((resolve) => {
-			const files = {};
-			files[fileName] = strToU8(data);
-			zip(files, { level: 9 }, (err, zippedData) => {
-				if (err) throw err;
-				if (type === 'blob') {
-					resolve(new Blob([zippedData], { type: 'application/zip' }));
-				} else {
-					resolve(zippedData);
-				}
-			});
-		});
+		return await getZip(data, fileName, type);
 	}
 
 	async readZip(data) {
-		let u8;
-		if (data instanceof Blob) {
-			const arrayBuffer = await data.arrayBuffer();
-			u8 = new Uint8Array(arrayBuffer);
-		} else if (data instanceof ArrayBuffer) {
-			u8 = new Uint8Array(data);
-		} else if (data instanceof Uint8Array) {
-			u8 = data;
-		} else {
-			throw new Error('Unsupported data type for readZip');
-		}
-
-		const files = unzipSync(u8);
-		const output = [];
-		for (const name in files) {
-			output.push({ name, value: strFromU8(files[name]) });
-		}
-		return output;
+		return await readZip(data);
 	}
 
-	downloadFile(data, fileName, blob) {
-		const url = window.URL.createObjectURL(blob || new Blob([data]));
-		const file = document.createElement('a');
-		file.download = fileName;
-		file.href = url;
-		document.body.appendChild(file);
-		file.click();
-		file.remove();
-		window.URL.revokeObjectURL(url);
+	async downloadFile(data, name, blob = null) {
+		try {
+			const shouldCompress = Settings.get('backupZip');
+			const extension = shouldCompress ? '.json.gz' : '.json';
+			const fileName = name.endsWith(extension) ? name : `${name}${extension}`;
+			let fileBlob = blob;
+
+			if (!fileBlob) {
+				const jsonString = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+				fileBlob = shouldCompress
+					? await getZip(jsonString, null, 'blob')
+					: new Blob([jsonString], { type: 'application/json' });
+			}
+
+			const url = window.URL.createObjectURL(fileBlob);
+			const file = document.createElement('a');
+			file.download = fileName;
+			file.href = url;
+			document.body.appendChild(file);
+			file.click();
+			file.remove();
+			window.URL.revokeObjectURL(url);
+		} catch (err) {
+			console.error('Export failed:', err);
+		}
 	}
 
 	async lockAndSaveGames(games) {
@@ -3775,9 +3764,9 @@ class Common extends Module {
 						`esgst_settings_${new Date().toISOString().replace(/:/g, '_')}`
 				  )
 				: `esgst_settings_${new Date().toISOString().replace(/:/g, '_')}`
-		}.json`;
-		if (name === 'null.json') return;
-		this.downloadFile(JSON.stringify(data), name);
+		}`;
+		if (name === 'null') return;
+		this.downloadFile(data, name);
 	}
 
 	async selectSwitches(switches, type, settings) {

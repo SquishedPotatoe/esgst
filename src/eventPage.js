@@ -1,4 +1,4 @@
-import { zip, unzipSync, strToU8, strFromU8 } from 'fflate';
+import { getZip, readZip } from './lib/compression';
 
 const locks = {};
 const notificationMap = new Map();
@@ -585,32 +585,6 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 		}
 	})();
 });
-
-async function getZip(data, fileName) {
-	return new Promise((resolve) => {
-		const fileMap = {};
-		fileMap[fileName] = strToU8(data);
-		zip(fileMap, { level: 9 }, (err, zippedData) => {
-			if (err) throw err;
-			resolve(new Blob([zippedData], { type: 'application/zip' }));
-		});
-	});
-}
-
-async function readZip(data) {
-	let u8 = data instanceof Uint8Array
-		? data
-		: data instanceof ArrayBuffer
-			? new Uint8Array(data)
-			: data instanceof Blob
-				? new Uint8Array(await data.arrayBuffer())
-				: null;
-
-	if (!u8) throw new Error("Unsupported data type for readZip in SW");
-
-	const files = unzipSync(u8);
-	return Object.keys(files).map(name => ({ name, value: strFromU8(files[name]) }));
-}
 
 async function doFetch(parameters, request, sender, callbackOrPort) {
 	const steamUrl = "https://store.steampowered.com/";

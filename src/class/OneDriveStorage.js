@@ -65,10 +65,10 @@ class OneDriveStorage extends ICloudStorage {
 			data,
 			fileName: Settings.get('backupZip') ? `${fileName}.json` : null,
 			headers: Object.assign(OneDriveStorage.getDefaultHeaders(token), {
-				'Content-Type': Settings.get('backupZip') ? 'application/zip' : 'text/plain',
+				'Content-Type': Settings.get('backupZip') ? 'application/gzip' : 'text/plain',
 			}),
 			pathParams: {
-				fileName: `${fileName}.${Settings.get('backupZip') ? 'zip' : 'json'}`,
+				fileName: `${fileName}.${Settings.get('backupZip') ? 'json.gz' : 'json'}`,
 			},
 		};
 		const response = await FetchRequest.put(OneDriveStorage.UPLOAD_URL, requestOptions);
@@ -83,7 +83,7 @@ class OneDriveStorage extends ICloudStorage {
 		}
 		const requestOptions = {
 			anon: true,
-			blob: fileInfo.name.match(/\.zip$/),
+			blob: fileInfo.name.match(/\.(zip|gz)$/),
 			headers: Object.assign(OneDriveStorage.getDefaultHeaders(token), {}),
 			pathParams: {
 				fileId: fileInfo.id,

@@ -68,7 +68,7 @@ class GoogleDriveStorage extends ICloudStorage {
 		}
 		const metadataRequestOptions = {
 			data: Settings.get('backupZip')
-				? `{ "name": "${fileName}.zip", "parents": ["appDataFolder"]}`
+				? `{ "name": "${fileName}.json.gz", "parents": ["appDataFolder"]}`
 				: `{"name": "${fileName}.json", "parents": ["appDataFolder"] }`,
 			headers: Object.assign(GoogleDriveStorage.getDefaultHeaders(token), {
 				'Content-Type': 'application/json',
@@ -85,7 +85,7 @@ class GoogleDriveStorage extends ICloudStorage {
 			data,
 			fileName: Settings.get('backupZip') ? `${fileName}.json` : null,
 			headers: Object.assign(GoogleDriveStorage.getDefaultHeaders(token), {
-				'Content-Type': Settings.get('backupZip') ? 'application/zip' : 'text/plain',
+				'Content-Type': Settings.get('backupZip') ? 'application/gzip' : 'text/plain',
 			}),
 			pathParams: {
 				fileId: metadataResponse.json.id,
@@ -105,7 +105,7 @@ class GoogleDriveStorage extends ICloudStorage {
 			token = await GoogleDriveStorage.authenticate();
 		}
 		const requestOptions = {
-			blob: fileInfo.name.match(/\.zip$/),
+			blob: fileInfo.name.match(/\.(zip|gz)$/),
 			headers: Object.assign(GoogleDriveStorage.getDefaultHeaders(token), {}),
 			pathParams: {
 				fileId: fileInfo.id,

@@ -189,25 +189,18 @@ async function loadImportFile(dm, storageType, space, callback) {
 				popup.close();
 				callback();
 			};
-			fileField.addEventListener('change', () => {
+			fileField.addEventListener('change', async () => {
 				const file = fileField.files[0];
-				if (file) {
-					dm.reader = new FileReader();
-					const isZip = file.name.match(/\.zip$/);
-					dm.reader.onload = async () => {
-						try {
-							await readImportFile(dm, STORAGE_TYPES.COMPUTER, space, isZip, cb);
-						} catch (err) {
-							Shared.common.createFadeMessage(warningNode, 'Cannot parse file!');
-						}
-					};
-					if (isZip) {
-						dm.reader.readAsArrayBuffer(file);
-					} else {
-						dm.reader.readAsText(file);
-					}
-				} else {
+				if (!file) {
 					Shared.common.createFadeMessage(warningNode, 'No file was loaded!');
+					return;
+				}
+				try {
+					const isZip = file.name.match(/\.(zip|gz)$/i);
+					const arrayBuffer = await file.arrayBuffer();
+					await readImportFile(dm, STORAGE_TYPES.COMPUTER, space, isZip, arrayBuffer, cb);
+				} catch (err) {
+					Shared.common.createFadeMessage(warningNode, 'Cannot parse file!');
 				}
 			});
 			popup.open();
@@ -263,17 +256,24 @@ async function loadImportFile(dm, storageType, space, callback) {
 	}
 }
 
-async function readImportFile(dm, storageType, space, isZip, callback) {
-	if (dm.reader) {
-		dm.data = JSON.parse(
-			isZip ? (await Shared.common.readZip(dm.reader.result))[0].value : dm.reader.result
+async function readImportFile(dm, storageType, space, isZip, buffer, callback) {
+	try {
+		if (isZip) {
+			const results = await Shared.common.readZip(buffer);
+			dm.data = results[0].data;
+		} else {
+			const text = new TextDecoder().decode(buffer);
+			dm.data = JSON.parse(text);
+		}
+		Shared.common.createConfirmation(
+			'Are you sure you want to restore the selected data?',
+			manageData.bind(null, dm, storageType, space, callback),
+			callback
 		);
+	} catch (err) {
+		console.error("Import Error:", err);
+		throw err;
 	}
-	Shared.common.createConfirmation(
-		'Are you sure you want to restore the selected data?',
-		manageData.bind(null, dm, storageType, space, callback),
-		callback
-	);
 }
 
 function confirmDataDeletion(dm, storageType, space, callback) {
@@ -2984,11 +2984,7 @@ async function manageData(dm, storageType, space, callback) {
 					callback();
 					return;
 				}
-				if (Settings.get('backupZip')) {
-					await Shared.common.downloadZip(data, `${name}.json`, `${name}.zip`);
-				} else {
-					Shared.common.downloadFile(JSON.stringify(data), `${name}.json`);
-				}
+				await Shared.common.downloadFile(data, name);
 				if (!dm.autoBackup) {
 					Shared.common.createFadeMessage(dm.message, `Data ${dm.pastTense} with success!`);
 				}
