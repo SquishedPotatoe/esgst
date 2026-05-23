@@ -27,7 +27,7 @@ class GeneralElementFilters extends Module {
 						</li>
 						<li>
 							To hide the pinned giveaways (the multiple copy giveaways) in the main page, use:{' '}
-							<code>[esgst.giveawaysPath].pinned-giveaways__outer-wrap</code>
+							<code>[esgst.giveawaysPath].pinned-giveaways-header, [esgst.giveawaysPath].pinned-giveaways</code>
 						</li>
 					</ul>
 				</ul>

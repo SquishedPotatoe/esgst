@@ -270,7 +270,7 @@ class Giveaways extends Module {
 				}
 			}
 		}
-		giveaway.pinned = giveaway.outerWrap.closest('.pinned-giveaways__outer-wrap');
+		giveaway.pinned = giveaway.outerWrap.closest('.pinned-giveaways');
 		thinHeadings = giveaway.innerWrap.querySelectorAll(
 			`.giveaway__heading__thin:not(.dyegb_playtime):not(.dyegb_achievement), .featured__heading__small`
 		);
@@ -300,16 +300,19 @@ class Giveaways extends Module {
 				`.giveaway__column--width-fill.text-right, .featured__column--width-fill.text-right`
 			);
 			giveaway.started = !giveaway.endTimeColumn.textContent.match(/Begins/);
-			giveaway.endTime =
-				parseInt(giveaway.endTimeColumn.lastElementChild.getAttribute('data-timestamp')) * 1e3;
+			const endTimestamp = giveaway.endTimeColumn.querySelector(`[data-timestamp]`);
+			giveaway.endTime = endTimestamp ? parseInt(endTimestamp.getAttribute('data-timestamp')) * 1e3 : 0;
 			giveaway.ended = Boolean(
 				giveaway.deleted || giveaway.endTimeColumn.textContent.match(/Ended/)
 			);
-			giveaway.startTime =
-				parseInt(giveaway.startTimeColumn.firstElementChild.getAttribute('data-timestamp')) * 1e3;
-			giveaway.creatorContainer = giveaway.startTimeColumn.querySelector(
-				`a[href*="/user/"], a[style]`
-			);
+			const startTimestamp =
+				giveaway.startTimeColumn && giveaway.startTimeColumn.querySelector(`[data-timestamp]`);
+			giveaway.startTime = startTimestamp
+				? parseInt(startTimestamp.getAttribute('data-timestamp')) * 1e3
+				: 0;
+			giveaway.creatorContainer = giveaway.startTimeColumn
+				? giveaway.startTimeColumn.querySelector(`a[href*="/user/"], a[style]`)
+				: null;
 		} else {
 			giveaway.started = true;
 		}

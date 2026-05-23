@@ -76,7 +76,6 @@ import { discussionsMainPostSkipper } from './Discussions/MainPostSkipper';
 import { generalNotificationMerger } from './General/NotificationMerger';
 import { giveawaysNextPreviousTrainHotkeys } from './Giveaways/NextPreviousTrainHotkeys';
 import { generalPaginationNavigationOnTop } from './General/PaginationNavigationOnTop';
-import { giveawaysPinnedGiveawaysButton } from './Giveaways/PinnedGiveawaysButton';
 import { discussionsPuzzleMarker } from './Discussions/PuzzleMarker';
 import { generalPointsVisualizer } from './General/PointsVisualizer';
 import { giveawaysQuickGiveawaySearch } from './Giveaways/QuickGiveawaySearch';
@@ -245,7 +244,6 @@ const modules = {
 	generalNotificationMerger,
 	giveawaysNextPreviousTrainHotkeys,
 	generalPaginationNavigationOnTop,
-	giveawaysPinnedGiveawaysButton,
 	discussionsPuzzleMarker,
 	generalPointsVisualizer,
 	giveawaysAdvancedGiveawaySearch,

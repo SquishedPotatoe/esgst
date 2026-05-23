@@ -2801,8 +2801,12 @@ function addStyle() {
 		text-align: center;
 	}
 
-	.esgst-gv-view.pinned-giveaways__inner-wrap--minimized .giveaway__row-outer-wrap:nth-child(-n + 10) {
-		display: inline-block;
+	.esgst-mgc-giveaways {
+		background-color: #e8eaef;
+		border: 1px solid #d2d6e0;
+		border-radius: 4px;
+		margin-bottom: 15px;
+		padding: 0 15px;
 	}
 
 	.esgst-gv-container {

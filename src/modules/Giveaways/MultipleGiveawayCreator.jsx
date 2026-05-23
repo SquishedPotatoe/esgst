@@ -472,13 +472,13 @@ class GiveawaysMultipleGiveawayCreator extends Module {
 			mgc.giveaways = createElements(section, 'beforeend', [
 				{
 					attributes: {
-						class: 'pinned-giveaways__outer-wrap',
+						class: 'esgst-mgc-giveaways__outer-wrap',
 					},
 					type: 'div',
 					children: [
 						{
 							attributes: {
-								class: 'pinned-giveaways__inner-wrap',
+								class: 'esgst-mgc-giveaways',
 							},
 							type: 'div',
 						},

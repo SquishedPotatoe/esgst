@@ -604,7 +604,7 @@ class Common extends Module {
 			/** @type {HTMLElement} */ discussionHeading &&
 			discussionHeading.closest('.widget-container--margin-top');
 		this.esgst.pinnedGiveaways = /** @type {HTMLElement} */ document.getElementsByClassName(
-			'pinned-giveaways__outer-wrap'
+			'pinned-giveaways'
 		)[0];
 		let mainPageHeadingIndex;
 		if (this.esgst.commentsPath) {

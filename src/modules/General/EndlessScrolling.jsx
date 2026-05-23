@@ -345,9 +345,9 @@ class GeneralEndlessScrolling extends Module {
 			title: 'Refresh all pages',
 		});
 		this.esgst.es_refresh = this.es_refresh.bind(this, es);
-		es.refreshButton.addEventListener('click', this.esgst.es_refresh.bind(this));
+		es.refreshButton.addEventListener('click', this.esgst.es_refresh);
 		this.esgst.es_refreshAll = this.es_refreshAll.bind(this, es);
-		es.refreshAllButton.addEventListener('click', this.esgst.es_refreshAll.bind(this));
+		es.refreshAllButton.addEventListener('click', this.esgst.es_refreshAll);
 		es.continuousButton.addEventListener('click', this.es_continuouslyLoad.bind(this, es));
 		es.nextButton.addEventListener('click', this.es_stepNext.bind(this, es));
 		es.pauseButton.addEventListener('click', this.es_pause.bind(this, es, false));
@@ -429,7 +429,7 @@ class GeneralEndlessScrolling extends Module {
 			rows = context.getElementsByClassName('table__rows')[0];
 		if (this.esgst.commentsPath && !context.classList.contains('comments')) {
 			if (!refreshAll) {
-				es.refreshButton.addEventListener('click', this.esgst.es_refresh.bind(this));
+				es.refreshButton.addEventListener('click', this.esgst.es_refresh);
 				createElements(es.refreshButton, 'atinner', [
 					{
 						attributes: {
@@ -543,7 +543,7 @@ class GeneralEndlessScrolling extends Module {
 				if (Settings.get('ts') && !Settings.get('us')) {
 					this.esgst.modules.generalTableSorter.ts_sortTables();
 				}
-				es.refreshButton.addEventListener('click', this.esgst.es_refresh.bind(this));
+				es.refreshButton.addEventListener('click', this.esgst.es_refresh);
 				createElements(es.refreshButton, 'atinner', [
 					{
 						attributes: {
@@ -846,24 +846,7 @@ class GeneralEndlessScrolling extends Module {
 				checkMissingDiscussions(true);
 			}
 		}
-		if (this.esgst.pinnedGiveaways) {
-			createElements(this.esgst.pinnedGiveaways, 'atinner', [
-				...Array.from(
-					response.html.getElementsByClassName('pinned-giveaways__outer-wrap')[0].childNodes
-				).map((x) => {
-					return {
-						context: x,
-					};
-				}),
-			]);
-			await endless_load(this.esgst.pinnedGiveaways, true);
-			this.esgst.modules.giveawaysPinnedGiveawaysButton.init();
-		}
-
-		await EventDispatcher.dispatch(
-			Events.PAGE_REFRESHED,
-			(await FetchRequest.get(Shared.esgst.sg ? '/giveaways/search?type=wishlist' : '/')).html
-		);
+		await this.es_refreshPinnedGiveaways(es.pageIndex === 1 ? response.html : null);
 	}
 
 	async es_refreshAll(es) {
@@ -878,11 +861,16 @@ class GeneralEndlessScrolling extends Module {
 		]);
 		let page = es.reverseScrolling ? es.pageBase - 1 : es.pageBase + 1,
 			response = await FetchRequest.get(`${this.esgst.searchUrl}${page}`);
+		let pinnedResponseHtml = page === 1 ? response.html : null;
 		// noinspection JSIgnoredPromiseFromCall
 		this.es_getNext(es, true, page, null, response);
 		const promises = [];
 		for (let i = 1, n = es.paginations.length; i < n; ++i) {
 			page = es.reverseScrolling ? es.pageBase - (i + 1) : es.pageBase + (i + 1);
+			const pageResponse = await FetchRequest.get(`${this.esgst.searchUrl}${page}`);
+			if (page === 1 && !pinnedResponseHtml) {
+				pinnedResponseHtml = pageResponse.html;
+			}
 			// noinspection JSIgnoredPromiseFromCall
 			promises.push(
 				this.es_getNext(
@@ -890,21 +878,16 @@ class GeneralEndlessScrolling extends Module {
 					true,
 					page,
 					null,
-					await FetchRequest.get(`${this.esgst.searchUrl}${page}`)
+					pageResponse
 				)
 			);
 		}
-
-		await EventDispatcher.dispatch(
-			Events.PAGE_REFRESHED,
-			(await FetchRequest.get(Shared.esgst.sg ? '/giveaways/search?type=wishlist' : '/')).html
-		);
 
 		await Promise.all(promises);
 		common.moveAdsDown(es);
 		await endless_load(es.mainContext, true);
 		this.es_setRemoveEntry(es.mainContext);
-		es.refreshAllButton.addEventListener('click', this.esgst.es_refreshAll.bind(this));
+		es.refreshAllButton.addEventListener('click', this.esgst.es_refreshAll);
 		createElements(es.refreshAllButton, 'atinner', [
 			{
 				attributes: {
@@ -924,19 +907,44 @@ class GeneralEndlessScrolling extends Module {
 				checkMissingDiscussions(true);
 			}
 		}
-		if (this.esgst.pinnedGiveaways) {
-			createElements(this.esgst.pinnedGiveaways, 'atinner', [
-				...Array.from(
-					response.html.getElementsByClassName('pinned-giveaways__outer-wrap')[0].childNodes
-				).map((x) => {
-					return {
-						context: x,
-					};
-				}),
-			]);
-			await endless_load(this.esgst.pinnedGiveaways, true);
-			this.esgst.modules.giveawaysPinnedGiveawaysButton.init();
+		await this.es_refreshPinnedGiveaways(pinnedResponseHtml);
+	}
+
+	async es_refreshPinnedGiveaways(responseHtml = null) {
+		if (!this.esgst.pinnedGiveaways) return;
+
+		const html = responseHtml || (await FetchRequest.get(`${this.esgst.searchUrl}1`)).html;
+		const pinnedGiveaways = html.getElementsByClassName('pinned-giveaways')[0];
+		if (!pinnedGiveaways) return;
+
+		const currentPinnedHeader =
+			this.esgst.pinnedGiveaways.previousElementSibling?.classList.contains('pinned-giveaways-header')
+				? this.esgst.pinnedGiveaways.previousElementSibling
+				: null;
+		const pinnedHeader =
+			pinnedGiveaways.previousElementSibling?.classList.contains('pinned-giveaways-header')
+				? pinnedGiveaways.previousElementSibling
+				: null;
+
+		const refreshedPinnedGiveaways = pinnedGiveaways.cloneNode(true);
+		const refreshedPinnedHeader = pinnedHeader?.cloneNode(true) ?? null;
+
+		if (currentPinnedHeader) {
+			if (refreshedPinnedHeader) {
+				currentPinnedHeader.replaceWith(refreshedPinnedHeader);
+			} else {
+				currentPinnedHeader.remove();
+			}
+		} else if (refreshedPinnedHeader) {
+			this.esgst.pinnedGiveaways.parentElement.insertBefore(
+				refreshedPinnedHeader,
+				this.esgst.pinnedGiveaways
+			);
 		}
+
+		this.esgst.pinnedGiveaways.replaceWith(refreshedPinnedGiveaways);
+		this.esgst.pinnedGiveaways = refreshedPinnedGiveaways;
+		await endless_load(this.esgst.pinnedGiveaways, true);
 	}
 
 	es_setPagination(es) {
