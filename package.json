@@ -1,7 +1,7 @@
 {
 	"name": "esgst-mv3",
-	"version": "9.2.4",
-	"betaVersion": "9.2.4",
+	"version": "9.2.5",
+	"betaVersion": "9.2.5",
 	"title": "Enhanced SteamGifts & SteamTrades (ESGST Potatoe edition)",
 	"description": "A script that adds some cool features to SteamGifts and SteamTrades.",
 	"author": "rafaelgomesxyz",
@@ -19,8 +19,6 @@
 	},
 	"dependencies": {
 		"jQuery-QueryBuilder": "3.0.0",
-		"jquery": "4.0.0",
-		"jquery-ui": "^1.14.2",
 		"simple-vdf": "^1.1.1"
 	},
 	"devDependencies": {

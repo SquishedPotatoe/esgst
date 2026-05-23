@@ -67,8 +67,6 @@ function getWebExtensionManifest(env) {
 			"*://*.graph.microsoft.com/*",
 			"*://*.isthereanydeal.com/*",
 			"*://*.raw.githubusercontent.com/*",
-			"*://*.script.google.com/*",
-			"*://*.script.googleusercontent.com/*",
 			"*://*.sgtools.info/*",
 			"*://*.steam-tracker.com/*",
 			"*://*.steamcommunity.com/*",

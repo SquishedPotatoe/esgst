@@ -105,7 +105,6 @@ To learn more about each feature you have to install ESGST.
 - Multiple Giveaway Creator
 - Next/Previous Train Hotkeys
 - One-Click Hide Giveaway Button
-- Pinned Giveaways Button
 - Quick Giveaway Search
 - Real CV Calculator
 - Sent Key Searcher
@@ -184,10 +183,10 @@ To learn more about each feature you have to install ESGST.
 - Entered Game Highlighter
 - Game Categories
 - Game Tags
+- Hide Games In Tables Button
 
 ### Others
 
-- Automatically add no CV games to the database when searching for games in the new giveaway page.
 - Automatically backup your data every specified number of days.
 - Automatically sync games/groups when syncing through SteamGifts.
 - Automatically update whitelist/blacklist when adding/removing a user to/from those lists.
