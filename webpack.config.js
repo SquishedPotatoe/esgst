@@ -105,6 +105,7 @@ module.exports = (env = {}) => {
 		output: {
 			path: outputDir,
 			filename: '[name].js',
+			clean: true,
 		},
 		module: {
 			rules: [
@@ -172,7 +173,7 @@ module.exports = (env = {}) => {
 		],
 		resolve: {
 			extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
-			alias: { jquery: path.resolve(__dirname, 'node_modules/jquery/dist/jquery.slim.js') },
+			alias: { jquery: path.resolve(__dirname, 'src/lib/jquery-compat.js') },
 		},
 		optimization: isProduction
 			? {
