@@ -214,20 +214,26 @@ class GroupsGroupLibraryWishlistChecker extends Module {
 	 */
 	async glwc_getUsers(glwc, nextPage) {
 		if (glwc.isCanceled) return;
+		if (!glwc.seenUsernames) {
+			glwc.seenUsernames = new Set();
+		}
 		glwc.progressBar.setMessage(`Retrieving users (page ${nextPage})...`);
 		let elements, i, n, pagination, responseHtml;
 		responseHtml = (await FetchRequest.get(`/${glwc.url}/search?page=${nextPage}`)).html;
 		elements = responseHtml.querySelectorAll(`.table__row-inner-wrap:not(.is-faded)`);
 		for (i = 0, n = elements.length; i < n; ++i) {
-			glwc.users.push({
-				username: elements[i].getElementsByClassName('table__column__heading')[0].textContent,
-			});
+			const username = elements[i].getElementsByClassName('table__column__heading')[0].textContent.trim();
+			if (!glwc.seenUsernames.has(username)) {
+				glwc.seenUsernames.add(username);
+				glwc.users.push({ username });
+			}
 		}
 		pagination = responseHtml.getElementsByClassName('pagination__navigation')[0];
 		if (pagination && !pagination.lastElementChild.classList.contains('is-selected')) {
 			window.setTimeout(() => this.glwc_getUsers(glwc, ++nextPage), 0);
 		} else {
 			glwc.overallProgressBar.setMessage('Step 2 of 3');
+			delete glwc.seenUsernames;
 			// noinspection JSIgnoredPromiseFromCall
 			this.glwc_getSteamIds(glwc, 0, glwc.users.length);
 		}
@@ -255,9 +261,8 @@ class GroupsGroupLibraryWishlistChecker extends Module {
 			glwc.overallProgressBar.setMessage(`Step 3 of 3 (this might take a while)`);
 			glwc.memberCount = 0;
 			// noinspection JSIgnoredPromiseFromCall
-
-			if (Settings.get('glwc_gn')) {
-				await Shared.esgst.modules.tradesHaveWantListChecker.hwlc_getGames(true);
+			if (Settings.get('glwc_gn') && Settings.get('steamApiKey')) {
+				await Shared.esgst.modules.tradesHaveWantListChecker.hwlc_getGames(Settings.get('steamApiKey'));
 			}
 
 			this.glwc_getGames(glwc, 0, glwc.users.length);
@@ -269,114 +274,228 @@ class GroupsGroupLibraryWishlistChecker extends Module {
 	 */
 	async glwc_getGames(glwc, i, n) {
 		if (glwc.isCanceled) return;
+		if (!glwc.retryUsers) {
+			glwc.retryUsers = [];
+		}
 		if (i < n) {
 			try {
 				glwc.progressBar.setMessage(`Retrieving libraries/wishlists (${i + 1} of ${n})...`);
+				glwc.users[i].failed = [];
+				glwc.users[i].library = [];
+				glwc.users[i].wishlist = [];
 				if (!glwc.id || glwc.members.indexOf(glwc.users[i].steamId) >= 0) {
-					try {
-						glwc.users[i].failed = [];
-						glwc.users[i].library = [];
-						const elements = (
-							await FetchRequest.get(
-								`http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key=${Settings.get(
-									'steamApiKey'
-								)}&steamid=${glwc.users[i].steamId}&format=json`
-							)
-						).json.response.games;
-						if (elements) {
-							elements.forEach((element) => {
-								let game = {
-									id: element.appid,
-									logo: `https://steamcdn-a.akamaihd.net/steam/apps/${element.appid}/header.jpg`,
-									name: `${element.appid}`,
-								};
-
-								if (Shared.esgst.appList) {
-									const name = Shared.esgst.appList[element.appid];
-
-									if (name) {
-										game.name = name;
-									}
-								}
-
-								if (!glwc.games[game.id]) {
-									game.libraries = [];
-									game.wishlists = [];
-									glwc.games[game.id] = game;
-								}
-								glwc.games[game.id].libraries.push(i);
-								glwc.users[i].library.push(game.id);
-							});
-						}
-					} catch (e) {
-						/**/
-					}
-					glwc.users[i].wishlist = [];
-					const wishlistData = (
-						await FetchRequest.get(
-							`https://api.steampowered.com/IWishlistService/GetWishlist/v1/?steamid=${glwc.users[i].steamId}&format=json`
-						)
-					).json.response.items;
-					if (wishlistData) {
-						const maxWishlists = Settings.get('glwc_checkMaxWishlists')
-							? parseInt(Settings.get('glwc_maxWishlists'))
-							: Infinity;
-						if (wishlistData.length <= maxWishlists) {
-							wishlistData.forEach((item) => {
-								let id = item.appid;
-								let game = { id };
-								game.logo = `https://steamcdn-a.akamaihd.net/steam/apps/${id}/header.jpg`;
-
-								if (Shared.esgst.appList) {
-									const name = Shared.esgst.appList[item.appid];
-
-									if (name) {
-										game.name = name;
-									}
-								}
-
-								if (!game.name) {
-									game.name = `${id}`;
-								}
-
-								if (glwc.games[id]) {
-
-									if (game.logo && game.name) {
-										glwc.games[id].logo = game.logo;
-										glwc.games[id].name = game.name;
-									}
-								} else {
-									game.libraries = [];
-									game.wishlists = [];
-									glwc.games[id] = game;
-								}
-								glwc.games[id].wishlists.push(i);
-								glwc.users[i].wishlist.push(parseInt(id));
-							});
-						}
-					} else {
-						glwc.users[i].failed.push(
-							`<a class="table__column__secondary-link" href="https://steamcommunity.com/profiles/${glwc.users[i].steamId}">${glwc.users[i].username}</a>`
-						);
+					const result = await this.glwc_processUserGames(glwc, i);
+					if (result.shouldRetry) {
+						glwc.retryUsers.push(i);
 					}
 					glwc.memberCount += 1;
 					window.setTimeout(() => this.glwc_getGames(glwc, ++i, n), 0);
 				} else {
 					window.setTimeout(() => this.glwc_getGames(glwc, ++i, n), 0);
 				}
-			} catch (err) {
+			} catch (e) {
 				glwc.users[i].failed.push(
 					`<a class="table__column__secondary-link" href="https://steamcommunity.com/profiles/${glwc.users[i].steamId}">${glwc.users[i].username}</a>`
 				);
 				window.setTimeout(() => this.glwc_getGames(glwc, ++i, n), 0);
 			}
 		} else {
-			this.glwc_showResults(glwc);
+			await this.glwc_retryGames(glwc);
+			glwc.users.forEach((user, idx) => {
+				if (user.failed?.length > 0) {
+					console.log(`User ${idx} (${user.username})`);
+				}
+			});
+			await this.glwc_showResults(glwc);
+			await this.fixBrokenThumbnails();
 		}
 	}
 
-	glwc_showResults(glwc) {
-		const failedUsers = [...new Set(glwc.users.flatMap(user => user.failed.length > 0 ? user.failed : []))];
+	async glwc_processUserGames(glwc, i, isRetry = false) {
+		const user = glwc.users[i];
+		const libraryResult = await this.glwc_fetchOwnedGames(user.steamId);
+		const wishlistResult = await this.glwc_fetchWishlist(user.steamId);
+		const hasSuspiciousFailure =
+			this.glwc_isRetryableSteamFailure(libraryResult) ||
+			this.glwc_isRetryableSteamFailure(wishlistResult);
+		const hasTerminalFailure =
+			this.glwc_hasTerminalSteamFailure(libraryResult) ||
+			this.glwc_hasTerminalSteamFailure(wishlistResult);
+
+		if (hasSuspiciousFailure && !isRetry) {
+			return { shouldRetry: true };
+		}
+
+		this.glwc_applyOwnedGames(glwc, i, libraryResult.games);
+		if (Array.isArray(wishlistResult.items)) {
+			this.glwc_applyWishlist(glwc, i, wishlistResult.items);
+		}
+		if (hasSuspiciousFailure || hasTerminalFailure) {
+			this.glwc_markUserFailed(user);
+		}
+
+		return { shouldRetry: false };
+	}
+
+	async glwc_retryGames(glwc) {
+		if (!glwc.retryUsers?.length || glwc.isCanceled) return;
+
+		const retryUsers = [...new Set(glwc.retryUsers)];
+
+		for (let j = 0, n = retryUsers.length; j < n; ++j) {
+			if (glwc.isCanceled) return;
+			const i = retryUsers[j];
+			glwc.progressBar.setMessage(
+				`Retrying Steam requests (${j + 1} of ${n})...`
+			);
+			glwc.users[i].failed = [];
+			glwc.users[i].library = [];
+			glwc.users[i].wishlist = [];
+			await this.glwc_processUserGames(glwc, i, true);
+			if (j + 1 < n) {
+				await this.glwc_delay(2100);
+			}
+		}
+	}
+
+	async glwc_fetchOwnedGames(steamId) {
+		if (!Settings.get('steamApiKey')) {
+			return { games: null, retryable: false, failed: false };
+		}
+
+		try {
+			const response = await FetchRequest.get(
+				`http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key=${Settings.get(
+					'steamApiKey'
+				)}&steamid=${steamId}&format=json`
+			);
+			const json = response.json;
+			if (!json || !json.response) {
+				return { games: null, retryable: true, failed: false };
+			}
+
+			return { games: json.response.games || [], retryable: false, failed: false };
+		} catch (e) {
+			return { games: null, retryable: true, failed: false };
+		}
+	}
+
+	async glwc_fetchWishlist(steamId) {
+		try {
+			const url = `https://api.steampowered.com/IWishlistService/GetWishlist/v1/?${
+				Settings.get('steamApiKey') ? `key=${Settings.get('steamApiKey')}&` : ''
+			}steamid=${steamId}&format=json`;
+			const response = await FetchRequest.get(url);
+			const json = response.json;
+			if (!json || !json.response) {
+				return { items: null, retryable: true, failed: false };
+			}
+			if (!Array.isArray(json.response.items)) {
+				return { items: null, retryable: false, failed: true };
+			}
+
+			return { items: json.response.items, retryable: false, failed: false };
+		} catch (e) {
+			return { items: null, retryable: true, failed: false };
+		}
+	}
+
+	glwc_isRetryableSteamFailure(result) {
+		return !result || result.retryable;
+	}
+
+	glwc_hasTerminalSteamFailure(result) {
+		return Boolean(result?.failed);
+	}
+
+	glwc_applyOwnedGames(glwc, i, elements) {
+		if (!elements) return;
+
+		elements.forEach((element) => {
+			let game = {
+				id: element.appid,
+				logo: `https://steamcdn-a.akamaihd.net/steam/apps/${element.appid}/header.jpg`,
+				name: `${element.appid}`,
+			};
+
+			if (Shared.esgst.appList) {
+				const name = Shared.esgst.appList[element.appid];
+
+				if (name) {
+					game.name = name;
+				}
+			}
+
+			if (!glwc.games[game.id]) {
+				game.libraries = [];
+				game.wishlists = [];
+				glwc.games[game.id] = game;
+			}
+			if (glwc.games[game.id].libraries.indexOf(i) < 0) {
+				glwc.games[game.id].libraries.push(i);
+			}
+			glwc.users[i].library.push(game.id);
+		});
+	}
+
+	glwc_applyWishlist(glwc, i, wishlistData) {
+		const maxWishlists = Settings.get('glwc_checkMaxWishlists')
+			? parseInt(Settings.get('glwc_maxWishlists'))
+			: Infinity;
+		if (wishlistData.length > maxWishlists) return;
+
+		wishlistData.forEach((item) => {
+			let id = item.appid;
+			let game = { id };
+			game.logo = `https://steamcdn-a.akamaihd.net/steam/apps/${id}/header.jpg`;
+
+			if (Shared.esgst.appList) {
+				const name = Shared.esgst.appList[item.appid];
+
+				if (name) {
+					game.name = name;
+				}
+			}
+
+			if (!game.name) {
+				game.name = `${id}`;
+			}
+
+			if (glwc.games[id]) {
+				if (game.logo && game.name) {
+					glwc.games[id].logo = game.logo;
+					glwc.games[id].name = game.name;
+				}
+			} else {
+				game.libraries = [];
+				game.wishlists = [];
+				glwc.games[id] = game;
+			}
+			if (glwc.games[id].wishlists.indexOf(i) < 0) {
+				glwc.games[id].wishlists.push(i);
+			}
+			glwc.users[i].wishlist.push(parseInt(id));
+		});
+	}
+
+	glwc_delay(ms) {
+		return new Promise((resolve) => {
+			window.setTimeout(resolve, ms);
+		});
+	}
+
+	glwc_markUserFailed(user) {
+		const failedUser = `<a class="table__column__secondary-link" href="https://steamcommunity.com/profiles/${user.steamId}">${user.username}</a>`;
+		if (!user.failed.includes(failedUser)) {
+			user.failed.push(failedUser);
+			console.log(`[GLWC] Marked failed user: ${user.username} (${user.steamId})`);
+		}
+	}
+
+	async glwc_showResults(glwc) {
+		const failedUsers = [...new Set(glwc.users.flatMap(user => user.failed?.length > 0 ? user.failed : []))];
+		console.log(`[GLWC] Failed users count: ${failedUsers.length}`);
+		console.log('[GLWC] Failed users payload:', failedUsers);
 		if (failedUsers.length > 0) {
 			glwc.progressBar.setWarning(`${failedUsers.length} users were not retrieved. Possibly games, wishlists or profile are private. (Hover to view details)`);
 			const popout = createTooltip(
@@ -1306,6 +1425,130 @@ class GroupsGroupLibraryWishlistChecker extends Module {
 			}
 		});
 	}
+
+async fixBrokenThumbnails() {
+    const container = document.querySelector('.esgst-glwc-results');
+    if (!container) return; 
+
+    if (!this.hasThumbnailObserver) {
+        this.hasThumbnailObserver = true; 
+
+        const searchObserver = new MutationObserver((mutationsList) => {
+            let shouldTriggerFix = false;
+            for (const mutation of mutationsList) {
+                if (
+                    (mutation.type === 'attributes' &&
+                        (mutation.attributeName === 'style' || mutation.attributeName === 'class')) ||
+                    (mutation.type === 'childList' && mutation.addedNodes.length > 0)
+                ) {
+                    shouldTriggerFix = true;
+                    break;
+                }
+            }
+
+			if (shouldTriggerFix) {
+				window.clearTimeout(this.thumbnailScanTimeout);
+				this.thumbnailScanTimeout = window.setTimeout(() => {
+					this._scanAndFixElements(container);
+				}, 50);
+			}
+		});
+
+        searchObserver.observe(container, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['style', 'class']
+        });
+    }
+    await this._scanAndFixElements(container);
+}
+
+async _scanAndFixElements(container) {
+    const thumbnails = container.querySelectorAll('.table_image_thumbnail:not([data-fixed])');
+    if (thumbnails.length === 0) return; 
+
+    await Promise.all(Array.from(thumbnails).map(div => {
+        return new Promise((resolve) => {
+            // Skip scanning rows currently hidden by the search engine
+            const parentRow = div.closest('.table__row-outer-wrap');
+            if (parentRow && window.getComputedStyle(parentRow).display === 'none') {
+                resolve();
+                return;
+            }
+
+            const style = window.getComputedStyle(div).backgroundImage;
+            const match = style.match(/url\(["']?(.*?)["']?\)/);
+
+            if (!match || match[1] === 'none') {
+                div.setAttribute('data-fixed', 'true');
+                resolve();
+                return;
+            }
+
+            const url = match[1];
+            const img = new Image();
+
+            img.onload = () => {
+                div.setAttribute('data-fixed', 'true');
+                resolve();
+            };
+
+            img.onerror = async () => {
+                div.setAttribute('data-fixed', 'true');
+                
+                const appIdMatch = url.match(/\/apps\/(\d+)/);
+                let fallbackSuccess = false;
+
+                if (appIdMatch) {
+                    const appId = appIdMatch[1];
+
+                    try {
+                        const response = await FetchRequest.get(`https://store.steampowered.com/api/appdetails?appids=${appId}&filters=basic`);
+                        const json = response.json;
+
+                        if (json && json[appId] && json[appId].success) {
+                            const newLogoUrl = json[appId].data.header_image;
+                            div.style.backgroundImage = `url("${newLogoUrl}")`;
+                            fallbackSuccess = true;
+                        }
+                    } catch (e) {
+                        console.log(`Failed to fetch fallback data for App ID ${appId}:`, e);
+                    }
+                }
+
+                if (!fallbackSuccess) {
+                    this._setBrokenThumbnailFallback(div);
+                }
+
+                resolve();
+            };
+
+            img.src = url;
+        });
+    }));
+
+    console.log(`Processed ${thumbnails.length} thumbnails.`);
+}
+
+	_setBrokenThumbnailFallback(thumbnail) {
+		thumbnail.style.backgroundImage = 'none';
+		thumbnail.style.display = 'flex';
+		thumbnail.style.justifyContent = 'center';
+		thumbnail.style.alignItems = 'center';
+		thumbnail.replaceChildren(
+			createElements(document.createDocumentFragment(), 'atinner', [
+				{
+					attributes: {
+						class: 'fa fa-picture-o',
+						style: 'font-size: 26px;',
+					},
+					type: 'i',
+				},
+			]).firstElementChild
+		);
+	}
+
 }
 
 const groupsGroupLibraryWishlistChecker = new GroupsGroupLibraryWishlistChecker();
