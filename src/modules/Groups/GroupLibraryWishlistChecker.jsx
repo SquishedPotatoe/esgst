@@ -301,11 +301,6 @@ class GroupsGroupLibraryWishlistChecker extends Module {
 			}
 		} else {
 			await this.glwc_retryGames(glwc);
-			glwc.users.forEach((user, idx) => {
-				if (user.failed?.length > 0) {
-					console.log(`User ${idx} (${user.username})`);
-				}
-			});
 			await this.glwc_showResults(glwc);
 			await this.fixBrokenThumbnails();
 		}
@@ -488,14 +483,11 @@ class GroupsGroupLibraryWishlistChecker extends Module {
 		const failedUser = `<a class="table__column__secondary-link" href="https://steamcommunity.com/profiles/${user.steamId}">${user.username}</a>`;
 		if (!user.failed.includes(failedUser)) {
 			user.failed.push(failedUser);
-			console.log(`[GLWC] Marked failed user: ${user.username} (${user.steamId})`);
 		}
 	}
 
 	async glwc_showResults(glwc) {
 		const failedUsers = [...new Set(glwc.users.flatMap(user => user.failed?.length > 0 ? user.failed : []))];
-		console.log(`[GLWC] Failed users count: ${failedUsers.length}`);
-		console.log('[GLWC] Failed users payload:', failedUsers);
 		if (failedUsers.length > 0) {
 			glwc.progressBar.setWarning(`${failedUsers.length} users were not retrieved. Possibly games, wishlists or profile are private. (Hover to view details)`);
 			const popout = createTooltip(
@@ -1426,110 +1418,107 @@ class GroupsGroupLibraryWishlistChecker extends Module {
 		});
 	}
 
-async fixBrokenThumbnails() {
-    const container = document.querySelector('.esgst-glwc-results');
-    if (!container) return; 
+	async fixBrokenThumbnails() {
+		const container = document.querySelector('.esgst-glwc-results');
+		if (!container) return;
 
-    if (!this.hasThumbnailObserver) {
-        this.hasThumbnailObserver = true; 
+		if (!this.hasThumbnailObserver) {
+			this.hasThumbnailObserver = true;
 
-        const searchObserver = new MutationObserver((mutationsList) => {
-            let shouldTriggerFix = false;
-            for (const mutation of mutationsList) {
-                if (
-                    (mutation.type === 'attributes' &&
-                        (mutation.attributeName === 'style' || mutation.attributeName === 'class')) ||
-                    (mutation.type === 'childList' && mutation.addedNodes.length > 0)
-                ) {
-                    shouldTriggerFix = true;
-                    break;
-                }
-            }
+			const searchObserver = new MutationObserver((mutationsList) => {
+				let shouldTriggerFix = false;
+				for (const mutation of mutationsList) {
+					if (
+						(mutation.type === 'attributes' &&
+							(mutation.attributeName === 'style' || mutation.attributeName === 'class')) ||
+						(mutation.type === 'childList' && mutation.addedNodes.length > 0)
+					) {
+						shouldTriggerFix = true;
+						break;
+					}
+				}
 
-			if (shouldTriggerFix) {
-				window.clearTimeout(this.thumbnailScanTimeout);
-				this.thumbnailScanTimeout = window.setTimeout(() => {
-					this._scanAndFixElements(container);
-				}, 50);
-			}
-		});
+				if (shouldTriggerFix) {
+					window.clearTimeout(this.thumbnailScanTimeout);
+					this.thumbnailScanTimeout = window.setTimeout(() => {
+						this._scanAndFixElements(container);
+					}, 50);
+				}
+			});
 
-        searchObserver.observe(container, {
-            childList: true,
-            subtree: true,
-            attributes: true,
-            attributeFilter: ['style', 'class']
-        });
-    }
-    await this._scanAndFixElements(container);
-}
+			searchObserver.observe(container, {
+				childList: true,
+				subtree: true,
+				attributes: true,
+				attributeFilter: ['style', 'class']
+			});
+		}
+		await this._scanAndFixElements(container);
+	}
 
-async _scanAndFixElements(container) {
-    const thumbnails = container.querySelectorAll('.table_image_thumbnail:not([data-fixed])');
-    if (thumbnails.length === 0) return; 
+	async _scanAndFixElements(container) {
+		const thumbnails = container.querySelectorAll('.table_image_thumbnail:not([data-fixed])');
+		if (thumbnails.length === 0) return;
 
-    await Promise.all(Array.from(thumbnails).map(div => {
-        return new Promise((resolve) => {
-            // Skip scanning rows currently hidden by the search engine
-            const parentRow = div.closest('.table__row-outer-wrap');
-            if (parentRow && window.getComputedStyle(parentRow).display === 'none') {
-                resolve();
-                return;
-            }
+		await Promise.all(Array.from(thumbnails).map(div => {
+			return new Promise((resolve) => {
+				// Skip scanning rows currently hidden by the search engine
+				const parentRow = div.closest('.table__row-outer-wrap');
+				if (parentRow && window.getComputedStyle(parentRow).display === 'none') {
+					resolve();
+					return;
+				}
 
-            const style = window.getComputedStyle(div).backgroundImage;
-            const match = style.match(/url\(["']?(.*?)["']?\)/);
+				const style = window.getComputedStyle(div).backgroundImage;
+				const match = style.match(/url\(["']?(.*?)["']?\)/);
 
-            if (!match || match[1] === 'none') {
-                div.setAttribute('data-fixed', 'true');
-                resolve();
-                return;
-            }
+				if (!match || match[1] === 'none') {
+					div.setAttribute('data-fixed', 'true');
+					resolve();
+					return;
+				}
 
-            const url = match[1];
-            const img = new Image();
+				const url = match[1];
+				const img = new Image();
 
-            img.onload = () => {
-                div.setAttribute('data-fixed', 'true');
-                resolve();
-            };
+				img.onload = () => {
+					div.setAttribute('data-fixed', 'true');
+					resolve();
+				};
 
-            img.onerror = async () => {
-                div.setAttribute('data-fixed', 'true');
-                
-                const appIdMatch = url.match(/\/apps\/(\d+)/);
-                let fallbackSuccess = false;
+				img.onerror = async () => {
+					div.setAttribute('data-fixed', 'true');
 
-                if (appIdMatch) {
-                    const appId = appIdMatch[1];
+					const appIdMatch = url.match(/\/apps\/(\d+)/);
+					let fallbackSuccess = false;
 
-                    try {
-                        const response = await FetchRequest.get(`https://store.steampowered.com/api/appdetails?appids=${appId}&filters=basic`);
-                        const json = response.json;
+					if (appIdMatch) {
+						const appId = appIdMatch[1];
 
-                        if (json && json[appId] && json[appId].success) {
-                            const newLogoUrl = json[appId].data.header_image;
-                            div.style.backgroundImage = `url("${newLogoUrl}")`;
-                            fallbackSuccess = true;
-                        }
-                    } catch (e) {
-                        console.log(`Failed to fetch fallback data for App ID ${appId}:`, e);
-                    }
-                }
+						try {
+							const response = await FetchRequest.get(`https://store.steampowered.com/api/appdetails?appids=${appId}&filters=basic`);
+							const json = response.json;
 
-                if (!fallbackSuccess) {
-                    this._setBrokenThumbnailFallback(div);
-                }
+							if (json && json[appId] && json[appId].success) {
+								const newLogoUrl = json[appId].data.header_image;
+								div.style.backgroundImage = `url("${newLogoUrl}")`;
+								fallbackSuccess = true;
+							}
+						} catch (e) {
+						}
+					}
 
-                resolve();
-            };
+					if (!fallbackSuccess) {
+						this._setBrokenThumbnailFallback(div);
+					}
 
-            img.src = url;
-        });
-    }));
+					resolve();
+				};
 
-    console.log(`Processed ${thumbnails.length} thumbnails.`);
-}
+				img.src = url;
+			});
+		}));
+	}
 
 	_setBrokenThumbnailFallback(thumbnail) {
 		thumbnail.style.backgroundImage = 'none';
