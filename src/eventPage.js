@@ -874,7 +874,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 						if (request.key === 'st' && targetQueue.pendingRecords > 0) {
 							targetQueue.pendingRecords -= 1;
 						}
-						const cooldownMs = request.cooldown || 60000;
+						const cooldownMs = request.cooldown || 65000;
 						targetQueue.cooldownUntil = Date.now() + cooldownMs;
 
 						StorageManager.set('lastRequests', {

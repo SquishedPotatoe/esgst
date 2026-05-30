@@ -179,15 +179,20 @@ export class FetchRequest {
 	}
 
 	static async sendInternal(url: string, options: FetchOptions): Promise<FetchResponse> {
-		await this.waitForCooldown();
-
 		const { fetchObj, fetchOptions } = await this.getFetchObj(options);
-		const globalTimeout = 2 * 60_000;
+		const globalTimeout = 3 * 60_000;
 		const startTime = Date.now();
 
 		for (; ;) {
-			if (Date.now() - startTime > globalTimeout) {
-				throw new Error('Fetch retry timeout reached (exceeded 2 minutes)');
+			const now = Date.now();
+
+			if (now < this.rateLimitUntil) {
+				await this.waitForCooldown();
+				continue;
+			}
+
+			if (now - startTime > globalTimeout) {
+				throw new Error('Fetch retry timeout reached (exceeded 3 minutes)');
 			}
 
 			const abortController = new AbortController();
@@ -203,10 +208,7 @@ export class FetchRequest {
 				window.clearTimeout(timeoutId);
 			}
 
-			const text = await response.text();
-
 			if (response.status === 429) {
-				const now = Date.now();
 				let cooldown = 0;
 				const retryAfter = response.headers.get("Retry-After");
 
@@ -221,27 +223,34 @@ export class FetchRequest {
 				if (!cooldown) cooldown = this.queueKey === "sg" ? 60_000 : 15_000;
 				cooldown += 5000;
 
-				if (this.rateLimitUntil < now) {
-					this.rateLimitUntil = now + cooldown;
+				const baseTime = Math.max(now, this.rateLimitUntil);
+				const newRateLimitUntil = baseTime + cooldown;
+
+				if (newRateLimitUntil > this.rateLimitUntil) {
+					this.rateLimitUntil = newRateLimitUntil;
+
+					const effectiveCooldown = this.rateLimitUntil - now;
 
 					await chrome.runtime.sendMessage({
 						action: "rate_limit_hit",
 						key: this.queueKey,
-						cooldown
-					});
+						cooldown: effectiveCooldown
+					}).catch(() => { });
 
 					window.dispatchEvent(
-						new CustomEvent("rate_limit_hit", { detail: { cooldown } })
+						new CustomEvent("rate_limit_hit", { detail: { cooldown: effectiveCooldown } })
 					);
 				}
-				await this.waitForCooldown();
 				continue;
 			}
+
+			const text = await response.text();
+
 			if (response.redirected) {
 				await chrome.runtime.sendMessage({
 					action: 'record_request',
-					key: FetchRequest.queueKey,
-				});
+					key: this.queueKey,
+				}).catch(() => { });
 			}
 			if (!response.ok) throw new Error(text);
 
