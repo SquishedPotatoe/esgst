@@ -572,6 +572,21 @@ class SettingsModule {
 			this.preSave('steamApiKey', SMAPIKey.value);
 		});
 		if (Shared.esgst.parameters.esgst === 'settings' && Shared.esgst.parameters.id) {
+			const targetElement = document.getElementById(`esgst_${Shared.esgst.parameters.id}`);
+
+			if (targetElement) {
+				let parentMenu = targetElement.closest('.SMFeatures.esgst-hidden');
+				while (parentMenu) {
+					parentMenu.classList.remove('esgst-hidden');
+					const collapseItem = this.collapseButtons.find(item => item.subMenu === parentMenu);
+					if (collapseItem) {
+						collapseItem.isExpanded = true;
+						this.expandSection(collapseItem.collapseButton, collapseItem.id, parentMenu);
+					}
+					parentMenu = parentMenu.parentElement.closest('.SMFeatures.esgst-hidden');
+				}
+			}
+
 			this.loadFeatureDetails(
 				Shared.esgst.parameters.id,
 				Shared.common.getFeatureNumber(Shared.esgst.parameters.id).number,
