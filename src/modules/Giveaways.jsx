@@ -243,6 +243,7 @@ class Giveaways extends Module {
 		} else {
 			giveaway.heading = giveaway.headingName.parentElement;
 		}
+		giveaway.quickEntryWrap = giveaway.innerWrap?.querySelector('.giveaway__quick-entry-wrap') || null;
 		giveaway.name = giveaway.headingName.textContent;
 		match = giveaway.name.match(/\s\((.+) Copies\)/);
 		if (match) {

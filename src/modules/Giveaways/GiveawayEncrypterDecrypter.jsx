@@ -311,6 +311,9 @@ class GiveawaysGiveawayEncrypterDecrypter extends Module {
 				continue;
 			}
 			let context = createElements(ged.results, 'beforeend', builtGiveaway.html);
+				if (context && response.html?.querySelector('.page__description')) {
+					context.querySelector('.giveaway__row-inner-wrap')?.classList.add('has-description');
+				}
 			if (giveaway.source) {
 				createElements(context.getElementsByClassName('giveaway__columns')[0], 'afterbegin', [
 					{

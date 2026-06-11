@@ -724,6 +724,9 @@ class GiveawaysGiveawayExtractor extends Module {
 						if (giveaway) {
 							createElements(ge.results, 'beforeend', giveaway.html);
 							ge.results.lastElementChild.classList.add(`esgst-es-page-${ge.endless}`);
+							if (responseHtml?.querySelector('.page__description')) {
+								ge.results.lastElementChild.querySelector('.giveaway__row-inner-wrap')?.classList.add('has-description');
+							}
 							giveaway.html = ge.results.lastElementChild.outerHTML;
 							ge.cache[ge.cacheId].codes.push(code);
 							ge.cache[ge.cacheId].giveaways[code] = giveaway;

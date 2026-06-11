@@ -44,6 +44,10 @@ class GiveawaysEnterLeaveGiveawayButton extends Module {
 						'Cache repeated descriptions from the same creator for 1 hour and only show them once.',
 					sg: true,
 				},
+				elgb_db: {
+					name: 'Add a button to open the giveaway description in a popup.',
+					sg: true,
+				},
 				elgb_f: {
 					inputItems: [
 						{
@@ -99,6 +103,9 @@ class GiveawaysEnterLeaveGiveawayButton extends Module {
 
 	async elgb_addButtons(giveaways, main, source) {
 		giveaways.forEach((giveaway) => {
+			if (giveaway.quickEntryWrap) {
+				giveaway.quickEntryWrap.classList.add('is-hidden');
+			}
 			if (
 				giveaway.sgTools ||
 				(main && (Settings.get('elgb_p') || this.esgst.createdPath || this.esgst.wonPath))
@@ -112,17 +119,20 @@ class GiveawaysEnterLeaveGiveawayButton extends Module {
 				return;
 			}
 			if (
-				giveaway.blacklist ||
-				(giveaway.inviteOnly && !giveaway.url) ||
-				!giveaway.started ||
-				giveaway.ended ||
-				giveaway.created ||
-				giveaway.level > Session.counters.level.base ||
-				(giveaway.id &&
-					this.esgst.games[giveaway.type][giveaway.id] &&
-					(this.esgst.games[giveaway.type][giveaway.id].owned ||
-						this.esgst.games[giveaway.type][giveaway.id].won ||
-						(this.esgst.games[giveaway.type][giveaway.id].hidden && Settings.get('hgebd'))))
+				!Settings.get('elgb_db') &&
+				(
+					giveaway.blacklist ||
+					(giveaway.inviteOnly && !giveaway.url) ||
+					!giveaway.started ||
+					giveaway.ended ||
+					giveaway.created ||
+					giveaway.level > Session.counters.level.base ||
+					(giveaway.id &&
+						this.esgst.games[giveaway.type][giveaway.id] &&
+						(this.esgst.games[giveaway.type][giveaway.id].owned ||
+							this.esgst.games[giveaway.type][giveaway.id].won ||
+							(this.esgst.games[giveaway.type][giveaway.id].hidden && Settings.get('hgebd'))))
+				)
 			) {
 				return;
 			}
@@ -395,6 +405,47 @@ class GiveawaysEnterLeaveGiveawayButton extends Module {
 				giveaway.elgbButton.insert(giveaway.elgbPanel, 'beforeend');
 			}
 			giveaway.elgbButton.nodes.outer.setAttribute('data-draggable-id', 'elgb');
+			if (Settings.get('elgb_db')) {
+				if (
+					giveaway.blacklist ||
+					(giveaway.inviteOnly && !giveaway.url) ||
+					!giveaway.started ||
+					giveaway.ended ||
+					giveaway.created ||
+					giveaway.level > Session.counters.level.base ||
+					(giveaway.id &&
+						this.esgst.games[giveaway.type][giveaway.id] &&
+						(this.esgst.games[giveaway.type][giveaway.id].owned ||
+							this.esgst.games[giveaway.type][giveaway.id].won ||
+							(this.esgst.games[giveaway.type][giveaway.id].hidden && Settings.get('hgebd'))))) {
+					giveaway.elgbButton.nodes.outer.classList.add('esgst-hidden');
+				}
+				if (giveaway.innerWrap?.classList.contains('has-description')) {
+					const descButton = createElements(giveaway.elgbButton.nodes.outer, 'beforebegin', [
+						{
+							attributes: {
+								class: 'esgst-clickable esgst-elgb-desc-shortcut giveaway__quick-entry-btn giveaway__quick-entry-btn--description',
+								style: 'margin-right: 5px; display: inline-block;',
+								'data-code': giveaway.code,
+								'data-ui-tooltip': '{"rows":[{"icon":[{"class":"fa-align-left","color":"var(--color-blue-3)"}],"columns":[{"name":"View Description"}]}]}',
+							},
+							type: 'div',
+							children: [
+								{
+									attributes: {
+										class: 'fa fa-align-left',
+									},
+									type: 'i',
+								},
+							],
+						},
+					]);
+					descButton.addEventListener('click', (e) => {
+						e.stopPropagation();
+						this.elgb_openPopup(giveaway, main, source, null, true);
+					});
+				}
+			}
 		}
 		const style = giveaway.elgbButton.nodes.outer.getAttribute('style');
 		if (giveaway.entered) {
@@ -415,7 +466,7 @@ class GiveawaysEnterLeaveGiveawayButton extends Module {
 		giveaway.elgbButton.nodes.outer.setAttribute('style', style);
 	}
 
-	async elgb_openPopup(giveaway, main, source, mainCallback) {
+	async elgb_openPopup(giveaway, main, source, mainCallback, fromDescButton) {
 		let headingButton;
 		let popup = new Popup({
 			addScrollable: true,
@@ -516,9 +567,10 @@ class GiveawaysEnterLeaveGiveawayButton extends Module {
 				Settings.get('elgb_f') ||
 				Settings.get('elgb_r') ||
 				Settings.get('elgb_r_d') ||
-				Settings.get('elgb_fp')
+				Settings.get('elgb_fp') ||
+				Settings.get('elgb_db')
 			) ||
-			( 
+			(
 				Settings.get('elgb_f') &&
 				Settings.get('elgb_filters') === '.*'
 			)
@@ -686,21 +738,54 @@ class GiveawaysEnterLeaveGiveawayButton extends Module {
 				}).insert(heading.nodes.outer.lastElementChild, 'beforebegin');
 			}
 		}
-		if (
-			(Settings.get('elgb_fp') && commentsContainer && commentsContainer.children.length) ||
-			description ||
-			(Settings.get('elgb_r') && (!Settings.get('elgb_r_d') || description)) ||
-			mainCallback
-		) {
+		if (fromDescButton) {
+			if (!Settings.get('elgb_db')) {
+				return;
+			}
+
+			const errorRow = [...responseHtml.querySelectorAll('.table__row-inner-wrap')].find(
+				row =>
+					row
+						.querySelector('.table__column--width-small')
+						?.textContent.trim()
+						.toLowerCase() === 'error'
+			);
+
+			const message = errorRow
+				?.querySelector('.table__column--width-fill')
+				?.textContent.trim();
+
+			if (message) {
+				createElements(popup.scrollable, 'beforeend', [
+					{
+						attributes: {
+							class: 'esgst-red',
+							style: 'font-weight: 900;',
+						},
+						type: 'div',
+						text: message,
+					},
+				]);
+			}
+		} else {
+			if (!(
+				(Settings.get('elgb_r') && !Settings.get('elgb_r_d')) ||
+				(Settings.get('elgb_r') && Settings.get('elgb_r_d') && description) ||
+				(Settings.get('elgb_fp') && commentsContainer && commentsContainer.children.length)
+			)) {
+				return;
+			}
+
 			if (mainCallback) {
 				popup.onClose = mainCallback;
 			}
-			popup.open(() => {
-				if (box) {
-					box.focus();
-				}
-			});
 		}
+
+		popup.open(() => {
+			if (box) {
+				box.focus();
+			}
+		});
 	}
 
 	async elgb_enterGiveaway(giveaway, main, popup, source, callback) {

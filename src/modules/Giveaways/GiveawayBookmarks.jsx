@@ -463,6 +463,9 @@ class GiveawaysGiveawayBookmarks extends Module {
 						DOM.insert(gbGiveaways, 'beforeend', <div className="row-spacer"></div>);
 					}
 					createElements(gbGiveaways, 'beforeend', buildResult.html);
+					if (responseHtml?.querySelector('.page__description')) {
+						gbGiveaways.lastElementChild?.querySelector('.giveaway__row-inner-wrap')?.classList.add('has-description');
+					}
 					await endless_load(gbGiveaways.lastElementChild, false, 'gb');
 					if (endTime > 0) {
 						const lock = new Lock('giveaway', { threshold: 300 });
