@@ -50,8 +50,8 @@ class GeneralImageBorders extends Module {
 					: '.giveaway_image_thumbnail_missing'
 			}, ${
 				endless
-					? `.esgst-es-page-${endless} .table_image_thumbnail, .esgst-es-page-${endless}.table_image_thumbnail`
-					: '.table_image_thumbnail'
+					? `.esgst-es-page-${endless} .table_image_thumbnail:not([style*="fanatical_icon.png"], [style*="humble_bundle_icon.png"]), .esgst-es-page-${endless}.table_image_thumbnail:not([style*="fanatical_icon.png"], [style*="humble_bundle_icon.png"])`
+					: '.table_image_thumbnail:not([style*="fanatical_icon.png"], [style*="humble_bundle_icon.png"])'
 			}, ${
 				endless
 					? `.esgst-es-page-${endless} .table_image_thumbnail_missing, .esgst-es-page-${endless}.table_image_thumbnail_missing`
