@@ -3292,6 +3292,21 @@ function addStyle() {
 	.esgst-gv-popout .giveaway__links .esgst-button-container [data-draggable-id="elgb"] i {
 		color: unset;
 	}
+
+	.esgst-cgb {
+		background-repeat: no-repeat;
+		background-size: 100% 100%;
+		border-radius: 6px;
+	}
+
+	.esgst-cgb.esgst-gv-container, .esgst-cgb.esgst-cgb-border {
+		border-radius: 4px;
+		background-size: 100% 5px;
+	}
+
+	.esgst-cgb.esgst-gv-container {
+		padding: 5px 0 0 !important;
+	}
 `;
 	if (!Shared.esgst.sg) {
 		style += `

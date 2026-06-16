@@ -15,6 +15,20 @@ class GiveawaysCustomGiveawayBackground extends Module {
 				</ul>
 			),
 			features: {
+				cgb_gv: {
+					description: () => (
+						<ul>
+							<li>
+								Shows a a colored border on top of the giveaway in Grid View
+							</li>
+						</ul>
+					), name: 'Enable for Grid View.',
+					sg: true,
+				},
+				cgb_brd: {
+					name: 'Use border on top instead of background',
+					sg: true,
+				},
 				cgb_b: {
 					background: true,
 					name: 'Color giveaways that cannot be entered because of blacklist reasons.',
@@ -62,53 +76,67 @@ class GiveawaysCustomGiveawayBackground extends Module {
 	}
 
 	color(giveaways) {
+		if (this.esgst.giveawayPath || this.esgst.createdPath || this.esgst.enteredPath || this.esgst.wonPath || (Settings.get('gv') && !Settings.get('cgb_gv')))
+			return;
+		const classesToAdd = ['esgst-cgb'];
+		if (Settings.get('cgb_brd')) {
+			classesToAdd.push('esgst-cgb-border');
+		}
 		for (const giveaway of giveaways) {
+			giveaway.outerWrap.classList.add(...classesToAdd);
+			const matchedColors = [];
 			if (Settings.get('cgb_b') && giveaway.outerWrap.getAttribute('data-blacklist')) {
-				giveaway.outerWrap.setAttribute(
-					'style',
-					`background-color: ${Settings.get('cgb_b_bgColor')} !important`
-				);
-			} else if (Settings.get('cgb_sgt') && giveaway.sgTools) {
-				giveaway.outerWrap.setAttribute(
-					'style',
-					`background-color: ${Settings.get('cgb_sgt_bgColor')} !important`
-				);
+				matchedColors.push(Settings.get('cgb_b_bgColor'));
 			}
-			const { color } = Settings.get('cgb_levelColors').filter(
+			if (Settings.get('cgb_sgt') && giveaway.sgTools) {
+				matchedColors.push(Settings.get('cgb_sgt_bgColor'));
+			}
+			const { color: levelColor } = Settings.get('cgb_levelColors').filter(
 				(colors) =>
 					giveaway.level >= parseInt(colors.lower) && giveaway.level <= parseInt(colors.upper)
 			)[0] || { color: undefined };
-			if (color) {
-				giveaway.outerWrap.setAttribute('style', `background-color: ${color} !important`);
-			} else if (Settings.get('cgb_w') && giveaway.whitelist) {
-				giveaway.outerWrap.setAttribute(
-					'style',
-					`background-color: ${Settings.get('cgb_w_bgColor')} !important`
+
+			if (levelColor) {
+				matchedColors.push(levelColor);
+			}
+			if (Settings.get('cgb_w') && giveaway.whitelist) {
+				matchedColors.push(Settings.get('cgb_w_bgColor'));
+			}
+			if (Settings.get('cgb_g') && giveaway.group) {
+				matchedColors.push(Settings.get('cgb_g_bgColor'));
+			}
+			if (Settings.get('cgb_rr') && giveaway.regionRestricted) {
+				matchedColors.push(Settings.get('cgb_rr_bgColor'));
+			}
+			if (Settings.get('cgb_io') && giveaway.inviteOnly) {
+				matchedColors.push(Settings.get('cgb_io_bgColor'));
+			}
+			if (Settings.get('cgb_p') && giveaway.public) {
+				matchedColors.push(Settings.get('cgb_p_bgColor'));
+			}
+			if (matchedColors.length >= 2) {
+				const count = matchedColors.length;
+				const blockWidth = 100 / count;
+				const gradientParts = [];
+
+				matchedColors.forEach((color, index) => {
+					const startPos = index * blockWidth;
+					const endPos = startPos + blockWidth;
+					gradientParts.push(`${color} ${startPos.toFixed(1)}%`);
+					gradientParts.push(`${color} ${endPos.toFixed(1)}%`);
+				});
+				giveaway.outerWrap.style.setProperty(
+					'background-image',
+					`linear-gradient(to right, ${gradientParts.join(', ')})`,
+					'important'
 				);
-			} else if (Settings.get('cgb_g') && giveaway.group) {
-				giveaway.outerWrap.setAttribute(
-					'style',
-					`background-color: ${Settings.get('cgb_g_bgColor')} !important`
-				);
-			} else if (Settings.get('cgb_rr') && giveaway.regionRestricted) {
-				giveaway.outerWrap.setAttribute(
-					'style',
-					`background-color: ${Settings.get('cgb_rr_bgColor')} !important`
-				);
-			} else if (Settings.get('cgb_io') && giveaway.inviteOnly) {
-				giveaway.outerWrap.setAttribute(
-					'style',
-					`background-color: ${Settings.get('cgb_io_bgColor')} !important`
-				);
-			} else if (Settings.get('cgb_p') && giveaway.public) {
-				giveaway.outerWrap.setAttribute(
-					'style',
-					`background-color: ${Settings.get('cgb_p_bgColor')} !important`
+			} else if (matchedColors.length === 1) {
+				giveaway.outerWrap.style.setProperty(
+					'background-image',
+					`linear-gradient(${matchedColors[0]}, ${matchedColors[0]})`,
+					'important'
 				);
 			} else {
-				giveaway.outerWrap.style.backgroundColor = '';
-			}
-			if (giveaway.outerWrap.style.backgroundColor) {
 				giveaway.outerWrap.style.backgroundImage = 'none';
 			}
 		}
