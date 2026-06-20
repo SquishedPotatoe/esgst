@@ -619,6 +619,23 @@ class SettingsModule {
 		if (!feature) {
 			return;
 		}
+		if (feature.st && !feature.sg && !Settings.get('esgst_st') && id !== 'esgst') {
+			new Popup({
+				addScrollable: true,
+				icon: 'fa-exclamation',
+				isTemp: true,
+				title: (
+					<fragment>
+						Enable SteamTrades support first{' '}
+						<a className="table__column__secondary-link" href={`${Shared.esgst.settingsUrl}&id=esgst`}>
+							here
+						</a>
+						, to view this setting.
+					</fragment>
+				),
+			}).open();
+			return;
+		}
 		const url = `${Shared.esgst.settingsUrl}&id=${id}`;
 		const featureId = feature.alias ?? id;
 		let featureName;
@@ -3121,6 +3138,10 @@ class SettingsModule {
 				}
 				element = document.getElementById(`esgst_${type}`);
 				if (element) {
+					if (type === 'trades' && !Settings.get('esgst_st')) {
+						element.classList.add('esgst-hidden');
+						continue;
+					}
 					if (typeFound) {
 						element.classList.remove('esgst-hidden');
 					} else {
