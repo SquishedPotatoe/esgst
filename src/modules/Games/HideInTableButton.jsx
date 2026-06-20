@@ -20,8 +20,9 @@ class GamesHideInTableButton extends Module {
 					<li>
 						Adds a button (<i className="fa fa-eye"></i> if the game is hidden and{' '}
 						<i className="fa fa-eye-slash"></i> if it is not) at the end of table rows
-						with Steam app or package links to hide/unhide individual games. Unresolved
-						games will be marked as <i className="fa fa-question"></i>.
+						with Steam app or sub links to hide/unhide individual games. Unresolved
+						games will be marked as <i className="fa fa-question"></i>. Games that are 
+						not found will be marked as <i className="fa fa-times"></i>
 					</li>
 				</ul>
 			),
@@ -34,6 +35,7 @@ class GamesHideInTableButton extends Module {
 								Uses colored icons in table rows <i className="fa fa-eye-slash esgst-green"></i>
 								<i className="fa fa-eye esgst-red"></i>
 								<i className="fa fa-question esgst-yellow"></i>
+								<i className="fa fa-times esgst-red"></i>
 							</li>
 						</ul>
 					),
@@ -56,7 +58,11 @@ class GamesHideInTableButton extends Module {
 	hgitb_getTables(context) {
 		const tables = context.querySelectorAll('table');
 		for (const table of tables) {
-			if (!table.querySelector('tbody tr a[href*="/app/"], tbody tr a[href*="/sub/"]')) continue;
+			if (
+				!table.querySelector(
+					'tbody tr a[href*="store.steampowered.com/"], tbody tr a[href*="steamcommunity.com/"], tbody tr a[href*="s.team/"]'
+				)
+			) continue;
 			initTable(table, this.esgst);
 		}
 	}
@@ -65,9 +71,9 @@ class GamesHideInTableButton extends Module {
 function applyColorState(button, state) {
 	if (!Settings.get('hgitb_c')) return;
 	button.classList.remove('esgst-red', 'esgst-green', 'esgst-yellow');
-	if (state === 'hidden') button.classList.add('esgst-red');
+	if (state === 'hidden' || state === 'notfound') button.classList.add('esgst-red');
 	else if (state === 'visible') button.classList.add('esgst-green');
-	else if (state === 'notfound') button.classList.add('esgst-yellow');
+	else if (state === 'unresolved') button.classList.add('esgst-yellow');
 }
 
 function initTable(table, esgst) {
@@ -113,14 +119,16 @@ function initTable(table, esgst) {
 }
 
 function initRow(tr, state) {
-	const link = tr.querySelector('a[href*="/app/"], a[href*="/sub/"]');
+	const link = tr.querySelector(
+		'a[href*="store.steampowered.com/"], a[href*="steamcommunity.com/"], a[href*="s.team/"]'
+	);
 	if (!link) return null;
 
-	const match = link.pathname.match(/^\/(app|sub)\/(\d+)/);
+	const match = link.pathname.match(/^\/(app|sub|bundle|a)\/(\d+)/);
 	if (!match) return null;
 
 	const [, type, gameId] = match;
-	const storageType = type === 'app' ? 'apps' : 'subs';
+	const storageType = type === 'app' || type === 'a' ? 'apps' : 'subs';
 
 	const cell = document.createElement('td');
 	cell.className = 'esgst-hgitb-cell';
@@ -132,9 +140,16 @@ function initRow(tr, state) {
 	}
 	tr.appendChild(cell);
 
-	const saved = state.esgst.games[storageType][gameId];
-
 	let g;
+
+	if (type === 'bundle') {
+		g = { type, storageType, gameId, row: tr, cell, hidden: false, notFound: true, unknown: false };
+		g.button = createRowButton(g, state);
+		markNotFound(g);
+		return g;
+	}
+
+	const saved = state.esgst.games[storageType][gameId];
 
 	if (saved) {
 		const hidden = !!saved.hidden;
@@ -180,13 +195,13 @@ function createRowButton(g, state) {
 	button.className = 'fa esgst-clickable esgst-hgitb';
 
 	button.addEventListener('click', async () => {
-		if (state.loading || g.notFound || g.unknown) return;
+		if (state.loading || g.notFound) return;
 
 		state.loading = true;
 		const hide = !g.hidden;
 
 		const obj = {
-			appIds: g.type === 'app' ? [g.gameId] : [],
+			appIds: g.type === 'app' || g.type === 'a' ? [g.gameId] : [],
 			subIds: g.type === 'sub' ? [g.gameId] : [],
 			canceled: false,
 		};
@@ -195,7 +210,7 @@ function createRowButton(g, state) {
 
 		try {
 			const result = await hiddenGames(state.esgst, obj, !hide);
-			const nf = g.type === 'app' ? result.apps : result.subs;
+			const nf = g.type === 'app' || g.type === 'a' ? result.apps : result.subs;
 
 			if (nf.includes(g.gameId)) markNotFound(g);
 			else applyHiddenState(g, hide);
@@ -221,7 +236,10 @@ async function onHeaderClick(state) {
 	const hideAll = !allHidden;
 
 	const obj = { appIds: [], subIds: [], canceled: false };
-	valid.forEach(g => (g.type === 'app' ? obj.appIds : obj.subIds).push(g.gameId));
+	valid.forEach(g => {
+		if (g.type === 'app' || g.type === 'a') obj.appIds.push(g.gameId);
+		else if (g.type === 'sub') obj.subIds.push(g.gameId);
+	});
 
 	state.header._iconRef.className = 'fa fa-circle-o-notch fa-spin';
 
@@ -229,7 +247,7 @@ async function onHeaderClick(state) {
 		const result = await hiddenGames(state.esgst, obj, !hideAll);
 
 		valid.forEach(g => {
-			const nf = g.type === 'app' ? result.apps : result.subs;
+			const nf = g.type === 'app' || g.type === 'a' ? result.apps : result.subs;
 			if (nf.includes(g.gameId)) markNotFound(g);
 			else applyHiddenState(g, hideAll);
 		});
@@ -267,7 +285,7 @@ function markNotFound(g) {
 	g.notFound = true;
 	g.unknown = false;
 	const b = g.button;
-	b.className = 'fa esgst-clickable esgst-hgitb fa-question';
+	b.className = 'fa esgst-clickable esgst-hgitb fa-times';
 	b.title = 'Game not found';
 	applyColorState(b, 'notfound');
 	updateSortValue(g);
@@ -280,7 +298,7 @@ function markUnknown(g) {
 	const b = g.button;
 	b.className = 'fa esgst-clickable esgst-hgitb fa-question';
 	b.title = 'Game not yet resolved';
-	applyColorState(b, 'notfound');
+	applyColorState(b, 'unresolved');
 	updateSortValue(g);
 }
 
