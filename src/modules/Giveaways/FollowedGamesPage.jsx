@@ -36,13 +36,16 @@ class GiveawaysFollowedGamesPage extends Module {
 			DOM.insert(
 				sidebarLink.parentElement,
 				'afterend',
-				<li className="sidebar__navigation__item">
+				<li className="sidebar__navigation__item" id="esgst-fgp">
 					<a className="sidebar__navigation__item__link" href="/giveaways/search?esgst=fgp">
 						<div className="sidebar__navigation__item__name">Followed</div>
 						<div className="sidebar__navigation__item__underline"></div>
 					</a>
 				</li>
 			);
+			if (Shared.esgst.parameters.esgst === 'fgp') {
+				Shared.common.setSidebarActive('esgst-fgp');
+			}
 		}
 	}
 
@@ -51,13 +54,21 @@ class GiveawaysFollowedGamesPage extends Module {
 			container: Shared.esgst.pagination.previousElementSibling,
 			context: null,
 			count: 0,
+			displayed: 0,
 			leftovers: [],
 			page: 1,
 			perPage: 50,
 			reachedEnd: false,
+			results: Shared.esgst.pagination?.querySelector('.pagination__results'),
 			set: null,
-			url: `${Shared.esgst.path}/search?page=`,
+			url: Shared.esgst.searchUrl,
 		};
+		if (Shared.esgst.paginationNavigation) {
+			Shared.esgst.paginationNavigation.classList.add(Shared.esgst.hiddenClass);
+		}
+		if (obj.results) {
+			obj.results.classList.add(Shared.esgst.hiddenClass);
+		}
 		DOM.insert(obj.container, 'atinner', <div ref={(ref) => (obj.context = ref)} />);
 		obj.button = Button.create([
 			{
@@ -76,6 +87,32 @@ class GiveawaysFollowedGamesPage extends Module {
 		obj.button.onClick();
 	}
 
+	updatePaginationResults(obj) {
+		if (!obj.results) {
+			return;
+		}
+		const values = obj.results.getElementsByTagName('strong');
+		if (values.length < 2) {
+			return;
+		}
+		values[0].textContent = obj.displayed > 0 ? '1' : '0';
+		values[1].textContent = `${obj.displayed}`;
+		obj.results.classList.remove(Shared.esgst.hiddenClass);
+	}
+
+	showNoResults(obj) {
+		if (!obj.container || !Shared.esgst.pagination) {
+			return;
+		}
+		if (obj.context) {
+			obj.context.remove();
+		}
+		obj.container.classList.add(Shared.esgst.hiddenClass);
+		Shared.esgst.pagination.classList.add('pagination--no-results');
+		Shared.esgst.pagination.innerHTML =
+			'<div class="pagination__results">No results were found.</div>';
+	}
+
 	async loadNextPage(obj) {
 		let context;
 		DOM.insert(obj.context, 'beforeend', <div ref={(ref) => (context = ref)} />);
@@ -84,8 +121,10 @@ class GiveawaysFollowedGamesPage extends Module {
 			const leftover = obj.leftovers.splice(0, 1)[0];
 			context.appendChild(leftover);
 			obj.count += 1;
+			obj.displayed += 1;
 		}
 		if (obj.count === obj.perPage) {
+			this.updatePaginationResults(obj);
 			await Shared.common.endless_load(context, true);
 			return;
 		}
@@ -107,6 +146,7 @@ class GiveawaysFollowedGamesPage extends Module {
 					if (obj.count < obj.perPage) {
 						context.appendChild(element.cloneNode(true));
 						obj.count += 1;
+						obj.displayed += 1;
 					} else {
 						obj.leftovers.push(element.cloneNode(true));
 					}
@@ -117,6 +157,16 @@ class GiveawaysFollowedGamesPage extends Module {
 			obj.reachedEnd =
 				!pagination || pagination.lastElementChild.classList.contains(Shared.esgst.selectedClass);
 		} while (!obj.reachedEnd && obj.count < obj.perPage);
+		this.updatePaginationResults(obj);
+		if (!obj.displayed && obj.reachedEnd) {
+			this.showNoResults(obj);
+			obj.button.destroy();
+			return;
+		}
+		if (obj.reachedEnd) {
+			obj.button.destroy();
+			return;
+		}
 		await Shared.common.endless_load(context, true);
 	}
 }

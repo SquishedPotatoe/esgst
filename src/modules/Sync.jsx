@@ -1000,22 +1000,35 @@ async function sync(syncer) {
 		if (isPermitted) {
 			syncer.progressBar.setMessage('Syncing your followed games...');
 			const response = await FetchRequest.get('https://steamcommunity.com/my/followedgames/');
-			const elements = response.html.querySelectorAll('.gameListRow.followed');
-			const savedGames = JSON.parse(Shared.common.getValue('games'));
-			for (const id in savedGames.apps) {
-				if (savedGames.apps.hasOwnProperty(id)) {
-					savedGames.apps[id].followed = null;
+			const isLoggedOut = response.html.querySelector('a[href*="/login/home/"]')
+			if (isLoggedOut) {
+				syncer.failed.FollowedGames = true;
+				DOM.insert(
+					syncer.results,
+					'beforeend',
+					<div>
+						Unable to sync followed games.
+						Check if you are logged in to Steam on your current browser session. If you are, try again later
+					</div>
+				);
+			} else {
+				const elements = response.html.querySelectorAll('.gameListRow.followed');
+				const savedGames = JSON.parse(Shared.common.getValue('games'));
+				for (const id in savedGames.apps) {
+					if (savedGames.apps.hasOwnProperty(id)) {
+						savedGames.apps[id].followed = null;
+					}
 				}
-			}
-			for (const element of elements) {
-				const id = parseInt(element.getAttribute('data-appid'));
-				if (!savedGames.apps[id]) {
-					savedGames.apps[id] = {};
+				for (const element of elements) {
+					const id = parseInt(element.getAttribute('data-appid'));
+					if (!savedGames.apps[id]) {
+						savedGames.apps[id] = {};
+					}
+					savedGames.apps[id].followed = true;
 				}
-				savedGames.apps[id].followed = true;
+				await Shared.common.lockAndSaveGames(savedGames);
+				DOM.insert(syncer.results, 'beforeend', <div>Followed games synced.</div>);
 			}
-			await Shared.common.lockAndSaveGames(savedGames);
-			DOM.insert(syncer.results, 'beforeend', <div>Followed games synced.</div>);
 		} else {
 			syncer.failed.FollowedGames = true;
 			DOM.insert(
