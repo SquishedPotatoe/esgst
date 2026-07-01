@@ -1,6 +1,5 @@
 import { Module } from '../../class/Module';
 import { common } from '../Common';
-import { Settings } from '../../class/Settings';
 import { DOM } from '../../class/DOM';
 
 const createElements = common.createElements.bind(common),
@@ -18,12 +17,6 @@ class UsersRealWonSentCVLink extends Module {
 					</li>
 				</ul>
 			),
-			features: {
-				rwscvl_r: {
-					name: `Link SGTools' reverse pages (from newest to oldest).`,
-					sg: true,
-				},
-			},
 			id: 'rwscvl',
 			name: 'Real Won/Sent CV Link',
 			sg: true,
@@ -36,12 +29,9 @@ class UsersRealWonSentCVLink extends Module {
 
 	rwscvl_add(profile) {
 		let sentUrl, wonUrl;
-		wonUrl = `http://www.sgtools.info/won/${profile.username}`;
-		sentUrl = `http://www.sgtools.info/sent/${profile.username}`;
-		if (Settings.get('rwscvl_r')) {
-			wonUrl += '/newestfirst';
-			sentUrl += '/newestfirst';
-		}
+		wonUrl = `http://www.sgtools.info/real-cv/${profile.username}/won`;
+		sentUrl = `http://www.sgtools.info/real-cv/${profile.username}/sent`;
+
 		createElements(profile.wonRowLeft, 'atinner', [
 			{
 				attributes: {

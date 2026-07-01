@@ -6,7 +6,7 @@ import { LocalStorage } from './LocalStorage';
 
 class PersistentStorage {
 	constructor() {
-		this.currentVersion = 17;
+		this.currentVersion = 18;
 
 		this.defaultValues = {
 			decryptedGiveaways: '{}',
@@ -903,6 +903,64 @@ class PersistentStorage {
 			if (typeof settings.ags_sub === 'boolean') {
 				settings.ags_sub = '';
 				settingsChanged = true;
+			}
+
+			if (settingsChanged) {
+				toSet.settings = JSON.stringify(settings);
+				storage.settings = toSet.settings;
+			}
+		}
+
+		if (version < 18) {
+			window.console.log('Upgrading storage to version 18...');
+
+			let settingsChanged = false;
+			const settings = JSON.parse(storage.settings || '{}');
+
+			if (settings.chfl_support_sg != null) {
+				settings.chfl_support_sg = settings.chfl_support_sg.map((item) => {
+					if (typeof item === 'object' && item !== null) {
+						if (item.id === 'notActivatedWins' && item.url === 'https://www.sgtools.info/activation') {
+							item.url = 'https://www.sgtools.info/rules-checker/non-activated';
+							settingsChanged = true;
+						}
+						if (item.id === 'multipleWins' && item.url === 'https://www.sgtools.info/multiple-wins') {
+							item.url = 'https://www.sgtools.info/rules-checker/multiple-wins';
+							settingsChanged = true;
+						} if (item.id === 'lastBundled' && item.url === 'https://www.sgtools.info/lastbundled') {
+							item.url = 'https://www.sgtools.info/last-bundled';
+							settingsChanged = true;
+						}
+					}
+					return item;
+				});
+
+				const hasLastFree = settings.chfl_support_sg.some(
+					(x) => ((typeof x === 'string' && x) || x.id) === 'lastFree'
+				);
+
+				if (!hasLastFree) {
+					const lastBundledIndex = settings.chfl_support_sg
+						.map((x, i) => (((typeof x === 'string' && x) || x.id) === 'lastBundled' ? i : null))
+						.filter((x) => x != null)[0];
+
+					const lastFreeItem = {
+						color: 'grey',
+						description: 'Check the last free games.',
+						icon: 'fa-minus-circle',
+						id: 'lastFree',
+						name: 'Last Free',
+						url: `https://www.sgtools.info/last-free`,
+					};
+
+					if (lastBundledIndex != null) {
+						settings.chfl_support_sg.splice(lastBundledIndex + 1, 0, lastFreeItem);
+					} else {
+						settings.chfl_support_sg.push(lastFreeItem);
+					}
+
+					settingsChanged = true;
+				}
 			}
 
 			if (settingsChanged) {

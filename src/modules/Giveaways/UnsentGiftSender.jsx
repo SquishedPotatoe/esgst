@@ -729,7 +729,7 @@ class GiveawaysUnsentGiftSender extends Module {
 											? {
 													attributes: {
 														class: 'esgst-red',
-														href: `http://www.sgtools.info/nonactivated/${winner.username}`,
+														href: `https://www.sgtools.info/rules-checker/non-activated/${winner.username}`,
 													},
 													type: 'a',
 													children: [
@@ -751,7 +751,7 @@ class GiveawaysUnsentGiftSender extends Module {
 											? {
 													attributes: {
 														class: 'esgst-red',
-														href: `http://www.sgtools.info/multiple/${winner.username}`,
+														href: `https://www.sgtools.info/rules-checker/multiple-wins/${winner.username}`,
 													},
 													type: 'a',
 													children: [

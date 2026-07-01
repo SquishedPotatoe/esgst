@@ -462,9 +462,8 @@ class UsersNotActivatedMultipleWinChecker extends Module {
 					let count = obj.popup[`${key}Count`];
 					count.textContent = parseInt(count.textContent) + 1;
 					const attributes = {
-						href: `http://www.sgtools.info/${
-							key.match(/multiple/i) ? 'multiple' : 'nonactivated'
-						}/${user.username}`,
+						href: `https://www.sgtools.info/rules-checker/${key.match(/multiple/i) ? 'multiple-wins' : 'non-activated'
+							}/${user.username}`,
 						target: '_blank',
 					};
 					if (isNew) {
@@ -512,28 +511,44 @@ class UsersNotActivatedMultipleWinChecker extends Module {
 		if (obj.popup.progressBar) {
 			obj.popup.progressBar.setMessage(`Retrieving ${user.username}'s not activated wins...`);
 		}
+
+		let errorData = null;
+
 		const response = await FetchRequest.get(
-			`http://www.sgtools.info/nonactivated/${user.username}`,
+			`https://www.sgtools.info/api/v1/rules-checker/non-activated/${user.username}`,
 			{
 				queue: true,
 			}
-		);
-		if (response.text.match(/has a private profile/)) {
+		).catch(err => {
+			try {
+				errorData = JSON.parse(err.message);
+			} catch (e) {
+				console.error("SGTools Non-Activated request failed", err.message);
+			}
+			return null;
+		});
+
+		const data = response?.json || errorData;
+
+		if (!data || data.private_profile || data.error) {
 			user.values.namwc.results.activated = 0;
 			user.values.namwc.results.notActivated = [];
 			user.values.namwc.results.unknown = 1;
 		} else {
 			user.values.namwc.results.notActivated = [];
-			let elements = response.html.getElementsByClassName('notActivatedGame');
-			let n = elements.length;
+
+			const notActivatedWins = data.not_activated || [];
+			const n = notActivatedWins.length;
+
 			for (let i = 0; i < n; ++i) {
-				user.values.namwc.results.notActivated.push(
-					new Date(
-						elements[i].textContent.match(/\((\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2})\)/)[1]
-					).getTime()
-				);
+				const game = notActivatedWins[i];
+				if (game.date) {
+					user.values.namwc.results.notActivated.push(
+						new Date(game.date).getTime()
+					);
+				}
 			}
-			user.values.namwc.results.activated = n === 0 ? 1 : 0;
+			user.values.namwc.results.activated = user.values.namwc.results.notActivated.length === 0 ? 1 : 0;
 			user.values.namwc.results.unknown = 0;
 		}
 		user.values.namwc.lastCheck = Date.now();
@@ -546,19 +561,28 @@ class UsersNotActivatedMultipleWinChecker extends Module {
 			obj.popup.progressBar.setMessage(`Retrieving ${user.username}'s multiple wins...`);
 		}
 		user.values.namwc.results.multiple = [];
-		let elements = (
-			await FetchRequest.get(`http://www.sgtools.info/multiple/${user.username}`, {
-				queue: true,
-			})
-		).html?.getElementsByClassName('multiplewins');
-		let n = elements.length;
-		for (let i = 0; i < n; ++i) {
-			user.values.namwc.results.multiple.push(
-				new Date(
-					elements[i].textContent.match(/,\s(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2})\)/)[1]
-				).getTime()
-			);
+		const apiResponse = await FetchRequest.get(
+			`https://www.sgtools.info/api/v1/rules-checker/multiple-wins/${user.username}`,
+			{ queue: true }
+		).catch(err => {
+			console.error("SGTools Multiple-Wins request failed:", err.message);
+			return null;
+		});
+
+		const multipleWins = apiResponse?.json || [];
+
+		for (let i = 0; i < multipleWins.length; i++) {
+			const game = multipleWins[i];
+
+			if (game.dates && Array.isArray(game.dates)) {
+				for (let j = 0; j < game.dates.length; j++) {
+					user.values.namwc.results.multiple.push(
+						new Date(game.dates[j]).getTime()
+					);
+				}
+			}
 		}
+		const n = user.values.namwc.results.multiple.length;
 		user.values.namwc.results.notMultiple = n === 0 ? 1 : 0;
 		user.values.namwc.lastCheck = Date.now();
 	}
