@@ -19,7 +19,7 @@ class GiveawaysCustomGiveawayBackground extends Module {
 					description: () => (
 						<ul>
 							<li>
-								Shows a a colored border on top of the giveaway in Grid View
+								Shows a colored border on top of the giveaway in Grid View
 							</li>
 						</ul>
 					), name: 'Enable for Grid View.',
