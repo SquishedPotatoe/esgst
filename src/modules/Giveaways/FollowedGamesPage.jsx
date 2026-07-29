@@ -51,8 +51,7 @@ class GiveawaysFollowedGamesPage extends Module {
 
 	async load() {
 		const obj = {
-			container: Shared.esgst.pagination.previousElementSibling,
-			context: null,
+			container: Shared.esgst.pagination?.previousElementSibling,
 			count: 0,
 			displayed: 0,
 			leftovers: [],
@@ -63,13 +62,26 @@ class GiveawaysFollowedGamesPage extends Module {
 			set: null,
 			url: Shared.esgst.searchUrl,
 		};
+		if (!obj.container) return;
+		if (Shared.esgst.es) {
+			Shared.esgst.es.paused = true;
+			const buttonIds = [
+				'esgst-esPause','esgst-esResume','esgst-esContinuous','esgst-esNext','esgst-esRefresh','esgst-esRefreshAll',
+			];
+			for (const id of buttonIds) {
+				const element = document.getElementById(id);
+				if (element) {
+					element.classList.add('esgst-hidden');
+				}
+			}
+		}
 		if (Shared.esgst.paginationNavigation) {
 			Shared.esgst.paginationNavigation.classList.add(Shared.esgst.hiddenClass);
 		}
 		if (obj.results) {
 			obj.results.classList.add(Shared.esgst.hiddenClass);
 		}
-		DOM.insert(obj.container, 'atinner', <div ref={(ref) => (obj.context = ref)} />);
+		obj.container.innerHTML = '';
 		obj.button = Button.create([
 			{
 				color: 'green',
@@ -88,25 +100,16 @@ class GiveawaysFollowedGamesPage extends Module {
 	}
 
 	updatePaginationResults(obj) {
-		if (!obj.results) {
-			return;
-		}
+		if (!obj.results) return;
 		const values = obj.results.getElementsByTagName('strong');
-		if (values.length < 2) {
-			return;
-		}
+		if (values.length < 2) return;
 		values[0].textContent = obj.displayed > 0 ? '1' : '0';
 		values[1].textContent = `${obj.displayed}`;
 		obj.results.classList.remove(Shared.esgst.hiddenClass);
 	}
 
 	showNoResults(obj) {
-		if (!obj.container || !Shared.esgst.pagination) {
-			return;
-		}
-		if (obj.context) {
-			obj.context.remove();
-		}
+		if (!obj.container || !Shared.esgst.pagination) return;
 		obj.container.classList.add(Shared.esgst.hiddenClass);
 		Shared.esgst.pagination.classList.add('pagination--no-results');
 		Shared.esgst.pagination.innerHTML =
@@ -115,7 +118,7 @@ class GiveawaysFollowedGamesPage extends Module {
 
 	async loadNextPage(obj) {
 		let context;
-		DOM.insert(obj.context, 'beforeend', <div ref={(ref) => (context = ref)} />);
+		DOM.insert(obj.button.nodes.outer, 'beforebegin', <div className="esgst-fgp esgst-hidden" ref={(ref) => (context = ref)} />);
 		obj.count = 0;
 		while (obj.leftovers.length > 0 && obj.count < obj.perPage) {
 			const leftover = obj.leftovers.splice(0, 1)[0];
@@ -123,51 +126,52 @@ class GiveawaysFollowedGamesPage extends Module {
 			obj.count += 1;
 			obj.displayed += 1;
 		}
-		if (obj.count === obj.perPage) {
-			this.updatePaginationResults(obj);
-			await Shared.common.endless_load(context, true);
-			return;
-		}
-		if (obj.reachedEnd) {
-			obj.button.destroy();
-			return;
-		}
-		do {
-			const response = await FetchRequest.get(`${obj.url}${obj.page}`);
-			const html = response.html;
-			const elements = html.querySelectorAll('.giveaway__row-outer-wrap');
-			for (const element of elements) {
-				const gameInfo = await Shared.esgst.modules.games.games_getInfo(element);
-				if (
-					gameInfo &&
-					Shared.esgst.games[gameInfo.type][gameInfo.id] &&
-					Shared.esgst.games[gameInfo.type][gameInfo.id].followed
-				) {
-					if (obj.count < obj.perPage) {
-						context.appendChild(element.cloneNode(true));
-						obj.count += 1;
-						obj.displayed += 1;
-					} else {
-						obj.leftovers.push(element.cloneNode(true));
+		if (obj.count < obj.perPage && !obj.reachedEnd) {
+			do {
+				const response = await FetchRequest.get(`${obj.url}${obj.page}`);
+				const html = response.html;
+				const elements = html.querySelectorAll('.giveaway__row-outer-wrap');
+				for (const element of elements) {
+					const gameInfo = await Shared.esgst.modules.games.games_getInfo(element);
+					if (
+						gameInfo &&
+						Shared.esgst.games[gameInfo.type][gameInfo.id] &&
+						Shared.esgst.games[gameInfo.type][gameInfo.id].followed
+					) {
+						if (obj.count < obj.perPage) {
+							context.appendChild(element.cloneNode(true));
+							obj.count += 1;
+							obj.displayed += 1;
+						} else {
+							obj.leftovers.push(element.cloneNode(true));
+						}
 					}
 				}
-			}
-			obj.page += 1;
-			const pagination = html.querySelector('.pagination__navigation');
-			obj.reachedEnd =
-				!pagination || pagination.lastElementChild.classList.contains(Shared.esgst.selectedClass);
-		} while (!obj.reachedEnd && obj.count < obj.perPage);
+				obj.page += 1;
+				const pagination = html.querySelector('.pagination__navigation');
+				obj.reachedEnd =
+					!pagination || pagination.lastElementChild.classList.contains(Shared.esgst.selectedClass);
+			} while (!obj.reachedEnd && obj.count < obj.perPage);
+		}
 		this.updatePaginationResults(obj);
 		if (!obj.displayed && obj.reachedEnd) {
+			context.remove();
 			this.showNoResults(obj);
 			obj.button.destroy();
 			return;
 		}
-		if (obj.reachedEnd) {
-			obj.button.destroy();
-			return;
+		if (context.children.length > 0) {
+			context.classList.remove('esgst-hidden');
+			await Shared.common.endless_load(context, true);
+			if (obj.container && obj.button?.nodes?.outer && !obj.reachedEnd) {
+				obj.container.appendChild(obj.button.nodes.outer);
+			}
+		} else {
+			context.remove();
 		}
-		await Shared.common.endless_load(context, true);
+		if (obj.reachedEnd && obj.leftovers.length === 0) {
+			obj.button.destroy();
+		}
 	}
 }
 
