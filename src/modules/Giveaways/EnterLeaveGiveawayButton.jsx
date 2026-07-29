@@ -769,6 +769,7 @@ class GiveawaysEnterLeaveGiveawayButton extends Module {
 			}
 		} else {
 			if (!(
+				mainCallback ||
 				(Settings.get('elgb_r') && !Settings.get('elgb_r_d')) ||
 				(Settings.get('elgb_r') && Settings.get('elgb_r_d') && description) ||
 				(Settings.get('elgb_fp') && commentsContainer && commentsContainer.children.length)
