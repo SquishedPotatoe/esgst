@@ -112,40 +112,38 @@ class DiscussionsImprovedDiscussionBookmarks extends Module {
 	}
 
 	async addButtons(discussions, main) {
+		const isBookmarkedPage = /^\/discussions\/bookmarked/.test(window.location.pathname);
+
 		for (const discussion of discussions) {
-			if (discussion.idbButton) {
-				continue;
+			if (discussion.idbButton) continue;
+
+			const headingParent = discussion.heading?.parentElement;
+			const sgButton = headingParent?.querySelector('.page__heading__button[title*="Bookmark"]');
+			const thread = !!sgButton;
+			const isBookmarked = thread
+				? sgButton.classList.contains('page__heading__button--blue')
+				: !!discussion.bookmarked;
+
+			if (sgButton) {
+				sgButton.classList.add('esgst-hidden');
+			} else if (discussion.bookmarkNode) {
+				discussion.bookmarkNode.classList.add('esgst-hidden');
 			}
 
 			const context = discussion.outerWrap;
 
-			let index = 0;
+			if (isBookmarked) {
+				await this.bookmarkDiscussion(null, !thread && !isBookmarkedPage ? context : null);
 
-			if (discussion.bookmarked) {
-				await this.bookmarkDiscussion(null, context);
-
-				if (Settings.get('idb_t') && main && Shared.esgst.discussionsPath) {
-					discussion.outerWrap.parentElement.insertBefore(
-						discussion.outerWrap,
-						discussion.outerWrap.parentElement.firstElementChild
-					);
+				if (Settings.get('idb_t') && main && Shared.esgst.discussionsPath && context) {
+					context.parentElement.insertBefore(context, context.parentElement.firstElementChild);
 					discussion.isPinned = true;
 				}
-
-				index = 2;
 			}
 
-			let isNavy = false;
-
-			if (discussion.bookmarkNode) {
-				isNavy = discussion.bookmarkNode.classList.contains('icon-navy');
-
-				discussion.bookmarkNode.remove();
-			}
-
-			discussion.idbButton = new Button(discussion.heading.parentElement, 'afterbegin', {
+			discussion.idbButton = new Button(headingParent, 'afterbegin', {
 				callbacks: [
-					this.bookmarkDiscussion.bind(this, discussion.code, context),
+					this.bookmarkDiscussion.bind(this, discussion.code, !thread && !isBookmarkedPage ? context : null),
 					null,
 					this.unbookmarkDiscussion.bind(this, discussion.code, context),
 					null,
@@ -154,11 +152,11 @@ class DiscussionsImprovedDiscussionBookmarks extends Module {
 				icons: [
 					'fa-bookmark-o esgst-clickable',
 					'fa-circle-o-notch fa-spin',
-					`fa-bookmark esgst-clickable ${isNavy ? 'icon-navy' : ''}`,
+					thread ? 'fa-bookmark esgst-clickable' : `fa-bookmark esgst-clickable ${discussion.bookmarkNode?.classList.contains('icon-blue') ? 'icon-blue' : ''}`,
 					'fa-circle-o-notch fa-spin',
 				],
 				id: 'idb',
-				index: index,
+				index: isBookmarked ? 2 : 0,
 				titles: [
 					'Click to bookmark this discussion',
 					'Bookmarking discussion...',
