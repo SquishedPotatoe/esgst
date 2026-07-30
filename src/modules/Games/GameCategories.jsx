@@ -1731,7 +1731,7 @@ class GamesGameCategories extends Module {
 					(game.alias && Utils.getProperty(Shared.esgst.games.apps, [game.alias, 'wishlisted']));
 			}
 		}
-		if (count.num === count.total) {
+		if (count.total > 0 && count.num === count.total) {
 			savedGame.owned = true;
 		}
 		return count;
