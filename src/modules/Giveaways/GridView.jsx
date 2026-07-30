@@ -12,6 +12,8 @@ const createElements = common.createElements.bind(common),
 class GiveawaysGridView extends Module {
 	constructor() {
 		super();
+		this.descriptionMap = new WeakMap();
+		this.descriptionObserver = null;
 		this.info = {
 			description: () => (
 				<ul>
@@ -118,7 +120,7 @@ class GiveawaysGridView extends Module {
 			`
 			);
 			if ((this.esgst.groupPath && Settings.get('gv_grp')) || (this.esgst.gamePath && Settings.get('gv_gp')) || this.esgst.giveawaysPath || (this.esgst.userPath && Settings.get('gv_pro'))) {
-				let button, display, element, elements, i, n, popout, spacing, slider;
+				let button, display, element, popout, spacing, slider;
 				button = createHeadingButton({
 					id: 'gv',
 					icons: ['fa-th-large'],
@@ -160,6 +162,28 @@ class GiveawaysGridView extends Module {
 		}
 	}
 
+	gv_observeDescription(outerWrap, popout) {
+		if (this.descriptionMap.has(outerWrap)) return;
+
+		this.descriptionMap.set(outerWrap, popout);
+		if (!this.descriptionObserver) {
+			this.descriptionObserver = new MutationObserver((mutations) => {
+				for (const mutation of mutations) {
+					const targetContainer = mutation.target;
+					const descriptionPanel = targetContainer.querySelector(':scope > .giveaway__description-panel');
+					if (!descriptionPanel) continue;
+
+					const descriptionPopout = this.descriptionMap.get(targetContainer);
+					if (descriptionPopout) {
+						descriptionPopout.popout.replaceChildren(descriptionPanel);
+						descriptionPopout.reposition();
+					}
+				}
+			});
+		}
+		this.descriptionObserver.observe(outerWrap, { childList: true });
+	}
+
 	gv_setContainer(giveaways, main, source) {
 		if (
 			(!main || !((this.esgst.groupPath && Settings.get('gv_grp')) || (this.esgst.gamePath && Settings.get('gv_gp')) || this.esgst.giveawaysPath || (this.esgst.userPath && Settings.get('gv_pro')))) &&
@@ -193,6 +217,9 @@ class GiveawaysGridView extends Module {
 				giveaway.outerWrap.style.margin = `${Settings.get('gv_spacing')}px`;
 			}
 			giveaway.innerWrap.classList.add('esgst-gv-box');
+			if (giveaway.quickEntryWrap && !Settings.get('elgb')) {
+				giveaway.innerWrap.classList.add('esgst-gv-quick-entry');
+			}
 			const now = Date.now();
 			const endTimeText =
 				giveaway.endTimeColumn?.querySelector('[data-timestamp]')?.textContent ??
@@ -306,6 +333,21 @@ class GiveawaysGridView extends Module {
 				/[^\d,]+/g,
 				''
 			);
+			if (giveaway.quickEntryWrap && !Settings.get('elgb')) {
+				DOM.insert(temp, 'afterend', (
+					<div className="esgst-qe-panel">
+						{giveaway.quickEntryWrap}
+					</div>
+				));
+
+				const descriptionButton = giveaway.quickEntryWrap.querySelector('.giveaway__quick-entry-btn--description');
+
+				if (descriptionButton && !this.descriptionMap.has(giveaway.outerWrap)) {
+					const descriptionPopout = new Popout('esgst-gv-description', descriptionButton, 100, true);
+
+					this.gv_observeDescription(giveaway.outerWrap, descriptionPopout);
+				}
+			}
 			new Popout('', giveaway.outerWrap, 100, false, giveaway.summary);
 		});
 	}
