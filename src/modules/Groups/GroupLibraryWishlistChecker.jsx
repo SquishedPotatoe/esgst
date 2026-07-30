@@ -1497,7 +1497,11 @@ class GroupsGroupLibraryWishlistChecker extends Module {
 						const appId = appIdMatch[1];
 
 						try {
-							const response = await FetchRequest.get(`https://store.steampowered.com/api/appdetails?appids=${appId}&filters=basic`);
+							const response = await FetchRequest.get(`https://store.steampowered.com/api/appdetails?appids=${appId}&filters=basic`,
+								{
+									anon: true,
+								}
+							);
 							const json = response.json;
 
 							if (json && json[appId] && json[appId].success) {
