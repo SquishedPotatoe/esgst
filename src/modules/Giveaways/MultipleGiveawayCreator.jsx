@@ -1813,7 +1813,7 @@ class GiveawaysMultipleGiveawayCreator extends Module {
 					},
 				}).insert(element, 'afterbegin');
 				button.nodes.outer.style.position = 'absolute';
-				button.nodes.outer.style.right = '50px';
+				button.nodes.outer.style.right = '75px';
 			});
 			conflictPopup.onClose = callback;
 			conflictPopup.open();
@@ -1889,6 +1889,85 @@ class GiveawaysMultipleGiveawayCreator extends Module {
 		}
 	}
 
+	mgc_getDescriptionPreview(description, i, n) {
+		const children = [];
+		const markerRegex =
+			/\[ESGST-([PNB])\]([\s\S]+?)\[\/ESGST-\1\]|\[([^\]\r\n]+)\]\(([^)\s]+)\)/g;
+		const pairedLinksRegex =
+			/\[ESGST-P]([\s\S]+?)\[\/ESGST-P]([\s\S]+?)\[ESGST-N]([\s\S]+?)\[\/ESGST-N]/g;
+		const maxLength = 100;
+		let previewDescription = description;
+		if (Settings.get('mgc_createTrain') && Settings.get('mgc_removeLinks') && n > 1) {
+			if (i === 0) {
+				previewDescription = previewDescription.replace(
+					pairedLinksRegex,
+					'[ESGST-N]$3[/ESGST-N]'
+				);
+			} else if (i === n - 1) {
+				previewDescription = previewDescription.replace(
+					pairedLinksRegex,
+					'[ESGST-P]$1[/ESGST-P]'
+				);
+			}
+		}
+		let lastIndex = 0;
+		let match;
+		let textLength = 0;
+		let wasTruncated = false;
+		const addText = (text) => {
+			if (!text) {
+				return;
+			}
+			if (textLength >= maxLength) {
+				wasTruncated = true;
+				return;
+			}
+			const preview = text.slice(0, maxLength - textLength);
+			children.push({ text: preview, type: 'span' });
+			textLength += preview.length;
+			if (preview.length < text.length) {
+				children.push({ text: '...', type: 'span' });
+				children.push({ type: 'br' });
+				wasTruncated = true;
+			}
+		};
+		while ((match = markerRegex.exec(previewDescription))) {
+			addText(previewDescription.slice(lastIndex, match.index));
+			if (match[1] === 'B') {
+				children.push({ attributes: { href: '#' }, text: match[2], type: 'a' });
+			} else if (match[1]) {
+				const labelRegex = new RegExp(
+					`^(.*?)\\[${match[1]}]([\\s\\S]+?)\\[/${match[1]}](.*?)$`
+				);
+				const labelMatch = match[2].match(labelRegex);
+				const prefix = labelMatch ? labelMatch[1] : '';
+				const label = labelMatch ? labelMatch[2] : match[2];
+				const suffix = labelMatch ? labelMatch[3] : '';
+				const isPlainEndLink =
+					Settings.get('mgc_createTrain') &&
+					!Settings.get('mgc_removeLinks') &&
+					n > 1 &&
+					((i === 0 && match[1] === 'P') || (i === n - 1 && match[1] === 'N'));
+				if (prefix) {
+					children.push({ text: prefix, type: 'span' });
+				}
+				children.push(
+					isPlainEndLink
+						? { text: label, type: 'span' }
+						: { attributes: { href: '#' }, text: label, type: 'a' }
+				);
+				if (suffix) {
+					children.push({ text: suffix, type: 'span' });
+				}
+			} else {
+				children.push({ attributes: { href: match[4] }, text: match[3], type: 'a' });
+			}
+			lastIndex = markerRegex.lastIndex;
+		}
+		addText(previewDescription.slice(lastIndex));
+		return children;
+	}
+
 	mgc_createGiveaways(mgc, callback) {
 		if (!mgc.datas.length) {
 			createAlert(
@@ -1901,6 +1980,7 @@ class GiveawaysMultipleGiveawayCreator extends Module {
 			addScrollable: true,
 			icon: 'fa-arrow-circle-right',
 			title: 'ESGST will create the giveaways below. Are you sure you want to continue?',
+			className: 'esgst-mgc-popup',
 		});
 		let rows = createElements(popup.scrollable, 'beforeend', [
 			{
@@ -1916,65 +1996,34 @@ class GiveawaysMultipleGiveawayCreator extends Module {
 						type: 'div',
 						children: [
 							{
-								attributes: {
-									class: 'table__column--width-small',
-								},
 								text: 'No.',
 								type: 'div',
 							},
 							{
-								attributes: {
-									class: 'table__column--width-fill',
-								},
 								text: 'Game',
 								type: 'div',
 							},
 							{
-								attributes: {
-									class: 'table__column--width-small',
-								},
 								text: 'Copies/Keys',
 								type: 'div',
 							},
 							{
-								attributes: {
-									class: 'table__column--width-small',
-								},
-								text: 'Start Time',
+								text: 'Time Range',
 								type: 'div',
 							},
 							{
-								attributes: {
-									class: 'table__column--width-small',
-								},
-								text: 'End Time',
-								type: 'div',
-							},
-							{
-								attributes: {
-									class: 'table__column--width-small',
-								},
 								text: 'Region Restricted',
 								type: 'div',
 							},
 							{
-								attributes: {
-									class: 'table__column--width-small',
-								},
 								text: 'Who Can Enter',
 								type: 'div',
 							},
 							{
-								attributes: {
-									class: 'table__column--width-small',
-								},
 								text: 'Level',
 								type: 'div',
 							},
 							{
-								attributes: {
-									class: 'table__column--width-small',
-								},
 								text: 'Description',
 								type: 'div',
 							},
@@ -1991,6 +2040,7 @@ class GiveawaysMultipleGiveawayCreator extends Module {
 		]).lastElementChild;
 		for (let i = 0, n = mgc.giveaways.children.length; i < n; i++) {
 			let values = mgc.values[parseInt(mgc.giveaways.children[i].textContent) - 1];
+			const descriptionPreview = this.mgc_getDescriptionPreview(values.description, i, n);
 			let regionRestricted = 'No';
 			if (values.region === '1') {
 				regionRestricted = `Yes (`;
@@ -2047,14 +2097,14 @@ class GiveawaysMultipleGiveawayCreator extends Module {
 							children: [
 								{
 									attributes: {
-										class: 'table__column--width-small',
+										class: 'esgst-mgc-count',
 									},
 									text: i + 1,
 									type: 'div',
 								},
 								{
 									attributes: {
-										class: 'table__column--width-fill',
+										class: 'esgst-mgc-game',
 									},
 									type: 'div',
 									children: [
@@ -2078,7 +2128,7 @@ class GiveawaysMultipleGiveawayCreator extends Module {
 								},
 								{
 									attributes: {
-										class: 'table__column--width-small',
+										class: 'esgst-mgc-copies-keys',
 									},
 									text: keys.length ? null : `${values.copies} Copies`,
 									type: 'div',
@@ -2086,48 +2136,57 @@ class GiveawaysMultipleGiveawayCreator extends Module {
 								},
 								{
 									attributes: {
-										class: 'table__column--width-small',
+										class: 'esgst-mgc-time',
 									},
-									text: values.startTime,
 									type: 'div',
+									children: [
+										{
+											type: 'div',
+											children: [
+												{ type: 'strong', text: 'Start: ' },
+												{ type: 'span', text: values.startTime }
+											]
+										},
+										{
+											type: 'div',
+											children: [
+												{ type: 'strong', text: 'End: ' },
+												{ type: 'span', text: values.endTime }
+											]
+										}
+									]
 								},
 								{
 									attributes: {
-										class: 'table__column--width-small',
-									},
-									text: values.endTime,
-									type: 'div',
-								},
-								{
-									attributes: {
-										class: 'table__column--width-small',
+										class: 'esgst-mgc-region',
 									},
 									text: regionRestricted,
 									type: 'div',
 								},
 								{
 									attributes: {
-										class: 'table__column--width-small',
+										class: 'esgst-mgc-enter',
 									},
 									text: whoCanEnter,
 									type: 'div',
 								},
 								{
 									attributes: {
-										class: 'table__column--width-small',
+										class: 'esgst-mgc-level',
 									},
 									text: values.level,
 									type: 'div',
 								},
 								{
 									attributes: {
-										class: 'table__column--width-small',
+										class: 'esgst-mgc-description',
 										title: values.description.replace(/"/g, '&quot;'),
 									},
 									text:
 										values.description.length > 100
 											? `${values.description.slice(0, 100)}...`
 											: values.description,
+									children: descriptionPreview,
 									type: 'div',
 								},
 							],
