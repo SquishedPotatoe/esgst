@@ -68,6 +68,7 @@ class _Settings {
 			ge_flushCacheHours: 24,
 			ge_ignoreDiscussionComments: false,
 			ge_ignoreGiveawayComments: false,
+			ge_skipEndedGiveaways: false,
 			cv_username: '%username%',
 			cv_steamId: '%steamId%',
 			cv_creator: '%creator%',

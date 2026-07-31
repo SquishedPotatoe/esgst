@@ -20,6 +20,7 @@ class Permissions {
 			},
 			cookies: {
 				messages: {
+					ge: 'Required by Giveaway Extractor when checking eligibility and when unlocking giveaways from SGTools',
 					manipulateCookies: 'Required if the option to manipulate cookies is enabled.',
 				},
 				values: ['cookies', 'webRequest', 'webRequestBlocking'],

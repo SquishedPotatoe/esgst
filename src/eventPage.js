@@ -194,45 +194,76 @@ async function readZip(data) {
 }
 
 async function doFetch(parameters, request, sender, callback) {
+	const isSgTools = request.url.includes('www.sgtools.info');
+	const isSgToolsAuth = request.url.includes('/api/v1/auth/refresh') || request.url.includes('/api/v1/auth/me');
+
 	if (request.fileName) {
 		parameters.body = await getZip(parameters.body, request.fileName);
 	}
 
-	if (
-		request.manipulateCookies &&
-		(await browser.permissions.contains({ permissions: ['cookies'] }))
-	) {
-		let esgstCookie = parameters.headers.get('Esgst-Cookie') || '';
+	const canReadCookies = await browser.permissions.contains({ permissions: ['cookies'] });
 
-		const domain = request.url.match(/https?:\/\/(.+?)(\/.*)?$/)[1];
+	if (request.manipulateCookies && canReadCookies && sender?.tab?.id) {
+		try {
+			let esgstCookie = parameters.headers.get('Esgst-Cookie') || '';
+			const domain = request.url.match(/https?:\/\/(.+?)(\/.*)?$/)[1];
+			const tab = await browser.tabs.get(sender.tab.id);
+			const cookies = await browser.cookies.getAll({
+				domain,
+				storeId: tab.cookieStoreId,
+				firstPartyDomain: null,
+			});
 
-		const tab = await browser.tabs.get(sender.tab.id);
+			for (const cookie of cookies) {
+				esgstCookie += `${cookie.name}=${cookie.value}; `;
+			}
 
-		const cookies = await browser.cookies.getAll({
-			domain,
-			storeId: tab.cookieStoreId,
-			firstPartyDomain: null,
-		});
-
-		for (const cookie of cookies) {
-			esgstCookie += `${cookie.name}=${cookie.value}; `;
+			parameters.headers.append('Esgst-Cookie', esgstCookie);
+		} catch (e) {
+			console.warn('[doFetch] Container cookie manipulation failed', e);
 		}
-
-		parameters.headers.append('Esgst-Cookie', esgstCookie);
 	}
+
+	const applySgToolsCsrfHeader = async () => {
+		if (!isSgTools || !canReadCookies) return;
+
+		const hasCsrf = parameters.headers.has('X-CSRF-Token') || parameters.headers.has('X-CSRF-TOKEN');
+		if (hasCsrf) return;
+
+		const csrfCookie = await browser.cookies.get({ url: request.url, name: 'sgt_csrf' });
+		if (csrfCookie?.value) {
+			try {
+				parameters.headers.set('X-CSRF-Token', decodeURIComponent(csrfCookie.value));
+			} catch (e) {
+				console.warn('[doFetch] Could not decode SGTools CSRF cookie', e);
+			}
+		}
+	};
+
+	const fetchWithTimeout = async (url, fetchParameters) => {
+		const abortController = new AbortController();
+		const timeoutId = window.setTimeout(() => abortController.abort(), request.timeout || 10000);
+		try {
+			return await window.fetch(url, { ...fetchParameters, signal: abortController.signal });
+		} finally {
+			window.clearTimeout(timeoutId);
+		}
+	};
 
 	let response = null;
 	let responseText = null;
 	try {
-		const abortController = new AbortController();
+		await applySgToolsCsrfHeader();
+		response = await fetchWithTimeout(request.url, parameters);
 
-		const { timeout = 10000 } = request;
-		const timeoutId = window.setTimeout(() => abortController.abort(), timeout);
-
-		parameters.signal = abortController.signal;
-		response = await window.fetch(request.url, parameters);
-
-		window.clearTimeout(timeoutId);
+		if (isSgTools && !isSgToolsAuth && (response.status === 401 || response.status === 419)) {
+			const refreshUrl = new URL('/api/v1/auth/refresh', request.url).href;
+			const refreshRes = await fetchWithTimeout(refreshUrl, { method: 'POST', credentials: 'include' });
+			if (refreshRes.ok) {
+				await applySgToolsCsrfHeader();
+				response = await fetchWithTimeout(request.url, parameters);
+			}
+		}
 
 		responseText = request.blob
 			? (await readZip(await response.blob()))[0].value
@@ -241,7 +272,7 @@ async function doFetch(parameters, request, sender, callback) {
 			throw responseText;
 		}
 	} catch (error) {
-		callback(JSON.stringify({ error }));
+		callback(JSON.stringify({ error: error.message || error }));
 		return;
 	}
 	callback(
