@@ -502,17 +502,18 @@ class GeneralEndlessScrolling extends Module {
 				.replace(/\B(?=(\d{3})+(?!\d))/g, `,`);
 			this.esgst.pagination.firstElementChild.firstElementChild.textContent = this.esgst.pagination.firstElementChild.firstElementChild.nextElementSibling.textContent;
 		} else if (refresh) {
+			const targetPage = refreshAll || es.pageIndex;
 			pagination =
 				es.paginations[
 					(es.reverseScrolling
-						? es.pageBase - (refreshAll || es.pageIndex)
-						: (refreshAll || es.pageIndex) - es.pageBase) - 1
+						? es.pageBase - targetPage
+						: targetPage - es.pageBase) - 1
 				];
 			if (paginationNavigation && pagination !== paginationNavigation.innerHTML) {
 				es.paginations[
 					(es.reverseScrolling
-						? es.pageBase - (refreshAll || es.pageIndex)
-						: (refreshAll || es.pageIndex) - es.pageBase) - 1
+						? es.pageBase - targetPage
+						: targetPage - es.pageBase) - 1
 				] = paginationNavigation.innerHTML;
 				es.ended = false;
 			}
@@ -528,22 +529,40 @@ class GeneralEndlessScrolling extends Module {
 		for (let i = 0; i < n; ++i) {
 			let child = context.children[0];
 			child.classList.add(`esgst-es-page-${currentPage}`);
-			fragment.appendChild(child);
+			fragment.appendChild(document.adoptNode(child));
 		}
 		let oldN = 0;
 		if (refresh) {
-			let elements = document.getElementsByClassName(`esgst-es-page-${currentPage}`);
+			let elements = Array.from(document.getElementsByClassName(`esgst-es-page-${currentPage}`));
 			oldN = elements.length;
 			for (let i = 1; i < oldN; ++i) {
-				elements[0].remove();
+				elements[i].remove();
 			}
 			let element = elements[0];
 			if (element) {
 				es.mainContext.insertBefore(fragment, element);
-				es.observer.observe(element.previousElementSibling);
+				if (element.previousElementSibling) {
+					es.observer.observe(element.previousElementSibling);
+				}
 				element.remove();
 			} else {
-				es.mainContext.appendChild(fragment);
+				if (currentPage === 1) {
+					es.mainContext.insertBefore(fragment, es.mainContext.firstElementChild);
+				} else {
+					let inserted = false;
+					for (let p = currentPage - 1; p >= es.pageBase; --p) {
+						let prevPageElements = document.getElementsByClassName(`esgst-es-page-${p}`);
+						if (prevPageElements.length > 0) {
+							let lastElem = prevPageElements[prevPageElements.length - 1];
+							lastElem.after(fragment);
+							inserted = true;
+							break;
+						}
+					}
+					if (!inserted) {
+						es.mainContext.appendChild(fragment);
+					}
+				}
 				es.observer.observe(es.mainContext.lastElementChild);
 			}
 			if (!refreshAll) {
@@ -701,6 +720,7 @@ class GeneralEndlessScrolling extends Module {
 				this.updateUrl(index);
 			}
 		}
+		es.pageIndex = index;
 	}
 
 	es_fixFirstPageLinks() {
@@ -836,6 +856,7 @@ class GeneralEndlessScrolling extends Module {
 	}
 
 	async es_refresh(es) {
+		const currentPage = es.pageIndex || es.currentPage;
 		es.refreshButton.removeEventListener('click', this.esgst.es_refresh);
 		createElements(es.refreshButton, 'atinner', [
 			{
@@ -845,9 +866,9 @@ class GeneralEndlessScrolling extends Module {
 				type: 'i',
 			},
 		]);
-		let response = await FetchRequest.get(`${this.esgst.searchUrl}${es.pageIndex}`);
+		let response = await FetchRequest.get(`${this.esgst.searchUrl}${currentPage}`);
 		// noinspection JSIgnoredPromiseFromCall
-		this.es_getNext(es, true, false, null, response);
+		await this.es_getNext(es, true, false, null, response);
 		if (this.esgst.giveawaysPath && Settings.get('es_rd')) {
 			if (Settings.get('oadd')) {
 				// noinspection JSIgnoredPromiseFromCall
@@ -856,7 +877,7 @@ class GeneralEndlessScrolling extends Module {
 				checkMissingDiscussions(true);
 			}
 		}
-		await this.es_refreshPinnedGiveaways(es.pageIndex === 1 ? response.html : null);
+		await this.es_refreshPinnedGiveaways(currentPage === 1 ? response.html : null);
 	}
 
 	async es_refreshAll(es) {
