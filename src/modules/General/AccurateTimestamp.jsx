@@ -1,5 +1,5 @@
 import { Module } from '../../class/Module';
-import { format, differenceInHours, isSameYear } from '../../lib/date';
+import { format } from '../../lib/date';
 import { Settings } from '../../class/Settings';
 import { DOM } from '../../class/DOM';
 
@@ -24,10 +24,11 @@ class GeneralAccurateTimestamp extends Module {
 						<li>06:00 - HH:mm</li>
 						<li>06:00:00 - HH:mm:ss</li>
 					</ul>
-					<li>{`If you don't want the day and month to be shown when the difference is less than 24 hours, delimit them with "DM{}" in the format. For example, let's suppose that it's currently January 1, 2017, 06:00:00, and that the format is "MMM d, HH:mm:ss". Let's use the timestamp "Jan 1, 12:00:00" as an example. That's a less than 24 hours difference, so if the format was changed to "DM{MMM d, }HH:mm:ss", the timestamp would be just "12:00:00".`}</li>
+					<li>{`To include plain text words without them being parsed as date tokens (e.g. avoiding "at" or "on" turning into times), wrap the text in square brackets: [at], [on], or [Posted on ].`}</li>
+					<li>{`If you don't want the day and month to be shown when the date is on the same day, delimit them with "DM{}" in the format. For example, let's suppose that it's currently January 1, 2017, 06:00:00, and that the format is "MMM d, HH:mm:ss". Let's use the timestamp "Jan 1, 12:00:00" as an example. That's on the same day, so if the format was changed to "DM{MMM d, }HH:mm:ss", the timestamp would be just "12:00:00".`}</li>
 					<li>{`If you don't want the year to be shown when it's the current year, delimit it with "Y{}" in the format. For example, let's suppose that it's currently January 1, 2017, 06:00:00, and that the format is "MMM d, yyyy, HH:mm:ss". Let's use the timestamp "Jan 1, 2017, 12:00:00" as an example. That's the current year, so if the format was changed to "MMM d, Y{yyyy }HH:mm:ss", the timestamp would be just "Jan 1, 12:00:00".`}</li>
 					<li>{`If you don't want the seconds to be shown when they are equal to 0, delimit them with "S{}" in the format. For example, let's suppose that it's currently January 1, 2017, 06:30:00, and that the format is "MMM d, yyyy, HH:mm:ss". The timestamp would be "Jan 1, 2017, 06:30:00". The seconds are equal to 0, so if the format was changed to "MMM d, yyyy HH:mmS{:ss}", the timestamp would be just "Jan 1, 2017, 06:30".`}</li>
-					<li>{`And of course, you can combine the three, for example: DM{MMM d, }Y{yyyy }HH:mmS{:ss}`}</li>
+					<li>{`And of course, you can combine them, for example: DM{MMM d, }Y{yyyy }[at ]h:mm:ss a will produce Jan 1, 2017 at 5:00:00 PM`}</li>
 				</ul>
 			),
 			features: {
@@ -42,7 +43,6 @@ class GeneralAccurateTimestamp extends Module {
 				{
 					id: 'at_format',
 					prefix: `Timestamp format: `,
-					tooltip: `For the date templates, ESGST uses date-fns v2.0.0-alpha.25, so check the accepted tokens here: https://date-fns.org/v2.0.0-alpha.25/docs/Getting-Started.`,
 				},
 			],
 			sg: true,
@@ -66,14 +66,12 @@ class GeneralAccurateTimestamp extends Module {
 	}
 
 	at_formatTimestamp(seconds) {
-		const now = Date.now();
-		return format(
-			seconds,
-			(Settings.get('at_format') || `MMM dd, yyyy, HH:mm:ss`)
-				.replace(/DM\{(.+?)}/, Math.abs(differenceInHours(now, seconds)) < 24 ? '' : `$1`)
-				.replace(/Y\{(.+?)}/, isSameYear(now, seconds) ? '' : `$1`)
-				.replace(/S\{(.+?)}/, new Date(seconds).getSeconds() === 0 ? '' : `$1`)
-		);
+		let userFormat = Settings.get('at_format');
+		let result = format(seconds, userFormat);
+		if (!userFormat || !result) {
+			result = format(seconds, 'MMM dd, yyyy, HH:mm:ss');
+		}
+		return result;
 	}
 
 	/**

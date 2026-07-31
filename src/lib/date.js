@@ -44,11 +44,30 @@ function buildDate(year, month, day = 1) {
   return date;
 }
 
-export function format(date, fmt) {
+export function format(date, fmt, now = new Date()) {
   const d = toDate(date);
   if (!isValid(d)) return '';
-  return fmt.replace(/yyyy|MMMM|MMM|MM|M|dd|d|HH|H|hh|h|mm|m|ss|s|a/g, (token) => {
-    return String(FORMATTERS[token](d));
+
+  const refDate = toDate(now);
+  const isSameCalendarDay = isSameDay(d, refDate);
+  const isNotCurrentYear = d.getFullYear() !== refDate.getFullYear();
+  const hasNonZeroSeconds = d.getSeconds() !== 0;
+
+  let processedFmt = fmt.replace(/(DM|[YS])\{([^}]*)\}/g, (match, type, content) => {
+    switch (type) {
+      case 'DM': return isSameCalendarDay ? '' : content;
+      case 'Y': return isNotCurrentYear ? content : '';
+      case 'S': return hasNonZeroSeconds ? content : '';
+      default: return '';
+    }
+  });
+
+  const TOKEN_OR_LITERAL_REGEX = /\[([^\]]+)\]|yyyy|MMMM|MMM|MM|M|dd|d|HH|H|hh|h|mm|m|ss|s|a/g;
+
+  return processedFmt.replace(TOKEN_OR_LITERAL_REGEX, (match, literal) => {
+    if (literal) return literal;
+    const formatter = FORMATTERS[match];
+    return formatter ? String(formatter(d)) : match;
   });
 }
 
@@ -70,19 +89,31 @@ const MONTHS = {
 export function parse(str) {
   if (!str) return new Date(NaN);
 
-  const clean = str.toLowerCase().replace(/,/g, '').trim();
+  const clean = String(str).toLowerCase().replace(/,/g, '').trim();
+  if (/^\d{4}$/.test(clean)) {
+    return buildDate(Number(clean), 0, 1);
+  }
 
-  if (/^\d{1,4}[-/]\d{1,2}[-/]\d{1,4}$/.test(clean)) {
-    const [a, b, c] = clean.split(/[-/]/).map(Number);
+  if (/^\d{1,4}[-/]\d{1,2}([-/]\d{1,4})?$/.test(clean)) {
+    const parts = clean.split(/[-/]/).map(Number);
+    const currentYear = new Date().getFullYear();
 
-    if (a > 31) {
-      return buildDate(a, b - 1, c);
+    if (parts.length === 2) {
+      const [a, b] = parts;
+      if (a >= 1000) return buildDate(a, b - 1, 1);
+      if (a > 12) return buildDate(currentYear, b - 1, a);
+      return buildDate(currentYear, a - 1, b);
     }
 
+    const [a, b, c] = parts;
+    if (a > 31) return buildDate(a, b - 1, c);
     if (c > 31) {
       if (a > 12) return buildDate(c, b - 1, a);
       return buildDate(c, a - 1, b);
     }
+
+    const fullYear = c < 100 ? 2000 + c : c;
+    return buildDate(fullYear, a - 1, b);
   }
 
   const parts = clean.split(/\s+/);
@@ -112,10 +143,11 @@ export function parse(str) {
   return new Date(NaN);
 }
 
-
 export function isSameDay(a, b) {
   const d1 = toDate(a);
   const d2 = toDate(b);
+  if (!isValid(d1) || !isValid(d2)) return false;
+
   return (
     d1.getFullYear() === d2.getFullYear() &&
     d1.getMonth() === d2.getMonth() &&
@@ -130,7 +162,7 @@ export function isSameYear(a, b) {
 export function isSameWeek(a, b) {
   const startOfWeek = (d) => {
     const date = new Date(d);
-    const day = date.getDay(); // Sunday start
+    const day = date.getDay();
     date.setDate(date.getDate() - day);
     date.setHours(0, 0, 0, 0);
     return date.getTime();
@@ -138,7 +170,6 @@ export function isSameWeek(a, b) {
 
   return startOfWeek(toDate(a)) === startOfWeek(toDate(b));
 }
-
 
 export function differenceInHours(a, b) {
   return Math.floor((toDate(a) - toDate(b)) / 3600000);
@@ -149,25 +180,32 @@ export function differenceInDays(a, b) {
 }
 
 export function formatDistanceStrict(a, b, { compact = false, mode = 'approx' } = {}) {
-  const diffMs = Math.abs(toDate(a) - toDate(b));
+  const da = toDate(a);
+  const db = toDate(b);
+  if (!isValid(da) || !isValid(db)) return '';
 
+  const diffMs = Math.abs(da - db);
   const fn = mode === 'exact' ? Math.floor : Math.round;
+  const formatUnit = (val, singular, plural, compactSuffix) => {
+    if (compact) return `${val}${compactSuffix}`;
+    return `${val} ${val === 1 ? singular : plural}`;
+  };
 
   const seconds = fn(diffMs / 1000);
-  if (seconds < 60) return compact ? `${seconds}s` : `${seconds} seconds`;
+  if (seconds < 60) { return formatUnit(seconds, 'second', 'seconds', 's'); }
 
-  const minutes = fn(seconds / 60);
-  if (minutes < 60) return compact ? `${minutes}m` : `${minutes} minutes`;
+  const minutes = fn(diffMs / (1000 * 60));
+  if (minutes < 60) { return formatUnit(minutes, 'minute', 'minutes', 'm'); }
 
-  const hours = fn(minutes / 60);
-  if (hours < 24) return compact ? `${hours}h` : `${hours} hours`;
+  const hours = fn(diffMs / (1000 * 60 * 60));
+  if (hours < 24) { return formatUnit(hours, 'hour', 'hours', 'h'); }
 
-  const days = fn(hours / 24);
-  if (days < 30) return compact ? `${days}d` : `${days} days`;
+  const days = fn(diffMs / (1000 * 60 * 60 * 24));
+  if (days < 30) { return formatUnit(days, 'day', 'days', 'd'); }
 
-  const months = fn(days / 30);
-  if (months < 12) return compact ? `${months}mo` : `${months} months`;
+  const months = fn(diffMs / (1000 * 60 * 60 * 24 * 30.4375));
+  if (months < 12) { return formatUnit(months, 'month', 'months', 'mo'); }
 
-  const years = fn(months / 12);
-  return compact ? `${years}y` : `${years} years`;
+  const years = fn(diffMs / (1000 * 60 * 60 * 24 * 365.25));
+  return formatUnit(years, 'year', 'years', 'y');
 }

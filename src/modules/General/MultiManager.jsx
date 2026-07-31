@@ -1015,7 +1015,7 @@ class GeneralMultiManager extends Module {
 				<li>[name] - The name of the group.</li>
 				<li>[url] - The short URL of the group (https://www.steamgifts.com/group/XXXXX/).</li>
 			</ul>
-			<div>For the date templates, ESGST uses date-fns v2.0.0-alpha.25, so check the accepted tokens <a href="https://date-fns.org/v2.0.0-alpha.25/docs/Getting-Started">here</a>.</div>
+			<div>For supported date templates, refer to the <a href="https://www.steamgifts.com/account/settings/profile?esgst=settings&id=at">Accurate Timestamp</a> setting's description.</div>
 			<br/>
 			<div>Here is an example that generates a table with links to giveaways sorted in ascending order:</div>
 			<br/>
