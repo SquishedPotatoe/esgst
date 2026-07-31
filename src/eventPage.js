@@ -590,50 +590,82 @@ async function doFetch(parameters, request, sender, callbackOrPort) {
 	const steamUrl = "https://store.steampowered.com/";
 	const requestUrl = new URL(request.url);
 	const isSteamStore = requestUrl.hostname === "store.steampowered.com";
+	const isSgTools = requestUrl.hostname === "www.sgtools.info";
+	const isSgToolsAuth = requestUrl.pathname === '/api/v1/auth/refresh' || requestUrl.pathname === '/api/v1/auth/me';
 
-	if (request.manipulateCookies) {
-		try {
-			const hasPermission = await runPermissionsAction('contains', { permissions: ['cookies'] });
-			if (!hasPermission) {
-				request.manipulateCookies = false;
-				if (isSteamStore) {
-					parameters.credentials = 'include';
-				}
-			}
-		} catch (e) {
-			console.warn('[SW] permissions.contains failed', e);
-			request.manipulateCookies = false;
-			if (isSteamStore) {
-				parameters.credentials = 'include';
-			}
-		}
+	let canReadCookies = false;
+	try {
+		canReadCookies = await runPermissionsAction('contains', { permissions: ['cookies'] });
+	} catch (e) {
+		console.warn('[SW] Cookie permission check failed', e);
+	}
+	if (isSgTools && !canReadCookies) {
+		const errorResult = { success: false, error: 'Missing cookies permission required for SGTools authentication.' };
+		try { callbackOrPort(errorResult); } catch { }
+		return;
 	}
 
 	let originalBirthtime = null, originalMature = null;
-	if (isSteamStore && request.manipulateCookies) {
+	const setSteamCookies = isSteamStore && request.manipulateCookies && canReadCookies;
+
+	if (setSteamCookies) {
 		try {
 			originalBirthtime = await chrome.cookies.get({ url: steamUrl, name: "birthtime" });
 			originalMature = await chrome.cookies.get({ url: steamUrl, name: "mature_content" });
 			await chrome.cookies.set({ url: steamUrl, name: "birthtime", value: "0", secure: true, path: "/", sameSite: "no_restriction" });
 			await chrome.cookies.set({ url: steamUrl, name: "mature_content", value: "1", secure: true, path: "/", sameSite: "no_restriction" });
-			parameters.credentials = 'include';
-		} catch (e) { console.warn('[SW] cookie manipulation failed', e); }
+		} catch (e) { console.warn('[SW] Failed to modify Steam cookies', e); }
 	}
 
 	try {
 		if (request.fileName) parameters.body = await getZip(parameters.body, request.fileName);
+		const applySgToolsCsrfHeader = async (force = false) => {
+			if (!isSgTools || !canReadCookies) return;
 
-		const abortController = new AbortController();
-		const timeoutId = setTimeout(() => abortController.abort(), request.timeout || 10000);
-		parameters.signal = abortController.signal;
+			const hasCsrf = parameters.headers.has('X-CSRF-Token') || parameters.headers.has('X-CSRF-TOKEN');
+			if (hasCsrf && !force) return;
 
-		const response = await fetch(request.url, parameters);
-		clearTimeout(timeoutId);
+			const csrfCookie = await chrome.cookies.get({ url: request.url, name: 'sgt_csrf' });
+			if (csrfCookie?.value) {
+				try {
+					parameters.headers.set('X-CSRF-Token', decodeURIComponent(csrfCookie.value));
+				} catch (e) {
+					console.warn('[SW] Could not decode SGTools CSRF cookie', e);
+				}
+			}
+		};
+
+		const fetchWithTimeout = async (url, fetchParameters) => {
+			const abortController = new AbortController();
+			const timeoutId = setTimeout(() => abortController.abort(), request.timeout || 10000);
+			try {
+				return await fetch(url, { ...fetchParameters, signal: abortController.signal });
+			} finally {
+				clearTimeout(timeoutId);
+			}
+		};
+
+		await applySgToolsCsrfHeader();
+		let response = await fetchWithTimeout(request.url, parameters);
+		const needsRefresh = response.status === 401 || response.status === 419;
+
+		if (isSgTools && !isSgToolsAuth && needsRefresh) {
+			const refreshUrl = new URL('/api/v1/auth/refresh', request.url).href;
+			const refreshResponse = await fetchWithTimeout(refreshUrl, {
+				method: 'POST',
+				credentials: 'include',
+				headers: new Headers({ 'Accept': 'application/json' })
+			});
+			await refreshResponse.text().catch(() => { });
+			if (refreshResponse.ok) {
+				await applySgToolsCsrfHeader(true);
+				response = await fetchWithTimeout(request.url, parameters);
+			}
+		}
 
 		const contentLength = response.headers.get("content-length");
 		const lengthBytes = contentLength ? parseInt(contentLength, 10) : 0;
-		const USE_STREAMING_THRESHOLD = 1_000_000;
-		const useStreaming = callbackOrPort?.postMessage && lengthBytes >= USE_STREAMING_THRESHOLD;
+		const useStreaming = callbackOrPort?.postMessage && lengthBytes >= 1_000_000;
 
 		let responseText = "";
 
@@ -675,13 +707,13 @@ async function doFetch(parameters, request, sender, callbackOrPort) {
 			try { callbackOrPort(errorResult); } catch { }
 		}
 	} finally {
-		if (isSteamStore && request.manipulateCookies) {
+		if (setSteamCookies) {
 			try {
 				if (originalBirthtime) await chrome.cookies.set({ ...originalBirthtime });
 				else await chrome.cookies.remove({ url: steamUrl, name: "birthtime" });
 				if (originalMature) await chrome.cookies.set({ ...originalMature });
 				else await chrome.cookies.remove({ url: steamUrl, name: "mature_content" });
-			} catch (e) { console.warn('[SW] Failed to restore cookies', e); }
+			} catch (e) { console.warn('[SW] Failed to restore Steam cookies', e); }
 		}
 	}
 }
@@ -1179,7 +1211,7 @@ async function bootstrap() {
 	if (self._bootstrapped) return;
 	self._bootstrapped = true;
 
-	self.SW_VERSION = '4.0.3';
+	self.SW_VERSION = '4.0.4';
 
 	const originalLog = console.log;
 	const originalWarn = console.warn;

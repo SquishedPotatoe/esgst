@@ -20,6 +20,7 @@ class Permissions {
 			},
 			cookies: {
 				messages: {
+					ge: 'Required by Giveaway Extractor when checking eligibility and when unlocking giveaways from SGTools',
 					manipulateCookies: 'Required if Temporarily modify Steam cookies during requests is enabled. Used by Game Categories to retrieve age gated content',
 				},
 				values: ['cookies'],

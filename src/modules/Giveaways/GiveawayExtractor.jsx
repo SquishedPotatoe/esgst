@@ -49,6 +49,9 @@ class GiveawaysGiveawayExtractor extends Module {
 					<li>
 						This feature is useful for extracting trains (multiple giveaways linked to each other).
 					</li>
+					<li>
+						To check eligibility or unlock giveaways from SGTools you must be logged in to <a href="https://www.sgtools.info/">SGTools</a>.
+					</li>
 				</ul>
 			),
 			features: {
@@ -75,6 +78,7 @@ class GiveawaysGiveawayExtractor extends Module {
 				},
 				ge_sgtga: {
 					conflicts: ['ge_sgt'],
+					permissions: ['sgTools', 'cookies'],
 					features: {
 						ge_sgtga_u: {
 							name: 'Automatically unlock SGTools giveaways that have not yet been unlocked.',
@@ -360,11 +364,22 @@ class GiveawaysGiveawayExtractor extends Module {
 			null,
 			Settings.get('ge_ignoreGiveawayComments')
 		);
+		new ToggleSwitch(
+			popout.popout,
+			'ge_skipEndedGiveaways',
+			null,
+			'Do not show ended giveaways in results.',
+			false,
+			false,
+			'With this option enabled, ended giveaways will not be shown and not be followed more than one step ( in case they lead to an active giveaway ), but if that step is also ended extraction stops there.',
+			Settings.get('ge_skipEndedGiveaways')
+		);
 		ge.extractOnward = Settings.get('ge_extractOnward');
 		ge.flushCache = Settings.get('ge_flushCache');
 		ge.flushCacheHours = Settings.get('ge_flushCacheHours');
 		ge.ignoreDiscussionComments = Settings.get('ge_ignoreDiscussionComments');
 		ge.ignoreGiveawayComments = Settings.get('ge_ignoreGiveawayComments');
+		ge.skipEndedGiveaways = Settings.get('ge_skipEndedGiveaways');
 		ge.cacheWarning = null;
 		const onExtractClick = () => {
 			return new Promise((resolve) => {
@@ -379,6 +394,7 @@ class GiveawaysGiveawayExtractor extends Module {
 						ge.extractOnward = Settings.get('ge_extractOnward');
 						ge.ignoreDiscussionComments = Settings.get('ge_ignoreDiscussionComments');
 						ge.ignoreGiveawayComments = Settings.get('ge_ignoreGiveawayComments');
+						ge.skipEndedGiveaways = Settings.get('ge_skipEndedGiveaways');
 						ge.count = 0;
 						ge.endless = 0;
 						ge.total = 0;
@@ -631,12 +647,150 @@ class GiveawaysGiveawayExtractor extends Module {
 		}
 	}
 
-	ge_extractGiveaways(ge, giveaways, i, n, callback) {
+	ge_buildSgToolsGiveaway(data, code) {
+		const sg = data?.sg;
+		if (!sg?.name) return null;
+
+		const url = `https://www.sgtools.info/giveaways/${code}`;
+		const startTime = new Date(sg.created_at).getTime();
+		const endTime = new Date(sg.ends_at).getTime();
+		if (Number.isNaN(startTime) || Number.isNaN(endTime)) return null;
+
+		const copies = Number(sg.copies) || 1;
+		const points = Number(sg.points) || 0;
+		const steamUrl = sg.steam_url || '';
+		const gameId = steamUrl.match(/store\.steampowered\.com\/(?:app|sub|bundle)\/(\d+)/)?.[1];
+		const ended = endTime < Date.now();
+		const creator = data.creator || {};
+		const creatorName = creator.sg_name || creator.persona_name || 'unknown';
+		const creatorUrl = creator.sg_name ? `/user/${encodeURIComponent(creator.sg_name)}` : url;
+		const attributes = { class: 'giveaway__row-outer-wrap' };
+		if (gameId) attributes['data-game-id'] = gameId;
+
+		return {
+			code,
+			html: [
+				{
+					attributes,
+					type: 'div',
+					children: [
+						{
+							attributes: { class: 'giveaway__row-inner-wrap' },
+							type: 'div',
+							children: [
+								{
+									attributes: { class: 'giveaway__summary' },
+									type: 'div',
+									children: [
+										{
+											attributes: { class: 'giveaway__heading' },
+											type: 'h2',
+											children: [
+												{ attributes: { class: 'giveaway__heading__name', href: url, 'data-draggable-id': 'name' }, text: sg.name, type: 'a' },
+												...(copies > 1 ? [{ attributes: { class: 'giveaway__heading__thin', 'data-draggable-id': 'copies' }, text: ` (${copies} Copies)`, type: 'span' }] : []),
+												{ attributes: { class: 'giveaway__heading__thin', 'data-draggable-id': 'points' }, text: ` (${points}P)`, type: 'span' },
+												...(steamUrl ? [{
+													attributes: { class: 'giveaway__icon', href: steamUrl, rel: 'nofollow noopener', target: '_blank', 'data-draggable-id': 'steam' },
+													type: 'a',
+													children: [{ attributes: { class: 'fa fa-fw fa-steam' }, type: 'i' }],
+												}] : []),
+												...(gameId ? [
+													{
+														attributes: {
+															class: 'giveaway__icon',
+															href: `/giveaways/search?app=${gameId}`,
+															title: `Free Steam Giveaways and Keys for ${sg.name}`,
+															['data-draggable-id']: 'search',
+														},
+														type: 'a',
+														children: [{ attributes: { class: 'fa fa-fw fa-search' }, type: 'i' }],
+													},
+													{
+														attributes: {
+															class: 'fa fa-eye-slash giveaway__hide giveaway__icon',
+															title: 'Hide all giveaways for this game',
+															['data-draggable-id']: 'hideGame',
+														},
+														type: 'i',
+													},
+												] : []),
+											],
+										},
+										{
+											attributes: { class: 'giveaway__columns' },
+											type: 'div',
+											children: [
+												{
+													attributes: { 'data-draggable-id': 'endTime' },
+													type: 'div',
+													children: [
+														{ attributes: { class: 'fa fa-clock-o' }, type: 'i' },
+														{ attributes: { 'data-timestamp': endTime / 1000 }, text: ended ? `Ended ${common.getTimeSince(endTime)} ago` : common.getTimeSince(endTime, true), type: 'span' },
+														...(ended ? [] : [{ text: ' remaining', type: 'node' }]),
+													],
+												},
+												{
+													attributes: { class: 'giveaway__column--width-fill text-right', 'data-draggable-id': 'startTime' },
+													type: 'div',
+													children: [
+														{ attributes: { 'data-timestamp': startTime / 1000 }, text: common.getTimeSince(startTime), type: 'span' },
+														{ text: ' ago by ', type: 'node' },
+														{ attributes: { class: 'giveaway__username', href: creatorUrl }, text: creatorName, type: 'a' },
+													],
+												},
+											],
+										},
+										{
+											attributes: { class: 'giveaway__links esgst-giveaway-links' },
+											type: 'div',
+											children: [
+												{
+													attributes: { href: `${url}/entries`, 'data-draggable-id': 'entries' },
+													type: 'a',
+													children: [
+														{ attributes: { class: 'fa fa-tag' }, type: 'i' },
+														{ text: '0 entries', type: 'span' },
+													],
+												},
+												{
+													attributes: { href: `${url}/comments`, 'data-draggable-id': 'comments' },
+													type: 'a',
+													children: [
+														{ attributes: { class: 'fa fa-comment' }, type: 'i' },
+														{ text: '0 comments', type: 'span' },
+													],
+												},
+											],
+										},
+										{ attributes: { class: 'giveaway__columns esgst-giveaway-panel' }, type: 'div' },
+									],
+								},
+								...(creator.avatar ? [{
+									attributes: { class: 'giveaway_image_avatar', href: creatorUrl, style: `background-image: url(${creator.avatar})` },
+									type: 'a',
+								}] : []),
+								{
+									attributes: { class: 'giveaway_image_thumbnail', href: url, style: `background-image: url(${sg.img_url || ''})` },
+									type: 'a',
+								},
+							],
+						},
+					],
+				},
+			],
+			points,
+			started: startTime <= Date.now(),
+			timestamp: endTime,
+		};
+	}
+
+	ge_extractGiveaways(ge, giveaways, i, n, callback, parentEnded = false) {
 		if (!ge.isCanceled) {
 			if (i < n) {
 				// noinspection JSIgnoredPromiseFromCall
 				this.ge_extractGiveaway(ge, giveaways[i], () =>
-					window.setTimeout(this.ge_extractGiveaways.bind(this), 0, ge, giveaways, ++i, n, callback)
+					window.setTimeout(this.ge_extractGiveaways.bind(this), 0, ge, giveaways, ++i, n, callback, parentEnded),
+					parentEnded
 				);
 			} else {
 				callback();
@@ -644,7 +798,7 @@ class GiveawaysGiveawayExtractor extends Module {
 		}
 	}
 
-	async ge_extractGiveaway(ge, code, callback) {
+	async ge_extractGiveaway(ge, code, callback, parentEnded = false) {
 		if (!ge.isCanceled) {
 			if (ge.isDivided && ge.count === 50) {
 				let children, filtered, i;
@@ -667,8 +821,18 @@ class GiveawaysGiveawayExtractor extends Module {
 					this.checkScroll(ge, filtered);
 				}
 			} else {
+				if (ge.count === 0 && ge.extracted.length === 0 && ge.failedSgTools?.length) {
+					ge.failedSgTools = [];
+					if (ge.sgToolsProgressBar) {
+						ge.sgToolsProgressBar.hide();
+						if (ge.sgToolsProgressBar.message) {
+							ge.sgToolsProgressBar.message.innerHTML = '';
+						}
+					}
+				}
 				if (ge.extracted.indexOf(code) < 0) {
 					let sgTools = code.length > 5;
+					let sgToolsData = null;
 					if (sgTools) {
 						if (
 							Settings.get('ge_sgt') &&
@@ -683,21 +847,86 @@ class GiveawaysGiveawayExtractor extends Module {
 						}
 						if (Settings.get('ge_sgtga')) {
 							try {
-								if (Settings.get('ge_sgtga_u')) {
-									await FetchRequest.get(`https://www.sgtools.info/giveaways/${code}/check`, {
-										queue: true,
-									});
+								if (!(await permissions.contains([['sgTools', 'cookies']]))) {
+									throw new Error(permissions.getMessage([['sgTools', 'cookies']]));
 								}
-								const response = await FetchRequest.get(
-									`https://www.sgtools.info/giveaways/${code}/getLink`,
+								try {
+									const infoResponse = await FetchRequest.get(
+										`https://www.sgtools.info/api/v1/giveaways/${code}`,
+										{ headers: { Accept: 'application/json' } }
+									);
+									sgToolsData = infoResponse.json || (infoResponse.text ? JSON.parse(infoResponse.text) : null);
+								} catch (e) {}
+
+								if (Settings.get('ge_sgtga_u')) {
+									const checkResponse = await FetchRequest.post(
+										`https://www.sgtools.info/api/v1/giveaways/${code}/check`,
+										{
+											queue: true,
+											headers: {
+												'Accept': 'application/json',
+												'Content-Type': 'application/json',
+											},
+											data: JSON.stringify({}),
+										}
+									);
+									const checkData = checkResponse.json || (checkResponse.text ? JSON.parse(checkResponse.text) : {});
+									if (checkData.success === false) {
+										ge.failedSgTools = ge.failedSgTools || [];
+										const gameName = sgToolsData?.sg?.name || code;
+										if (!ge.failedSgTools.some(item => item.includes(`/${code}"`))) {
+											const failureReason = checkData.error ? ` (${checkData.error})` : '';
+											ge.failedSgTools.push(
+												`<a href="https://www.sgtools.info/giveaways/${code}" target="_blank" rel="noopener noreferrer">${gameName}</a>${failureReason}`
+											);
+										}
+										if (!ge.sgToolsProgressBar && ge.popup?.description) {
+											ge.sgToolsProgressBar = NotificationBar.create()
+												.insert(ge.progressBar?.nodes?.outer, 'afterend')
+												.hide();
+										}
+										if (ge.sgToolsProgressBar) {
+											ge.sgToolsProgressBar
+												.show()
+												.setWarning(
+													`${ge.failedSgTools.length} SGTools giveaway check(s) failed. (Hover to view details)`
+												);
+
+											const warningElem = ge.sgToolsProgressBar.nodes?.outer;
+
+											if (warningElem) {
+												warningElem.classList.add('esgst-sgtools-bar');
+												common.createTooltip(
+													warningElem,
+													ge.failedSgTools.join('<br>')
+												);
+											}
+										}
+
+										ge.extracted.push(code);
+										callback();
+										return;
+									}
+								}
+								const linkResponse = await FetchRequest.post(
+									`https://www.sgtools.info/api/v1/giveaways/${code}/getLink`,
 									{
 										queue: true,
+										headers: {
+											'Accept': 'application/json',
+											'Content-Type': 'application/json',
+										},
+										data: JSON.stringify({}),
 									}
 								);
-								if (response.json && response.json.url) {
-									ge.extracted.push(code);
-									code = response.json.url.match(/\/giveaway\/(.{5})/)[1];
-									sgTools = false;
+								const linkData = linkResponse.json || (linkResponse.text ? JSON.parse(linkResponse.text) : {});
+								if (linkData && linkData.url) {
+									const match = linkData.url.match(/\/giveaway\/([a-zA-Z0-9]{5})/);
+									if (match) {
+										ge.extracted.push(code);
+										code = match[1];
+										sgTools = false;
+									}
 								}
 							} catch (error) {
 								Logger.warning(error.message, error.stack);
@@ -707,33 +936,49 @@ class GiveawaysGiveawayExtractor extends Module {
 					if (ge.extracted.indexOf(code) < 0) {
 						let bumpLink, button, giveaway, giveaways, n, responseHtml;
 						try {
-							let response = await FetchRequest.get(
-								sgTools ? `https://www.sgtools.info/giveaways/${code}` : `/giveaway/${code}/`
-							);
-							responseHtml = response.html;
-							button = responseHtml.getElementsByClassName('sidebar__error')[0];
-							giveaway = await buildGiveaway(
-								responseHtml,
-								response.url,
-								button && button.textContent
-							);
-						} catch (error) {}
+							if (sgTools) {
+								if (!sgToolsData) {
+									const response = await FetchRequest.get(
+										`https://www.sgtools.info/api/v1/giveaways/${code}`,
+										{ headers: { Accept: 'application/json' } }
+									);
+									sgToolsData = response.json || (response.text ? JSON.parse(response.text) : null);
+								}
+								console.log('[ESGST] SGTools giveaway response', sgToolsData);
+								giveaway = this.ge_buildSgToolsGiveaway(sgToolsData, code);
+								console.log('[ESGST] SGTools giveaway card', giveaway);
+							} else {
+								let response = await FetchRequest.get(`/giveaway/${code}/`);
+								responseHtml = response.html;
+								button = responseHtml.getElementsByClassName('sidebar__error')[0];
+								giveaway = await buildGiveaway(
+									responseHtml,
+									response.url,
+									button && button.textContent
+								);
+							}
+						} catch (error) {
+							console.error('[ESGST] SGTools giveaway fallback failed', error, error.stack);
+						}
 						if (ge.isCanceled) {
 							return;
 						}
 						if (giveaway) {
-							createElements(ge.results, 'beforeend', giveaway.html);
-							ge.results.lastElementChild.classList.add(`esgst-es-page-${ge.endless}`);
-							if (responseHtml?.querySelector('.page__description')) {
-								ge.results.lastElementChild.querySelector('.giveaway__row-inner-wrap')?.classList.add('has-description');
+							const isEnded = ge.skipEndedGiveaways && giveaway.timestamp < Date.now();
+							if (!isEnded) {
+								createElements(ge.results, 'beforeend', giveaway.html);
+								ge.results.lastElementChild.classList.add(`esgst-es-page-${ge.endless}`);
+								if (responseHtml?.querySelector('.page__description')) {
+									ge.results.lastElementChild.querySelector('.giveaway__row-inner-wrap')?.classList.add('has-description');
+								}
+								giveaway.html = ge.results.lastElementChild.outerHTML;
+								ge.cache[ge.cacheId].codes.push(code);
+								ge.cache[ge.cacheId].giveaways[code] = giveaway;
+								ge.points += giveaway.points;
+								ge.count += 1;
+								ge.total += 1;
+								ge.progressBarCounter.textContent = ge.total;
 							}
-							giveaway.html = ge.results.lastElementChild.outerHTML;
-							ge.cache[ge.cacheId].codes.push(code);
-							ge.cache[ge.cacheId].giveaways[code] = giveaway;
-							ge.points += giveaway.points;
-							ge.count += 1;
-							ge.total += 1;
-							ge.progressBarCounter.textContent = ge.total;
 							ge.extracted.push(code);
 							if (sgTools) {
 								callback();
@@ -745,15 +990,19 @@ class GiveawaysGiveawayExtractor extends Module {
 										ge.cache[ge.cacheId].bumpLink = ge.bumpLink;
 									}
 								}
-								giveaways = this.ge_getGiveaways(ge, responseHtml);
-								n = giveaways.length;
-								if (n > 0) {
-									window.setTimeout(
-										() => this.ge_extractGiveaways(ge, giveaways, 0, n, callback),
-										0
-									);
-								} else {
+								if (isEnded && parentEnded) {
 									callback();
+								} else {
+									giveaways = this.ge_getGiveaways(ge, responseHtml);
+									n = giveaways.length;
+									if (n > 0) {
+										window.setTimeout(
+											() => this.ge_extractGiveaways(ge, giveaways, 0, n, callback, isEnded),
+											0
+										);
+									} else {
+										callback();
+									}
 								}
 							}
 						} else if (!sgTools) {
@@ -1022,8 +1271,11 @@ class GiveawaysGiveawayExtractor extends Module {
 			});
 		}
 		items[0].children.push({
+			type: 'p',
+			attributes: {
+				style: 'margin: 5px 0; display: block; font-size: 12px;',
+			},
 			text: `${ge.points}P required to enter all giveaways.`,
-			type: 'node',
 		});
 		const ithLinks = ge.cache?.[ge.cacheId]?.ithLinks ?? [];
 		const jigidiLinks = ge.cache?.[ge.cacheId]?.jigidiLinks ?? [];
@@ -1042,7 +1294,11 @@ class GiveawaysGiveawayExtractor extends Module {
 			);
 		}
 		createElements(ge.results, 'afterbegin', items);
-		createElements(ge.results, 'beforeend', items);
+		const hasGiveaways = ge.results.children.length > items.length;
+
+		if (hasGiveaways) {
+			createElements(ge.results, 'beforeend', items);
+		}
 		ge.extractButton.build(5);
 		ge.reExtract = true;
 		ge.isComplete = true;
