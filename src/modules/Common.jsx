@@ -968,10 +968,31 @@ class Common extends Module {
 						st: true,
 					},
 					notifyNewVersion: {
+						description: () => (
+							<fragment>
+								<ul>
+									<li>ESGST checks GitHub for new versions every 7 days by default. You can also check now.</li>
+								</ul>
+								<div className="esgst-button-group">
+									<div id="manualCheck" className="esgst-button form__saving-button" style={{ cursor: 'pointer' }}>
+										<i className="fa fa-check-circle"></i> Check now
+									</div>
+								</div>
+							</fragment>
+						),
 						name: 'Notify when a new ESGST version is available.',
 						extensionOnly: true,
 						sg: true,
 						st: true,
+						inputItems: [
+							{
+								id: 'updateCheckInterval',
+								prefix: 'Check for updates every ',
+								suffix: ' days (default is 7)',
+								attributes: { type: 'number', min: '1', step: '1' },
+							},
+						],
+						permissions: ['github'],
 					},
 					makeSectionsCollapsible: {
 						description: () => (
@@ -1260,8 +1281,8 @@ class Common extends Module {
 						<fragment>
 							ESGST has updated from v{Shared.esgst.previousVersion} to v
 							{Shared.esgst.currentVersion}! Please go to{' '}
-							<a href="https://github.com/SquishedPotatoe/esgst/-/releases">
-								https://github.com/SquishedPotatoe/esgst/-/releases
+							<a href={`https://github.com/SquishedPotatoe/esgst/releases/tag/v${Shared.esgst.currentVersion}`}>
+								https://github.com/SquishedPotatoe/esgst/releases/tag/v{Shared.esgst.currentVersion}
 							</a>{' '}
 							to view the changelog. If you want the changelog to be automatically retrieved from
 							GitHub and shown in this popup when updating, then go to the settings menu and grant
@@ -1345,6 +1366,59 @@ class Common extends Module {
 
 			Shared.esgst.isUpdate = false;
 		}
+
+		const browserInfo = await this.getBrowserInfo().catch(() => ({ name: '?' }));
+		if (browserInfo.name === 'userscript') return;
+
+		browser.runtime.sendMessage({ action: 'pendingUpdateCheck' }).catch(() => {});
+		document.body.addEventListener('click', async (event) => {
+			const button = event.target.closest('#manualCheck');
+			if (!button) return;
+			const originalHtml = button.innerHTML;
+			button.innerHTML = '<i class="fa fa-circle-o-notch fa-spin"></i> Checking...';
+			button.disabled = true;
+			try {
+				await browser.runtime.sendMessage({ action: 'manualCheckVersion' });
+			} finally {
+				button.innerHTML = originalHtml;
+				button.disabled = false;
+			}
+		});
+	}
+
+	showUpdatePopup(currentVersion, latestVersion) {
+		document.querySelectorAll('.esgst-update-bar').forEach((element) => element.remove());
+		const bar = (
+			<div className="esgst-notification-bar notification notification--info esgst-update-bar">
+				<i className="fa fa-info-circle"></i>
+				<span>A new ESGST version is available: <strong>{latestVersion}</strong> (you have {currentVersion}).</span>
+				<a href={`https://github.com/SquishedPotatoe/esgst/releases/tag/v${latestVersion}`} target="_blank" className="esgst-update-link"> View Release</a>
+				<button className="esgst-button form__saving-button esgst-update-dismiss"><i className="fa fa-times"></i><span> close</span></button>
+			</div>
+		);
+		DOM.insert(document.body, 'afterbegin', bar);
+		document.querySelector('.esgst-update-dismiss')?.addEventListener('click', () => {
+			document.querySelector('.esgst-update-bar')?.remove();
+			browser.runtime.sendMessage({ action: 'dismissUpdateNotification', version: latestVersion }).catch(() => {});
+		});
+	}
+
+	showUpToDatePopup(currentVersion, latestVersion) {
+		new Popup({
+			addScrollable: true,
+			icon: 'fa-bell',
+			isTemp: true,
+			title: `You are already running the latest version of ESGST. Latest version: ${latestVersion || currentVersion} (you have ${currentVersion}).`,
+		}).open();
+	}
+
+	showUpdateCheckFailedPopup() {
+		new Popup({
+			addScrollable: true,
+			icon: 'fa-times',
+			isTemp: true,
+			title: 'Unable to check GitHub for a newer ESGST version. Please try again later.',
+		}).open();
 	}
 
 	async parseMarkdown(context, string) {

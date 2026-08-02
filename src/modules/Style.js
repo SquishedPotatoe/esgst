@@ -1876,6 +1876,30 @@ function addStyle() {
 		text-decoration: underline;
 	}
 
+	.esgst-update-bar {
+		display: flex;
+		font-size: large;
+		gap: 10px;
+		justify-content: center;
+		line-height: 32px!important;
+		margin: 8px 25px;
+		padding: 7px 15px;
+		position: relative;
+		top: 0;
+		z-index: 2000;
+	}
+
+	.esgst-update-bar i {
+		font-size: 18px;
+		line-height: 32px;
+
+	}
+
+	.esgst-update-dismiss {
+		font-size: large;
+		cursor: pointer;
+	}
+
 	.esgst-popup-modal {
 		background-color: rgba(60, 66, 77, 0.7);
 		bottom: 0;

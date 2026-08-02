@@ -50,14 +50,14 @@ import { esgstIcons } from './lib/FontawesomeIcons';
 				case 'storageChanged':
 					Shared.common.getChanges(message.values.changes, message.values.areaName);
 					break;
-				case 'update':
-					common.createConfirmation(
-						`Hi! A new version of ESGST (${message.values.version}) is available. Do you want to force an update now? If you choose to force an update, ESGST will stop working in any SteamGifts/SteamTrades tab that is open, along with any operation that you might be performing (such as syncing, checking something etc), so you will have to refresh them. If you choose not to force an update, your browser will automatically update the extension when you are not using it (for example, when you restart the browser).`,
-						() => {
-							browser.runtime.sendMessage({ action: 'reload' }).then(() => {});
-						},
-						() => {}
-					);
+				case 'showUpdatePopup':
+					common.showUpdatePopup(message.values.currentVersion, message.values.latestVersion);
+					break;
+				case 'showUpToDatePopup':
+					common.showUpToDatePopup(message.values.currentVersion, message.values.latestVersion);
+					break;
+				case 'showUpdateCheckFailed':
+					common.showUpdateCheckFailedPopup();
 					break;
 			}
 		});

@@ -83,32 +83,105 @@ loadStorage().then(async () => {
 			await updateTab(currentTab.id, { active: true });
 		}
 	}
-	if (settings.notifyNewVersion_sg || settings.notifyNewVersion_st) {
-		/** @type {string[]} */
-		const urls = [];
-		if (settings.notifyNewVersion_sg) {
-			urls.push('https://www.steamgifts.com');
-		}
-		if (settings.notifyNewVersion_st) {
-			urls.push('https://www.steamtrades.com');
-		}
-		browser.runtime.onUpdateAvailable.addListener((details) => {
-			const tab = openTabs.find((tab) => urls.some((url) => tab.url.startsWith(url)));
-			if (tab) {
-				browser.tabs
-					.sendMessage(
-						tab.id,
-						JSON.stringify({
-							action: 'update',
-							values: details,
-						})
-					)
-					.then(() => {});
-			} else {
-				browser.runtime.reload();
-			}
-		});
+	await scheduleUpdateChecks(settings);
+});
+
+function isNewerVersion(candidate, current) {
+	const candidateParts = candidate.split('.').map(Number);
+	const currentParts = current.split('.').map(Number);
+	for (let i = 0; i < Math.max(candidateParts.length, currentParts.length); i += 1) {
+		const candidatePart = candidateParts[i] || 0;
+		const currentPart = currentParts[i] || 0;
+		if (candidatePart > currentPart) return true;
+		if (candidatePart < currentPart) return false;
 	}
+	return false;
+}
+
+function getUpdateUrls(settings) {
+	const urls = [];
+	if (settings.notifyNewVersion_sg) urls.push('https://www.steamgifts.com');
+	if (settings.notifyNewVersion_st) urls.push('https://www.steamtrades.com');
+	return urls;
+}
+
+async function scheduleUpdateChecks(settings) {
+	if (!settings.notifyNewVersion_sg && !settings.notifyNewVersion_st) {
+		await browser.alarms.clear('checkUpdates');
+		return;
+	}
+	const periodInMinutes = Math.max(1, Number(settings.updateCheckInterval) || 7) * 24 * 60;
+	const existing = await browser.alarms.get('checkUpdates');
+	if (!existing || existing.periodInMinutes !== periodInMinutes) {
+		await browser.alarms.clear('checkUpdates');
+		await browser.alarms.create('checkUpdates', { periodInMinutes });
+	}
+}
+
+async function checkRemoteVersion() {
+	try {
+		const response = await fetch('https://api.github.com/repos/SquishedPotatoe/esgst/tags?per_page=100');
+		if (!response.ok) throw new Error(`GitHub returned ${response.status}`);
+		const versions = (await response.json())
+			.map((tag) => /^v(\d+\.\d+\.\d+)$/.exec(tag.name))
+			.filter(Boolean)
+			.map((match) => match[1]);
+		const latestVersion = versions.reduce(
+			(latest, version) => (!latest || isNewerVersion(version, latest) ? version : latest),
+			null
+		);
+		const currentVersion = browser.runtime.getManifest().version;
+		return { currentVersion, latestVersion, isNewVersion: !!latestVersion && isNewerVersion(latestVersion, currentVersion) };
+	} catch (error) {
+		console.warn('[ESGST] Update check failed', error);
+		return { currentVersion: browser.runtime.getManifest().version, latestVersion: null, isNewVersion: false };
+	}
+}
+
+async function sendUpdateMessage(tabId, action, values) {
+	try {
+		await browser.tabs.sendMessage(tabId, JSON.stringify({ action, values }));
+	} catch (error) {
+		console.warn('[ESGST] Failed to send update notification', error);
+	}
+}
+
+async function notifyAboutUpdate(currentVersion, latestVersion) {
+	const { settings: settingsValue = '{}', updateCheckState = {} } = await browser.storage.local.get(['settings', 'updateCheckState']);
+	const settings = JSON.parse(settingsValue);
+	if (updateCheckState.lastNotifiedVersion === latestVersion) return;
+	const state = { ...updateCheckState, lastNotifiedVersion: latestVersion };
+	const matchingTabs = openTabs.filter((tab) => getUpdateUrls(settings).some((url) => tab.url.startsWith(url)));
+	if (matchingTabs.length) {
+		await Promise.all(matchingTabs.map((tab) => sendUpdateMessage(tab.id, 'showUpdatePopup', { currentVersion, latestVersion })));
+		delete state.pendingUpdateNotification;
+	} else {
+		state.pendingUpdateNotification = latestVersion;
+	}
+	await browser.storage.local.set({ updateCheckState: state });
+}
+
+async function deliverPendingUpdate(tab) {
+	const { updateCheckState = {} } = await browser.storage.local.get('updateCheckState');
+	if (!updateCheckState.pendingUpdateNotification) return;
+	await sendUpdateMessage(tab.id, 'showUpdatePopup', {
+		currentVersion: browser.runtime.getManifest().version,
+		latestVersion: updateCheckState.pendingUpdateNotification,
+	});
+	delete updateCheckState.pendingUpdateNotification;
+	await browser.storage.local.set({ updateCheckState });
+}
+
+browser.alarms.onAlarm.addListener(async (alarm) => {
+	if (alarm.name !== 'checkUpdates') return;
+	const { currentVersion, latestVersion, isNewVersion } = await checkRemoteVersion();
+	if (isNewVersion) await notifyAboutUpdate(currentVersion, latestVersion);
+});
+
+browser.storage.onChanged.addListener((changes, areaName) => {
+	if (areaName !== 'local' || !changes.settings) return;
+	// noinspection JSIgnoredPromiseFromCall
+	scheduleUpdateChecks(JSON.parse(changes.settings.newValue || '{}'));
 });
 
 browser.tabs.onRemoved.addListener(async (tabId) => {
@@ -395,10 +468,33 @@ browser.runtime.onMessage.addListener((request, sender) => {
 				openTab(request.url);
 				break;
 			case 'register_tab': {
-				openTabs.push({
+				const tab = {
 					id: sender.tab.id,
 					url: request.url,
-				});
+				};
+				openTabs = openTabs.filter((openTab) => openTab.id !== tab.id);
+				openTabs.push(tab);
+				await deliverPendingUpdate(tab);
+				resolve();
+				break;
+			}
+			case 'pendingUpdateCheck':
+				if (sender.tab) await deliverPendingUpdate({ id: sender.tab.id, url: sender.tab.url });
+				resolve();
+				break;
+			case 'manualCheckVersion': {
+				const result = await checkRemoteVersion();
+				if (sender.tab) {
+					const action = result.isNewVersion ? 'showUpdatePopup' : result.latestVersion ? 'showUpToDatePopup' : 'showUpdateCheckFailed';
+					await sendUpdateMessage(sender.tab.id, action, result);
+				}
+				resolve(result);
+				break;
+			}
+			case 'dismissUpdateNotification': {
+				const { updateCheckState = {} } = await browser.storage.local.get('updateCheckState');
+				delete updateCheckState.pendingUpdateNotification;
+				await browser.storage.local.set({ updateCheckState });
 				resolve();
 				break;
 			}

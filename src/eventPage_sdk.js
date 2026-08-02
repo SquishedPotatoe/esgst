@@ -16,8 +16,10 @@ const file = FileUtils.getFile('ProfD', ['esgst.sqlite']);
 const lastRequests = {};
 const locks = {};
 const workers = new Set();
+const workerUrls = new Map();
 let storage = {};
 let tdsData = [];
+let updateCheckTimer = null;
 
 RequestQueue.getLastRequest = (key) => {
 	return lastRequests[key] ?? 0;
@@ -79,6 +81,7 @@ function load() {
 
 	loadStorage().then(async () => {
 		const settings = storage.settings ? JSON.parse(storage.settings) : {};
+		scheduleUpdateChecks(settings);
 		if (!settings.activateTab_sg && !settings.activateTab_st) {
 			return;
 		}
@@ -193,6 +196,7 @@ function load() {
 			worker.port.on('setValues', async (request) => {
 				const values = JSON.parse(request.values);
 				await handle_storage(TYPE_SET, values);
+				if (values.settings) scheduleUpdateChecks(JSON.parse(values.settings));
 				worker.port.emit(`setValues_${request.uuid}_response`, 'null');
 				const changes = {};
 				for (const key in values) {
@@ -214,7 +218,33 @@ function load() {
 			});
 
 			worker.port.on('register_tab', async (request) => {
+				workerUrls.set(worker, request.url);
+				await deliverPendingUpdate(worker);
 				worker.port.emit(`register_tab_${request.uuid}_response`, 'null');
+			});
+
+			worker.port.on('pendingUpdateCheck', async (request) => {
+				await deliverPendingUpdate(worker);
+				worker.port.emit(`pendingUpdateCheck_${request.uuid}_response`, 'null');
+			});
+
+			worker.port.on('manualCheckVersion', async (request) => {
+				const result = await checkRemoteVersion();
+				const action = result.isNewVersion
+					? 'showUpdatePopup'
+					: result.latestVersion
+						? 'showUpToDatePopup'
+						: 'showUpdateCheckFailed';
+				sendUpdateMessage(worker, action, result);
+				worker.port.emit(`manualCheckVersion_${request.uuid}_response`, JSON.stringify(result));
+			});
+
+			worker.port.on('dismissUpdateNotification', async (request) => {
+				const values = await handle_storage(TYPE_GET, { updateCheckState: '{}' });
+				const updateCheckState = JSON.parse(values.updateCheckState);
+				delete updateCheckState.pendingUpdateNotification;
+				await handle_storage(TYPE_SET, { updateCheckState: JSON.stringify(updateCheckState) });
+				worker.port.emit(`dismissUpdateNotification_${request.uuid}_response`, 'null');
 			});
 
 			worker.port.on('update_adareqlim', async (request) => {
@@ -223,6 +253,102 @@ function load() {
 			});
 		},
 	});
+}
+
+function isNewerVersion(candidate, current) {
+	const candidateParts = candidate.split('.').map(Number);
+	const currentParts = current.split('.').map(Number);
+	for (let i = 0; i < Math.max(candidateParts.length, currentParts.length); i += 1) {
+		const candidatePart = candidateParts[i] || 0;
+		const currentPart = currentParts[i] || 0;
+		if (candidatePart > currentPart) return true;
+		if (candidatePart < currentPart) return false;
+	}
+	return false;
+}
+
+function getUpdateUrls(settings) {
+	const urls = [];
+	if (settings.notifyNewVersion_sg) urls.push('https://www.steamgifts.com');
+	if (settings.notifyNewVersion_st) urls.push('https://www.steamtrades.com');
+	return urls;
+}
+
+function scheduleUpdateChecks(settings) {
+	if (updateCheckTimer) {
+		clearTimeout(updateCheckTimer);
+		updateCheckTimer = null;
+	}
+	if (!settings.notifyNewVersion_sg && !settings.notifyNewVersion_st) return;
+
+	const period = Math.max(1, Number(settings.updateCheckInterval) || 7) * 24 * 60 * 60 * 1000;
+	updateCheckTimer = setTimeout(async () => {
+		const result = await checkRemoteVersion();
+		if (result.isNewVersion) await notifyAboutUpdate(result.currentVersion, result.latestVersion);
+		const values = await handle_storage(TYPE_GET, { settings: '{}' });
+		scheduleUpdateChecks(JSON.parse(values.settings));
+	}, period);
+}
+
+async function checkRemoteVersion() {
+	try {
+		const response = await fetch('https://api.github.com/repos/SquishedPotatoe/esgst/tags?per_page=100');
+		if (!response.ok) throw new Error(`GitHub returned ${response.status}`);
+		const versions = (await response.json())
+			.map((tag) => /^v(\d+\.\d+\.\d+)$/.exec(tag.name))
+			.filter(Boolean)
+			.map((match) => match[1]);
+		const latestVersion = versions.reduce(
+			(latest, version) => (!latest || isNewerVersion(version, latest) ? version : latest),
+			null
+		);
+		const currentVersion = packageJson.version;
+		return { currentVersion, latestVersion, isNewVersion: !!latestVersion && isNewerVersion(latestVersion, currentVersion) };
+	} catch (error) {
+		console.warn('[ESGST] Update check failed', error);
+		return { currentVersion: packageJson.version, latestVersion: null, isNewVersion: false };
+	}
+}
+
+function sendUpdateMessage(worker, action, values) {
+	worker.port.emit('esgstMessage', JSON.stringify({ action, values }));
+}
+
+async function notifyAboutUpdate(currentVersion, latestVersion) {
+	const values = await handle_storage(TYPE_GET, { settings: '{}', updateCheckState: '{}' });
+	const settings = JSON.parse(values.settings);
+	const updateCheckState = JSON.parse(values.updateCheckState);
+	if (updateCheckState.lastNotifiedVersion === latestVersion) return;
+
+	const state = { ...updateCheckState, lastNotifiedVersion: latestVersion };
+	const urls = getUpdateUrls(settings);
+	const matchingWorkers = Array.from(workers).filter((worker) =>
+		urls.some((url) => workerUrls.get(worker)?.startsWith(url))
+	);
+	if (matchingWorkers.length) {
+		for (const worker of matchingWorkers) {
+			sendUpdateMessage(worker, 'showUpdatePopup', { currentVersion, latestVersion });
+		}
+		delete state.pendingUpdateNotification;
+	} else {
+		state.pendingUpdateNotification = latestVersion;
+	}
+	await handle_storage(TYPE_SET, { updateCheckState: JSON.stringify(state) });
+}
+
+async function deliverPendingUpdate(worker) {
+	const values = await handle_storage(TYPE_GET, { settings: '{}', updateCheckState: '{}' });
+	const settings = JSON.parse(values.settings);
+	const updateCheckState = JSON.parse(values.updateCheckState);
+	if (!updateCheckState.pendingUpdateNotification) return;
+	if (!getUpdateUrls(settings).some((url) => workerUrls.get(worker)?.startsWith(url))) return;
+
+	sendUpdateMessage(worker, 'showUpdatePopup', {
+		currentVersion: packageJson.version,
+		latestVersion: updateCheckState.pendingUpdateNotification,
+	});
+	delete updateCheckState.pendingUpdateNotification;
+	await handle_storage(TYPE_SET, { updateCheckState: JSON.stringify(updateCheckState) });
 }
 
 function handleClick(state) {
@@ -410,6 +536,7 @@ function doFetch(parameters, request) {
 async function detachWorker(worker) {
 	//Cu.reportError(worker);
 	workers.delete(worker);
+	workerUrls.delete(worker);
 }
 
 function do_lock(lock) {
