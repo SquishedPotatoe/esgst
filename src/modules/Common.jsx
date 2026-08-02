@@ -979,16 +979,16 @@ class Common extends Module {
 									<li>
 										ESGST will check for updates every 7 days (default) and will notify you when a new version is available.
 										<br></br><br></br>
-										or you can click the "Check now" button to manually check for updates.
+										or you can click the "Check for Updates" button to manually check for updates.
 									</li>
 								</ul>
 								<div className="esgst-button-group">
 									<div
 										id="manualCheck"
-										className="esgst-button form__saving-button"
+										className="esgst-button form__saving-button btn_action white"
 										style={{ cursor: 'pointer' }}
 									>
-										<i className="fa fa-check-circle"></i> Check now
+										<i className="fa fa-check-circle"></i> Check for Updates
 									</div>
 								</div>
 							</fragment>
@@ -1292,8 +1292,11 @@ class Common extends Module {
 
 		// Manual check button
 		document.body.addEventListener('click', async e => {
-			const btn = e.target.closest('#manualCheck');
+			const btn = e.target.closest('.nav__row, .dropdown_btn, #manualCheck');
 			if (!btn) return;
+			const targetElement = btn?.querySelector('.nav__row__summary__name, span') || btn;
+			const label = targetElement?.textContent?.trim();
+			if (label !== 'Check for Updates') return;
 
 			const originalHTML = btn.innerHTML;
 			btn.innerHTML = `<i class="fa fa-circle-o-notch fa-spin"></i> Checking...`;
@@ -6001,8 +6004,9 @@ class Common extends Module {
 					onClick: this.openDonationsPopup.bind(this),
 				},
 				{
+					description: `Current Version: ${Shared.esgst.versionName}`,
 					icon: 'fa fa-fw fa-info-circle icon-grey grey',
-					name: `Current Version: ${Shared.esgst.versionName}`,
+					name: 'Check for Updates',
 				},
 			],
 			onClick: (event) => {

@@ -1896,6 +1896,7 @@ function addStyle() {
 	.esgst-update-bar {
 		display: flex;
 		font-size: large;
+		gap: 10px;
 		justify-content: center;
 		line-height: 32px!important;
 		margin: 8px 25px;
@@ -1908,13 +1909,11 @@ function addStyle() {
 	.esgst-update-bar i {
 		font-size: 18px;
 		line-height: 32px;
-		margin-right: 5px;
 	}
 
 	.esgst-update-dismiss {
 		font-size: large;
 		cursor: pointer;
-		margin-left: 10px;
 	}
 
 	.esgst-popup-modal {

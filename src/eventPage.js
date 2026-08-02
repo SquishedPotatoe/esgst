@@ -978,25 +978,33 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 					try {
 						const { latestVersion, isNewVersion } = await checkRemoteVersionSW();
 
-						if (latestVersion && isNewVersion && sender.tab?.id) {
+						if (latestVersion && sender.tab?.id) {
 							const currentVersion = chrome.runtime.getManifest().version;
-							const { swSettings = {} } = await chrome.storage.local.get('swSettings');
-							await chrome.storage.local.set({
-								swSettings: {
-									...swSettings,
-									lastNotifiedVersion: latestVersion
-								}
-							});
-							chrome.tabs.sendMessage(sender.tab.id, {
-								action: 'showUpdatePopup',
-								currentVersion,
-								latestVersion
-							});
+							if (isNewVersion) {
+								const { swSettings = {} } = await chrome.storage.local.get('swSettings');
+								await chrome.storage.local.set({
+									swSettings: {
+										...swSettings,
+										lastNotifiedVersion: latestVersion
+									}
+								});
+								chrome.tabs.sendMessage(sender.tab.id, {
+									action: 'showUpdatePopup',
+									currentVersion,
+									latestVersion
+								});
+							} else {
+								chrome.tabs.sendMessage(sender.tab.id, {
+									action: 'showUpToDatePopup',
+									currentVersion,
+									latestVersion
+								});
+							}
 						}
 						sendResponse({ success: true });
 					} catch (err) {
 						console.warn('[SW] Manual update check failed', err);
-						sendResponse({ success: false, error: err.message });
+						sendResponse({ success: false, error: 'Failed to check for updates. Please check your network connection and try again.' });
 					}
 					break;
 				}
@@ -1211,7 +1219,7 @@ async function bootstrap() {
 	if (self._bootstrapped) return;
 	self._bootstrapped = true;
 
-	self.SW_VERSION = '4.0.4';
+	self.SW_VERSION = '4.0.5';
 
 	const originalLog = console.log;
 	const originalWarn = console.warn;
