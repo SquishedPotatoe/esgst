@@ -971,11 +971,11 @@ class Common extends Module {
 						description: () => (
 							<fragment>
 								<ul>
-									<li>ESGST checks GitHub for new versions every 7 days by default. You can also check now.</li>
+									<li>ESGST checks GitHub for new versions every 7 days by default. You can also Check for Updates.</li>
 								</ul>
 								<div className="esgst-button-group">
-									<div id="manualCheck" className="esgst-button form__saving-button" style={{ cursor: 'pointer' }}>
-										<i className="fa fa-check-circle"></i> Check now
+									<div id="manualCheck" className="esgst-button form__saving-button btn_action white" style={{ cursor: 'pointer' }}>
+										<i className="fa fa-check-circle"></i> Check for Updates
 									</div>
 								</div>
 							</fragment>
@@ -1371,17 +1371,25 @@ class Common extends Module {
 		if (browserInfo.name === 'userscript') return;
 
 		browser.runtime.sendMessage({ action: 'pendingUpdateCheck' }).catch(() => {});
-		document.body.addEventListener('click', async (event) => {
-			const button = event.target.closest('#manualCheck');
-			if (!button) return;
-			const originalHtml = button.innerHTML;
-			button.innerHTML = '<i class="fa fa-circle-o-notch fa-spin"></i> Checking...';
-			button.disabled = true;
+		document.body.addEventListener('click', async e => {
+			const btn = e.target.closest('.nav__row, .dropdown_btn, #manualCheck');
+			if (!btn) return;
+			const targetElement = btn?.querySelector('.nav__row__summary__name, span') || btn;
+			const label = targetElement?.textContent?.trim();
+			if (label !== 'Check for Updates') return;
+
+			const originalHTML = btn.innerHTML;
+			btn.innerHTML = `<i class="fa fa-circle-o-notch fa-spin"></i> Checking...`;
+			btn.disabled = true;
+
 			try {
 				await browser.runtime.sendMessage({ action: 'manualCheckVersion' });
+				console.log('Manual update check triggered');
+			} catch (err) {
+				console.error('Failed to trigger manual update check', err);
 			} finally {
-				button.innerHTML = originalHtml;
-				button.disabled = false;
+				btn.innerHTML = originalHTML;
+				btn.disabled = false;
 			}
 		});
 	}
@@ -6135,6 +6143,8 @@ class Common extends Module {
 			return;
 		}
 
+		const browserInfo = await this.getBrowserInfo().catch(() => ({ name: '?' }));
+
 		Shared.header.addButtonContainer({
 			buttonImage: Shared.esgst.icon,
 			buttonName: ' ESGST',
@@ -6195,10 +6205,16 @@ class Common extends Module {
 					name: 'SteamGifts Request Log',
 					onClick: this.openRequestLog.bind(this),
 				},
-				{
-					icon: 'fa fa-fw fa-info-circle icon-grey grey',
-					name: `Current Version: ${Shared.esgst.versionName}`,
-				},
+				...(browserInfo.name !== 'userscript'
+					? [{
+						description: `Current Version: ${Shared.esgst.versionName}`,
+						icon: 'fa fa-fw fa-info-circle icon-grey grey',
+						name: 'Check for Updates',
+					}]
+					: [{
+						icon: 'fa fa-fw fa-info-circle icon-grey grey',
+						name: `Current Version: ${Shared.esgst.versionName}`,
+					}]),
 			],
 			onClick: (event) => {
 				if (!Settings.get('openSettingsInTab')) {
