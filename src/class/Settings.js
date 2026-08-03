@@ -110,20 +110,8 @@ class _Settings {
 					url: `https://www.playingappreciated.com/profile.php?u=%steamid%`,
 				},
 				{
-					label: `https://steamcdn-a.akamaihd.net/steamcommunity/public/images/avatars/0a/0a603fdbfb5d1283132c6558390ef71c1f48fc51_full.jpg`,
-					url: `https://touhou.justarchi.net/user/%steamid%/profile`,
-				},
-				{
-					label: `https://steamcdn-a.akamaihd.net/steamcommunity/public/images/avatars/1a/1ad341114c26138740b405595f9ecf140f6b647f_full.jpg`,
-					url: `https://astats.astats.nl/astats/User_Info.php?steamID64=%steamid%`,
-				},
-				{
 					label: `https://steamcdn-a.akamaihd.net/steamcommunity/public/images/avatars/41/41d0a0ca20c6b460c10e03c6ff8ef23bc6bb7f9d_full.jpg`,
 					url: `https://barter.vg/steam/%steamid%`,
-				},
-				{
-					label: 'SteamRep',
-					url: `https://steamrep.com/profiles/%steamid%`,
 				},
 			],
 			cgb_b_bgColor: '#f2d9dc',
