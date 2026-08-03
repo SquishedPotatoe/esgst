@@ -548,7 +548,7 @@ class Giveaways extends Module {
 			`.giveaway__column--invite-only, .featured__column--invite-only`
 		);
 		giveaway.regionRestricted = giveaway.outerWrap.querySelector(
-			`.giveaway__column--region-restricted:not(.touhou_giveaway_points), .featured__column--region-restricted:not(.touhou_giveaway_points)`
+			`.giveaway__column--region-restricted, .featured__column--region-restricted`
 		);
 		giveaway.group = giveaway.outerWrap.querySelector(
 			`.giveaway__column--group, .featured__column--group`
@@ -562,7 +562,6 @@ class Giveaways extends Module {
 			!giveaway.regionRestricted &&
 			!giveaway.group &&
 			!giveaway.whitelist;
-		giveaway.touhouBox = giveaway.outerWrap.querySelector('.touhou_giveaway_points');
 		if (!main || !giveawayPath) {
 			if (giveaway.inviteOnly) {
 				createElements(giveaway.inviteOnly, 'atinner', [
@@ -791,9 +790,6 @@ class Giveaways extends Module {
 		}
 		if (giveaway.sourceColumn) {
 			giveaway.sourceColumn.setAttribute('data-draggable-id', 'ged');
-		}
-		if (giveaway.touhouBox) {
-			giveaway.touhouBox.setAttribute('data-draggable-id', 'touhou');
 		}
 		return {
 			giveaway: giveaway,
