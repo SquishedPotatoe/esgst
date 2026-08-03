@@ -14,8 +14,7 @@ class UsersUserLinks extends Module {
 						Can be used in other pages through <span data-esgst-feature-id="cl_ui"></span>.
 					</li>
 					<li>
-						Comes by default with 5 links to BLAEO, Playing Appreciated, Touhou Giveaways, AStats
-						and SteamRep.
+						Comes by default with 4 links to steamtrades, BLAEO, Playing Appreciated, and Barter.vg.
 					</li>
 				</ul>
 			),
