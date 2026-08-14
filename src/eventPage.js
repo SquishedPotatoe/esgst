@@ -718,6 +718,83 @@ async function doFetch(parameters, request, sender, callbackOrPort) {
 	}
 }
 
+const LOGGED_OUT_RULE_ID_START = 1001;
+const LOGGED_OUT_RULE_ID_END = 1999;
+
+async function startLoggedOutFetch(url, tabId) {
+	try {
+		const targetUrl = new URL(url);
+		if (!targetUrl.hostname.endsWith('.steamgifts.com')) {
+			return { success: false, error: 'Logged-out requests are only supported for SteamGifts' };
+		}
+
+		const [standardCookies, partitionedCookies, rules] = await Promise.all([
+			chrome.cookies.getAll({ url: targetUrl.href }),
+			chrome.cookies.getAll({ url: targetUrl.href, partitionKey: {} }).catch(() => []),
+			chrome.declarativeNetRequest.getSessionRules(),
+		]);
+		const usedRuleIds = new Set(rules.map(rule => rule.id));
+		const ruleId = Array.from(
+			{ length: LOGGED_OUT_RULE_ID_END - LOGGED_OUT_RULE_ID_START + 1 },
+			(_, index) => LOGGED_OUT_RULE_ID_START + index
+		).find(id => !usedRuleIds.has(id));
+		if (ruleId === undefined) {
+			return { success: false, error: 'No logged-out request rule is available' };
+		}
+
+		const cookieMap = new Map(
+			[...standardCookies, ...partitionedCookies].map((c) => [c.name, c])
+		);
+
+		const cookieHeaderValue = Array.from(cookieMap.values())
+			.filter((c) => c.name !== 'PHPSESSID')
+			.map((c) => `${c.name}=${c.value}`)
+			.join('; ');
+
+		const requestHeaders = cookieHeaderValue
+			? [{ header: 'cookie', operation: 'set', value: cookieHeaderValue }]
+			: [{ header: 'cookie', operation: 'remove' }];
+
+		await chrome.declarativeNetRequest.updateSessionRules({
+			addRules: [
+				{
+					id: ruleId,
+					priority: 10,
+					action: {
+						type: 'modifyHeaders',
+						requestHeaders,
+						responseHeaders: [{ header: 'set-cookie', operation: 'remove' }],
+					},
+					condition: {
+						urlFilter: `|${targetUrl.origin}${targetUrl.pathname}${targetUrl.search}`,
+						resourceTypes: ['xmlhttprequest'],
+						...(typeof tabId === 'number' ? { tabIds: [tabId] } : {}),
+					},
+				},
+			],
+		});
+
+		return { success: true, ruleId };
+	} catch (error) {
+		return { success: false, error: error?.message };
+	}
+}
+
+async function endLoggedOutFetch(ruleId) {
+	if (!Number.isInteger(ruleId)) {
+		return { success: false, error: 'Missing rule ID' };
+	}
+
+	try {
+		await chrome.declarativeNetRequest.updateSessionRules({
+			removeRuleIds: [ruleId],
+		});
+		return { success: true };
+	} catch (error) {
+		return { success: false, error: error.message };
+	}
+}
+
 function do_lock(lock) {
 	return new Promise((resolve) => {
 		const start = Date.now();
@@ -834,6 +911,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 	(async () => {
 		try {
 			switch (request.action) {
+				case 'start_logged_out_fetch': {
+					const res = await startLoggedOutFetch(request.url, sender.tab?.id);
+					sendResponse(res);
+					break;
+				}
+				case 'end_logged_out_fetch': {
+					const res = await endLoggedOutFetch(request.ruleId);
+					sendResponse(res);
+					break;
+				}
 				case 'get-tds': {
 					let tdsData = StorageManager.get("tdsData");
 					if (!Array.isArray(tdsData) || !tdsData.length) {
@@ -1219,7 +1306,7 @@ async function bootstrap() {
 	if (self._bootstrapped) return;
 	self._bootstrapped = true;
 
-	self.SW_VERSION = '4.0.5';
+	self.SW_VERSION = '4.0.6';
 
 	const originalLog = console.log;
 	const originalWarn = console.warn;

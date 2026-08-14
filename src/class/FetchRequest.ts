@@ -13,6 +13,7 @@ export interface FetchOptions {
 	doNotQueue?: boolean;
 	timeout?: number;
 	anon?: boolean;
+	loggedOut?: boolean;
 	blob?: string;
 	fileName?: string;
 }
@@ -89,6 +90,7 @@ export class FetchRequest {
 	static async send(url: string, options: FetchOptions): Promise<FetchResponse> {
 		let response = null;
 		let lock = null;
+		let loggedOutRuleId: number | null = null;
 		if (typeof url === 'object' && url.path) {
 			url = url.path;
 		} else if (typeof url !== 'string') {
@@ -143,6 +145,21 @@ export class FetchRequest {
 				await lock.lock();
 			}
 
+			if (options.loggedOut) {
+				if (!isInternal) {
+					throw new Error('Logged-out requests are only supported for the current site');
+				}
+
+				const res = await chrome.runtime.sendMessage({
+					action: 'start_logged_out_fetch',
+					url,
+				});
+				if (!res?.success || !Number.isInteger(res.ruleId)) {
+					throw new Error(`Could not start logged-out request: ${res?.error || 'unknown error'}`);
+				}
+				loggedOutRuleId = res.ruleId;
+			}
+
 			if (isInternal) {
 				response = await FetchRequest.sendInternal(url, options);
 			} else {
@@ -175,6 +192,12 @@ export class FetchRequest {
 			}
 
 			throw err;
+		} finally {
+			if (loggedOutRuleId !== null) {
+				await chrome.runtime
+					.sendMessage({ action: 'end_logged_out_fetch', ruleId: loggedOutRuleId })
+					.catch(() => {});
+			}
 		}
 	}
 
@@ -329,4 +352,5 @@ export class FetchRequest {
 		}
 		return `${url}?${queryParams.join('&')}`;
 	}
+
 }

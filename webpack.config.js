@@ -48,7 +48,7 @@ function getWebExtensionManifest(env) {
 		description: packageJson.description,
 		author: packageJson.author,
 		icons: { "64": "icon.png" },
-		permissions: ['storage', 'unlimitedStorage', 'tabs', 'alarms'],
+		permissions: ['storage', 'unlimitedStorage', 'tabs', 'alarms', 'declarativeNetRequest'],
 		host_permissions: [
 			'*://*.steamgifts.com/*',
 			'*://*.steamtrades.com/*',
