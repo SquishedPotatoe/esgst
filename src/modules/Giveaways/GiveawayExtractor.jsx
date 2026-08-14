@@ -1102,12 +1102,10 @@ class GiveawaysGiveawayExtractor extends Module {
 
 		if (!giveaway && !sgTools) {
 			try {
-				let response = await FetchRequest.get(`/giveaway/${code}/`, {
-					anon: true,
-				});
+				const response = await FetchRequest.get(`/giveaway/${currentCode}/`, { loggedOut: true });
 				responseHtml = response.html;
 				giveaway = await buildGiveaway(responseHtml, response.url, null, true);
-			} catch (error) { }
+			} catch { }
 		}
 
 		if (ge.isCanceled || !giveaway) {
