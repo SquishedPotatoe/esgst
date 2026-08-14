@@ -423,24 +423,32 @@ class GiveawaysGiveawayBookmarks extends Module {
 			let element = gb.popup.scrollable.children[i].firstElementChild;
 			if (!element.getAttribute('data-esgst')) {
 				let code = element.textContent;
-				element.textContent = (
-					await FetchRequest.get(element.getAttribute('href'), {
-						queue: true,
-					})
-				).html.getElementsByClassName('featured__heading__medium')[0].textContent;
-				giveaways[code] = {
-					name: element.textContent,
-				};
+				if (code) {
+					const name = (
+						await FetchRequest.get(element.getAttribute('href'), {
+							queue: true,
+						})
+					).html?.getElementsByClassName('featured__heading__medium')[0]?.textContent?.trim();
+
+					element.setAttribute('data-esgst', 'true');
+
+					if (name) {
+						element.textContent = name;
+						giveaways[code] = { name };
+					}
+				}
 			}
 		}
-		lockAndSaveGiveaways(giveaways);
+		if (Object.keys(giveaways).length > 0) {
+			await lockAndSaveGiveaways(giveaways);
+		}
 	}
 
 	async gb_loadGiveaways(i, n, bookmarked, gbGiveaways, info, popup, callback) {
 		if (i < n) {
 			if (bookmarked[i]) {
 				let response = await FetchRequest.get(`/giveaway/${bookmarked[i].code}/`, {
-					queue: true,
+					doNotQueue: true,
 				});
 				let endTime;
 				let responseHtml = response.html;
