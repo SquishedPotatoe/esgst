@@ -655,123 +655,279 @@ class GiveawaysGiveawayExtractor extends Module {
 		const startTime = new Date(sg.created_at).getTime();
 		const endTime = new Date(sg.ends_at).getTime();
 		if (Number.isNaN(startTime) || Number.isNaN(endTime)) return null;
-
+		const now = Date.now();
 		const copies = Number(sg.copies) || 1;
 		const points = Number(sg.points) || 0;
 		const steamUrl = sg.steam_url || '';
 		const gameId = steamUrl.match(/store\.steampowered\.com\/(?:app|sub|bundle)\/(\d+)/)?.[1];
-		const ended = endTime < Date.now();
+		const ended = now > endTime;
+
 		const creator = data.creator || {};
 		const creatorName = creator.sg_name || creator.persona_name || 'unknown';
-		const creatorUrl = creator.sg_name ? `/user/${encodeURIComponent(creator.sg_name)}` : url;
-		const attributes = { class: 'giveaway__row-outer-wrap' };
-		if (gameId) attributes['data-game-id'] = gameId;
+		const creatorUrl = creator.sg_name
+			? `/user/${encodeURIComponent(creator.sg_name)}`
+			: url;
+
+		const attributes = {
+			class: 'giveaway__row-outer-wrap',
+		};
+
+		if (gameId) {
+			attributes['data-game-id'] = gameId;
+		}
 
 		return {
 			code,
 			html: [
 				{
-					attributes,
 					type: 'div',
 					children: [
 						{
-							attributes: { class: 'giveaway__row-inner-wrap' },
+							attributes,
 							type: 'div',
 							children: [
 								{
-									attributes: { class: 'giveaway__summary' },
+									attributes: {
+										class: 'giveaway__row-inner-wrap',
+									},
 									type: 'div',
 									children: [
 										{
-											attributes: { class: 'giveaway__heading' },
-											type: 'h2',
-											children: [
-												{ attributes: { class: 'giveaway__heading__name', href: url, 'data-draggable-id': 'name' }, text: sg.name, type: 'a' },
-												...(copies > 1 ? [{ attributes: { class: 'giveaway__heading__thin', 'data-draggable-id': 'copies' }, text: ` (${copies} Copies)`, type: 'span' }] : []),
-												{ attributes: { class: 'giveaway__heading__thin', 'data-draggable-id': 'points' }, text: ` (${points}P)`, type: 'span' },
-												...(steamUrl ? [{
-													attributes: { class: 'giveaway__icon', href: steamUrl, rel: 'nofollow noopener', target: '_blank', 'data-draggable-id': 'steam' },
-													type: 'a',
-													children: [{ attributes: { class: 'fa fa-fw fa-steam' }, type: 'i' }],
-												}] : []),
-												...(gameId ? [
-													{
-														attributes: {
-															class: 'giveaway__icon',
-															href: `/giveaways/search?app=${gameId}`,
-															title: `Free Steam Giveaways and Keys for ${sg.name}`,
-															['data-draggable-id']: 'search',
-														},
-														type: 'a',
-														children: [{ attributes: { class: 'fa fa-fw fa-search' }, type: 'i' }],
-													},
-													{
-														attributes: {
-															class: 'fa fa-eye-slash giveaway__hide giveaway__icon',
-															title: 'Hide all giveaways for this game',
-															['data-draggable-id']: 'hideGame',
-														},
-														type: 'i',
-													},
-												] : []),
-											],
-										},
-										{
-											attributes: { class: 'giveaway__columns' },
+											attributes: {
+												class: 'giveaway__summary',
+											},
 											type: 'div',
 											children: [
 												{
-													attributes: { 'data-draggable-id': 'endTime' },
-													type: 'div',
+													attributes: {
+														class: 'giveaway__heading',
+													},
+													type: 'h2',
 													children: [
-														{ attributes: { class: 'fa fa-clock-o' }, type: 'i' },
-														{ attributes: { 'data-timestamp': endTime / 1000 }, text: ended ? `Ended ${common.getTimeSince(endTime)} ago` : common.getTimeSince(endTime, true), type: 'span' },
-														...(ended ? [] : [{ text: ' remaining', type: 'node' }]),
+														{
+															attributes: {
+																class: 'giveaway__heading__name',
+																href: url,
+																['data-draggable-id']: 'name',
+															},
+															text: sg.name,
+															type: 'a',
+														},
+														...(copies > 1
+															? [
+																{
+																	attributes: {
+																		class: 'giveaway__heading__thin',
+																		['data-draggable-id']: 'copies',
+																	},
+																	text: ` (${copies} Copies)`,
+																	type: 'span',
+																},
+															]
+															: []),
+														{
+															attributes: {
+																class: 'giveaway__heading__thin',
+																['data-draggable-id']: 'points',
+															},
+															text: ` (${points}P)`,
+															type: 'span',
+														},
+														...(steamUrl
+															? [
+																{
+																	attributes: {
+																		class: 'giveaway__icon',
+																		href: steamUrl,
+																		rel: 'nofollow noopener',
+																		target: '_blank',
+																		['data-draggable-id']: 'steam',
+																	},
+																	type: 'a',
+																	children: [
+																		{
+																			attributes: {
+																				class: 'fa fa-fw fa-steam',
+																			},
+																			type: 'i',
+																		},
+																	],
+																},
+															]
+															: []),
+														...(gameId
+															? [
+																{
+																	attributes: {
+																		class: 'giveaway__icon',
+																		href: `/giveaways/search?app=${gameId}`,
+																		title: `Free Steam Giveaways and Keys for ${sg.name}`,
+																		['data-draggable-id']: 'search',
+																	},
+																	type: 'a',
+																	children: [
+																		{
+																			attributes: {
+																				class: 'fa fa-fw fa-search',
+																			},
+																			type: 'i',
+																		},
+																	],
+																},
+																{
+																	attributes: {
+																		class: 'fa fa-eye-slash giveaway__hide giveaway__icon',
+																		title: 'Hide all giveaways for this game',
+																		['data-draggable-id']: 'hideGame',
+																	},
+																	type: 'i',
+																},
+															]
+															: []),
 													],
 												},
 												{
-													attributes: { class: 'giveaway__column--width-fill text-right', 'data-draggable-id': 'startTime' },
+													attributes: {
+														class: 'giveaway__columns',
+													},
 													type: 'div',
 													children: [
-														{ attributes: { 'data-timestamp': startTime / 1000 }, text: common.getTimeSince(startTime), type: 'span' },
-														{ text: ' ago by ', type: 'node' },
-														{ attributes: { class: 'giveaway__username', href: creatorUrl }, text: creatorName, type: 'a' },
+														{
+															attributes: {
+																['data-draggable-id']: 'endTime',
+															},
+															type: 'div',
+															children: [
+																{
+																	attributes: {
+																		class: 'fa fa-clock-o',
+																	},
+																	type: 'i',
+																},
+																{
+																	attributes: {
+																		['data-timestamp']: endTime / 1000,
+																	},
+																	text: ended
+																		? `Ended ${common.getTimeSince(endTime)} ago`
+																		: common.getTimeSince(endTime, true),
+																	type: 'span',
+																},
+																...(ended
+																	? []
+																	: [
+																		{
+																			text: ' remaining',
+																			type: 'node',
+																		},
+																	]),
+															],
+														},
+														{
+															attributes: {
+																class: 'giveaway__column--width-fill text-right',
+																['data-draggable-id']: 'startTime',
+															},
+															type: 'div',
+															children: [
+																{
+																	attributes: {
+																		['data-timestamp']: startTime / 1000,
+																	},
+																	text: common.getTimeSince(startTime),
+																	type: 'span',
+																},
+																{
+																	text: ' ago by ',
+																	type: 'node',
+																},
+																{
+																	attributes: {
+																		class: 'giveaway__username',
+																		href: creatorUrl,
+																	},
+																	text: creatorName,
+																	type: 'a',
+																},
+															],
+														},
 													],
+												},
+												{
+													attributes: {
+														class: 'giveaway__links esgst-giveaway-links',
+													},
+													type: 'div',
+													children: [
+														{
+															attributes: {
+																href: `${url}/entries`,
+																['data-draggable-id']: 'entries',
+															},
+															type: 'a',
+															children: [
+																{
+																	attributes: {
+																		class: 'fa fa-tag',
+																	},
+																	type: 'i',
+																},
+																{
+																	text: '0 entries',
+																	type: 'span',
+																},
+															],
+														},
+														{
+															attributes: {
+																href: `${url}/comments`,
+																['data-draggable-id']: 'comments',
+															},
+															type: 'a',
+															children: [
+																{
+																	attributes: {
+																		class: 'fa fa-comment',
+																	},
+																	type: 'i',
+																},
+																{
+																	text: '0 comments',
+																	type: 'span',
+																},
+															],
+														},
+													],
+												},
+												{
+													attributes: {
+														class: 'giveaway__columns esgst-giveaway-panel',
+													},
+													type: 'div',
 												},
 											],
 										},
+										...(creator.avatar
+											? [
+												{
+													attributes: {
+														class: 'giveaway_image_avatar',
+														href: creatorUrl,
+														style: `background-image: url(${creator.avatar})`,
+													},
+													type: 'a',
+												},
+											]
+											: []),
 										{
-											attributes: { class: 'giveaway__links esgst-giveaway-links' },
-											type: 'div',
-											children: [
-												{
-													attributes: { href: `${url}/entries`, 'data-draggable-id': 'entries' },
-													type: 'a',
-													children: [
-														{ attributes: { class: 'fa fa-tag' }, type: 'i' },
-														{ text: '0 entries', type: 'span' },
-													],
-												},
-												{
-													attributes: { href: `${url}/comments`, 'data-draggable-id': 'comments' },
-													type: 'a',
-													children: [
-														{ attributes: { class: 'fa fa-comment' }, type: 'i' },
-														{ text: '0 comments', type: 'span' },
-													],
-												},
-											],
+											attributes: {
+												class: 'giveaway_image_thumbnail',
+												href: url,
+												style: `background-image: url(${sg.img_url || ''})`,
+											},
+											type: 'a',
 										},
-										{ attributes: { class: 'giveaway__columns esgst-giveaway-panel' }, type: 'div' },
 									],
-								},
-								...(creator.avatar ? [{
-									attributes: { class: 'giveaway_image_avatar', href: creatorUrl, style: `background-image: url(${creator.avatar})` },
-									type: 'a',
-								}] : []),
-								{
-									attributes: { class: 'giveaway_image_thumbnail', href: url, style: `background-image: url(${sg.img_url || ''})` },
-									type: 'a',
 								},
 							],
 						},
@@ -779,7 +935,7 @@ class GiveawaysGiveawayExtractor extends Module {
 				},
 			],
 			points,
-			started: startTime <= Date.now(),
+			started: startTime <= now,
 			timestamp: endTime,
 		};
 	}
@@ -799,261 +955,247 @@ class GiveawaysGiveawayExtractor extends Module {
 	}
 
 	async ge_extractGiveaway(ge, code, callback, parentEnded = false) {
-		if (!ge.isCanceled) {
-			if (ge.isDivided && ge.count === 50) {
-				let children, filtered, i;
-				ge.mainCallback();
-				ge.mainCallback = null;
-				ge.count = 0;
-				await endless_load(ge.results, false, 'ge', ge.endless);
-				ge.extractButton.build(3);
-				ge.progressBar.setInfo();
-				ge.callback = this.ge_extractGiveaway.bind(this, ge, code, callback);
-				filtered = false;
-				children = ge.results.querySelectorAll(`:scope > .esgst-es-page-${ge.endless}`);
-				for (i = children.length - 1; i > -1 && !filtered; --i) {
-					if (children[i].firstElementChild.classList.contains('esgst-hidden')) {
-						filtered = true;
+		if (ge.isCanceled) return;
+
+		if (!code || !/^[a-zA-Z0-9-]+$/.test(code)) {
+			callback();
+			return;
+		}
+
+		if (ge.isDivided && ge.count === 50) {
+			ge.mainCallback?.();
+			ge.mainCallback = null;
+			ge.count = 0;
+
+			await endless_load(ge.results, false, 'ge', ge.endless);
+			ge.extractButton.build(3);
+			ge.progressBar.setInfo();
+			ge.callback = this.ge_extractGiveaway.bind(this, ge, code, callback);
+
+			const children = ge.results.querySelectorAll(`:scope > .esgst-es-page-${ge.endless}`);
+			let filtered = false;
+			for (let i = children.length - 1; i >= 0 && !filtered; --i) {
+				if (children[i].firstElementChild?.classList.contains('esgst-hidden')) {
+					filtered = true;
+				}
+			}
+
+			ge.endless++;
+			if (Settings.get('es') && Settings.get('es_ge')) {
+				this.checkScroll(ge, filtered);
+			}
+			return;
+		}
+
+		if (ge.count === 0 && ge.extracted.length === 0 && ge.failedSgTools?.length) {
+			ge.failedSgTools = [];
+			if (ge.sgToolsProgressBar) {
+				ge.sgToolsProgressBar.hide();
+				if (ge.sgToolsProgressBar.message) {
+					ge.sgToolsProgressBar.message.innerHTML = '';
+				}
+			}
+		}
+
+		if (ge.extracted.includes(code)) {
+			callback();
+			return;
+		}
+
+		let currentCode = code;
+		let sgTools = currentCode.length > 5;
+		let sgToolsData = null;
+
+		if (sgTools) {
+			if (Settings.get('ge_sgt') && (!Settings.get('ge_sgt_l') || ge.sgToolsCount < Settings.get('ge_sgt_limit'))) {
+				Tabs.open(`https://www.sgtools.info/giveaways/${currentCode}`);
+				ge.cache[ge.cacheId].codes.push(currentCode);
+				ge.extracted.push(currentCode);
+				ge.sgToolsCount += 1;
+				callback();
+				return;
+			}
+
+			if (Settings.get('ge_sgtga')) {
+				try {
+					if (!(await permissions.contains([['sgTools', 'cookies']]))) {
+						throw new Error(permissions.getMessage([['sgTools', 'cookies']]));
 					}
+
+					try {
+						const infoResponse = await FetchRequest.get(
+							`https://www.sgtools.info/api/v1/giveaways/${currentCode}`,
+							{ headers: { Accept: 'application/json' } }
+						);
+						sgToolsData = infoResponse.json || (infoResponse.text ? JSON.parse(infoResponse.text) : null);
+					} catch { }
+
+					if (Settings.get('ge_sgtga_u')) {
+						const checkResponse = await FetchRequest.post(
+							`https://www.sgtools.info/api/v1/giveaways/${currentCode}/check`,
+							{
+								queue: true,
+								headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+								data: JSON.stringify({}),
+							}
+						);
+						const checkData = checkResponse.json || (checkResponse.text ? JSON.parse(checkResponse.text) : {});
+
+						if (checkData.success === false) {
+							this.handleSgToolsFailure(ge, currentCode, sgToolsData, checkData);
+							ge.extracted.push(currentCode);
+							callback();
+							return;
+						}
+					}
+
+					const linkResponse = await FetchRequest.post(
+						`https://www.sgtools.info/api/v1/giveaways/${currentCode}/getLink`,
+						{
+							queue: true,
+							headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+							data: JSON.stringify({}),
+						}
+					);
+					const linkData = linkResponse.json || (linkResponse.text ? JSON.parse(linkResponse.text) : {});
+					if (linkData?.url) {
+						const match = linkData.url.match(/\/giveaway\/([a-zA-Z0-9]{5})/);
+						if (match) {
+							ge.extracted.push(currentCode);
+							currentCode = match[1];
+							sgTools = false;
+						}
+					}
+				} catch (error) {
+					Logger.warning(error.message, error.stack);
 				}
-				ge.endless++;
-				if (Settings.get('es') && Settings.get('es_ge')) {
-					this.checkScroll(ge, filtered);
+			}
+		}
+
+		if (ge.extracted.includes(currentCode)) {
+			callback();
+			return;
+		}
+
+		let giveaway = null;
+		let responseHtml = null;
+
+		try {
+			if (sgTools) {
+				if (!sgToolsData) {
+					const response = await FetchRequest.get(
+						`https://www.sgtools.info/api/v1/giveaways/${currentCode}`,
+						{ headers: { Accept: 'application/json' } }
+					);
+					sgToolsData = response.json || (response.text ? JSON.parse(response.text) : null);
 				}
+				giveaway = this.ge_buildSgToolsGiveaway(sgToolsData, currentCode);
 			} else {
-				if (ge.count === 0 && ge.extracted.length === 0 && ge.failedSgTools?.length) {
-					ge.failedSgTools = [];
-					if (ge.sgToolsProgressBar) {
-						ge.sgToolsProgressBar.hide();
-						if (ge.sgToolsProgressBar.message) {
-							ge.sgToolsProgressBar.message.innerHTML = '';
-						}
-					}
-				}
-				if (ge.extracted.indexOf(code) < 0) {
-					let sgTools = code.length > 5;
-					let sgToolsData = null;
-					if (sgTools) {
-						if (
-							Settings.get('ge_sgt') &&
-							(!Settings.get('ge_sgt_l') || ge.sgToolsCount < Settings.get('ge_sgt_limit'))
-						) {
-							Tabs.open(`https://www.sgtools.info/giveaways/${code}`);
-							ge.cache[ge.cacheId].codes.push(code);
-							ge.extracted.push(code);
-							ge.sgToolsCount += 1;
-							callback();
-							return;
-						}
-						if (Settings.get('ge_sgtga')) {
-							try {
-								if (!(await permissions.contains([['sgTools', 'cookies']]))) {
-									throw new Error(permissions.getMessage([['sgTools', 'cookies']]));
-								}
-								try {
-									const infoResponse = await FetchRequest.get(
-										`https://www.sgtools.info/api/v1/giveaways/${code}`,
-										{ headers: { Accept: 'application/json' } }
-									);
-									sgToolsData = infoResponse.json || (infoResponse.text ? JSON.parse(infoResponse.text) : null);
-								} catch (e) {}
+				const response = await FetchRequest.get(`/giveaway/${currentCode}/`);
+				responseHtml = response.html;
+				const button = responseHtml.getElementsByClassName('sidebar__error')[0];
+				giveaway = await buildGiveaway(responseHtml, response.url, button?.textContent);
+			}
+		} catch (error) {
+			console.error('[ESGST] SGTools giveaway fetch failed', error);
+		}
 
-								if (Settings.get('ge_sgtga_u')) {
-									const checkResponse = await FetchRequest.post(
-										`https://www.sgtools.info/api/v1/giveaways/${code}/check`,
-										{
-											queue: true,
-											headers: {
-												'Accept': 'application/json',
-												'Content-Type': 'application/json',
-											},
-											data: JSON.stringify({}),
-										}
-									);
-									const checkData = checkResponse.json || (checkResponse.text ? JSON.parse(checkResponse.text) : {});
-									if (checkData.success === false) {
-										ge.failedSgTools = ge.failedSgTools || [];
-										const gameName = sgToolsData?.sg?.name || code;
-										if (!ge.failedSgTools.some(item => item.includes(`/${code}"`))) {
-											const failureReason = checkData.error ? ` (${checkData.error})` : '';
-											ge.failedSgTools.push(
-												`<a href="https://www.sgtools.info/giveaways/${code}" target="_blank" rel="noopener noreferrer">${gameName}</a>${failureReason}`
-											);
-										}
-										if (!ge.sgToolsProgressBar && ge.popup?.description) {
-											ge.sgToolsProgressBar = NotificationBar.create()
-												.insert(ge.progressBar?.nodes?.outer, 'afterend')
-												.hide();
-										}
-										if (ge.sgToolsProgressBar) {
-											ge.sgToolsProgressBar
-												.show()
-												.setWarning(
-													`${ge.failedSgTools.length} SGTools giveaway check(s) failed. (Hover to view details)`
-												);
+		if (!giveaway && !sgTools) {
+			try {
+				let response = await FetchRequest.get(`/giveaway/${code}/`, {
+					anon: true,
+				});
+				responseHtml = response.html;
+				giveaway = await buildGiveaway(responseHtml, response.url, null, true);
+			} catch (error) { }
+		}
 
-											const warningElem = ge.sgToolsProgressBar.nodes?.outer;
+		if (ge.isCanceled || !giveaway) {
+			callback();
+			return;
+		}
 
-											if (warningElem) {
-												warningElem.classList.add('esgst-sgtools-bar');
-												common.createTooltip(
-													warningElem,
-													ge.failedSgTools.join('<br>')
-												);
-											}
-										}
+		const isEnded = ge.skipEndedGiveaways && giveaway.timestamp < Date.now();
 
-										ge.extracted.push(code);
-										callback();
-										return;
-									}
-								}
-								const linkResponse = await FetchRequest.post(
-									`https://www.sgtools.info/api/v1/giveaways/${code}/getLink`,
-									{
-										queue: true,
-										headers: {
-											'Accept': 'application/json',
-											'Content-Type': 'application/json',
-										},
-										data: JSON.stringify({}),
-									}
-								);
-								const linkData = linkResponse.json || (linkResponse.text ? JSON.parse(linkResponse.text) : {});
-								if (linkData && linkData.url) {
-									const match = linkData.url.match(/\/giveaway\/([a-zA-Z0-9]{5})/);
-									if (match) {
-										ge.extracted.push(code);
-										code = match[1];
-										sgTools = false;
-									}
-								}
-							} catch (error) {
-								Logger.warning(error.message, error.stack);
-							}
-						}
-					}
-					if (ge.extracted.indexOf(code) < 0) {
-						let bumpLink, button, giveaway, giveaways, n, responseHtml;
-						try {
-							if (sgTools) {
-								if (!sgToolsData) {
-									const response = await FetchRequest.get(
-										`https://www.sgtools.info/api/v1/giveaways/${code}`,
-										{ headers: { Accept: 'application/json' } }
-									);
-									sgToolsData = response.json || (response.text ? JSON.parse(response.text) : null);
-								}
-								console.log('[ESGST] SGTools giveaway response', sgToolsData);
-								giveaway = this.ge_buildSgToolsGiveaway(sgToolsData, code);
-								console.log('[ESGST] SGTools giveaway card', giveaway);
-							} else {
-								let response = await FetchRequest.get(`/giveaway/${code}/`);
-								responseHtml = response.html;
-								button = responseHtml.getElementsByClassName('sidebar__error')[0];
-								giveaway = await buildGiveaway(
-									responseHtml,
-									response.url,
-									button && button.textContent
-								);
-							}
-						} catch (error) {
-							console.error('[ESGST] SGTools giveaway fallback failed', error, error.stack);
-						}
-						if (ge.isCanceled) {
-							return;
-						}
-						if (giveaway) {
-							const isEnded = ge.skipEndedGiveaways && giveaway.timestamp < Date.now();
-							if (!isEnded) {
-								createElements(ge.results, 'beforeend', giveaway.html);
-								ge.results.lastElementChild.classList.add(`esgst-es-page-${ge.endless}`);
-								if (responseHtml?.querySelector('.page__description')) {
-									ge.results.lastElementChild.querySelector('.giveaway__row-inner-wrap')?.classList.add('has-description');
-								}
-								giveaway.html = ge.results.lastElementChild.outerHTML;
-								ge.cache[ge.cacheId].codes.push(code);
-								ge.cache[ge.cacheId].giveaways[code] = giveaway;
-								ge.points += giveaway.points;
-								ge.count += 1;
-								ge.total += 1;
-								ge.progressBarCounter.textContent = ge.total;
-							}
-							ge.extracted.push(code);
-							if (sgTools) {
-								callback();
-							} else {
-								if (!ge.bumpLink) {
-									bumpLink = responseHtml.querySelector(`[href*="/discussion/"]`);
-									if (bumpLink) {
-										ge.bumpLink = bumpLink.getAttribute('href');
-										ge.cache[ge.cacheId].bumpLink = ge.bumpLink;
-									}
-								}
-								if (isEnded && parentEnded) {
-									callback();
-								} else {
-									giveaways = this.ge_getGiveaways(ge, responseHtml);
-									n = giveaways.length;
-									if (n > 0) {
-										window.setTimeout(
-											() => this.ge_extractGiveaways(ge, giveaways, 0, n, callback, isEnded),
-											0
-										);
-									} else {
-										callback();
-									}
-								}
-							}
-						} else if (!sgTools) {
-							let bumpLink, giveaway, giveaways, n, responseHtml;
-							try {
-								let response = await FetchRequest.get(`/giveaway/${code}/`, {
-									anon: true,
-								});
-								responseHtml = response.html;
-								giveaway = await buildGiveaway(responseHtml, response.url, null, true);
-							} catch (error) {}
-							if (giveaway) {
-								createElements(ge.results, 'beforeend', giveaway.html);
-								ge.results.lastElementChild.classList.add(`esgst-es-page-${ge.endless}`);
-								giveaway.html = ge.results.lastElementChild.outerHTML;
-								ge.cache[ge.cacheId].codes.push(code);
-								ge.cache[ge.cacheId].giveaways[code] = giveaway;
-								ge.points += giveaway.points;
-								ge.count += 1;
-								ge.total += 1;
-								ge.progressBarCounter.textContent = ge.total;
-								ge.extracted.push(code);
-								if (!ge.bumpLink) {
-									bumpLink = responseHtml.querySelector(`[href*="/discussion/"]`);
-									if (bumpLink) {
-										ge.bumpLink = bumpLink.getAttribute('href');
-										ge.cache[ge.cacheId].bumpLink = ge.bumpLink;
-									}
-								}
-								giveaways = this.ge_getGiveaways(ge, responseHtml);
-								n = giveaways.length;
-								if (n > 0) {
-									window.setTimeout(
-										() => this.ge_extractGiveaways(ge, giveaways, 0, n, callback),
-										0
-									);
-								} else {
-									callback();
-								}
-							} else {
-								callback();
-							}
-						} else {
-							callback();
-						}
-					} else {
-						callback();
-					}
-				} else {
-					callback();
-				}
+		if (!isEnded) {
+			createElements(ge.results, 'beforeend', giveaway.html);
+			const lastChild = ge.results.lastElementChild;
+			lastChild.classList.add(`esgst-es-page-${ge.endless}`);
+
+			if (responseHtml?.querySelector('.page__description')) {
+				lastChild.querySelector('.giveaway__row-inner-wrap')?.classList.add('has-description');
+			}
+
+			if (Settings.get('gv')) {
+				await endless_load(lastChild, false, 'ge', ge.endless);
+			}
+
+			giveaway.html = lastChild.outerHTML;
+			ge.cache[ge.cacheId].codes.push(currentCode);
+			ge.cache[ge.cacheId].giveaways[currentCode] = giveaway;
+			ge.points += giveaway.points;
+			ge.count += 1;
+			ge.total += 1;
+			ge.progressBarCounter.textContent = ge.total;
+		}
+
+		ge.extracted.push(currentCode);
+
+		if (sgTools) {
+			callback();
+			return;
+		}
+
+		if (!ge.bumpLink && responseHtml) {
+			const bumpLink = responseHtml.querySelector(`[href*="/discussion/"]`);
+			if (bumpLink) {
+				ge.bumpLink = bumpLink.getAttribute('href');
+				ge.cache[ge.cacheId].bumpLink = ge.bumpLink;
+			}
+		}
+
+		if (isEnded && parentEnded) {
+			callback();
+			return;
+		}
+
+		const giveaways = responseHtml ? this.ge_getGiveaways(ge, responseHtml) : [];
+		if (giveaways.length > 0) {
+			window.setTimeout(
+				() => this.ge_extractGiveaways(ge, giveaways, 0, giveaways.length, callback, isEnded),
+				0
+			);
+		} else {
+			callback();
+		}
+	}
+
+	handleSgToolsFailure(ge, code, sgToolsData, checkData) {
+		ge.failedSgTools = ge.failedSgTools || [];
+		const gameName = sgToolsData?.sg?.name || code;
+
+		if (!ge.failedSgTools.some(item => item.includes(`/${code}"`))) {
+			const failureReason = checkData.error ? ` (${checkData.error})` : '';
+			ge.failedSgTools.push(
+				`<a href="https://www.sgtools.info/giveaways/${code}" target="_blank" rel="noopener noreferrer">${gameName}</a>${failureReason}`
+			);
+		}
+
+		if (!ge.sgToolsProgressBar && ge.popup?.description) {
+			ge.sgToolsProgressBar = NotificationBar.create()
+				.insert(ge.progressBar?.nodes?.outer, 'afterend')
+				.hide();
+		}
+
+		if (ge.sgToolsProgressBar) {
+			ge.sgToolsProgressBar
+				.show()
+				.setWarning(`${ge.failedSgTools.length} SGTools giveaway check(s) failed. (Hover to view details)`);
+
+			const warningElem = ge.sgToolsProgressBar.nodes?.outer;
+			if (warningElem) {
+				warningElem.classList.add('esgst-sgtools-bar');
+				common.createTooltip(warningElem, ge.failedSgTools.join('<br>'));
 			}
 		}
 	}
@@ -1066,12 +1208,12 @@ class GiveawaysGiveawayExtractor extends Module {
 		];
 		let giveaways = [];
 		if (context === ge.context) {
-			let match = this.esgst.parameters.url.match(/\/giveaway\/(.+?)\//);
+			let match = this.esgst.parameters.url.match(/\/giveaway\/([a-zA-Z0-9]{5,})\//);
 			if (match) {
 				giveaways.push(match[1]);
 			}
 		} else if (context === this.esgst.pageOuterWrap && this.esgst.giveawayPath) {
-			let match = Shared.esgst.locationHref.match(/\/giveaway\/(.+?)\//);
+			let match = Shared.esgst.locationHref.match(/\/giveaway\/([a-zA-Z0-9]{5,})\//);
 			if (match) {
 				giveaways.push(match[1]);
 			}
@@ -1175,7 +1317,7 @@ class GiveawaysGiveawayExtractor extends Module {
 		if (element.matches('img')) {
 			const title = element.getAttribute('title');
 
-			if (title.length === 5) {
+			if (title && /^[a-zA-Z0-9]{5}$/.test(title)) {
 				if (ge.extracted.indexOf(title) < 0 && giveaways.indexOf(title) < 0) {
 					giveaways.push(title);
 				}
@@ -1227,7 +1369,8 @@ class GiveawaysGiveawayExtractor extends Module {
 		);
 		for (const element of elements) {
 			if (element.matches('img')) {
-				if (element.getAttribute('title').length === 5) {
+				const title = element.getAttribute('title');
+				if (title && /^[a-zA-Z0-9]{5}$/.test(title)) {
 					isFound = true;
 				}
 			} else {
@@ -1246,7 +1389,9 @@ class GiveawaysGiveawayExtractor extends Module {
 			ge.mainCallback();
 			ge.mainCallback = null;
 		}
-		await endless_load(ge.results, false, 'ge', ge.endless);
+		if (!Settings.get('gv')) {
+			await endless_load(ge.results, false, 'ge', ge.endless);
+		}
 		const items = [
 			{
 				attributes: {
