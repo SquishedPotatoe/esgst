@@ -73,164 +73,131 @@ class Games extends Module {
 	}
 
 	async games_get(context, main, savedGames, endless) {
-		let game, games, i, id, info, matches, n, headingNameQuery, matchesQuery, type;
-		games = {
-			apps: {},
-			subs: {},
-			all: [],
-		};
+		const games = { apps: {}, subs: {}, all: [] };
+		const esPrefix = endless ? `.esgst-es-page-${endless}` : '';
+		const prefixWrap = (selector) =>
+			endless ? `${esPrefix} ${selector}, ${esPrefix}${selector}` : selector;
+
+		const baseSelectors = [
+			prefixWrap('.featured__outer-wrap--giveaway'),
+			prefixWrap('.giveaway__row-outer-wrap'),
+			prefixWrap('.table__row-outer-wrap'),
+		];
+
 		if (this.esgst.discussionPath && main) {
-			matchesQuery = `${
-				endless
-					? `.esgst-es-page-${endless} .featured__outer-wrap--giveaway, .esgst-es-page-${endless}.featured__outer-wrap--giveaway`
-					: '.featured__outer-wrap--giveaway'
-			}, ${
-				endless
-					? `.esgst-es-page-${endless} .giveaway__row-outer-wrap, .esgst-es-page-${endless}.giveaway__row-outer-wrap`
-					: '.giveaway__row-outer-wrap'
-			}, ${
-				endless
-					? `.esgst-es-page-${endless} .table__row-outer-wrap, .esgst-es-page-${endless}.table__row-outer-wrap`
-					: '.table__row-outer-wrap'
-			}, ${
-				endless
-					? `.esgst-es-page-${endless} .markdown table td, .esgst-es-page-${endless}.markdown table td`
-					: '.markdown table td'
-			}`;
-			headingNameQuery = `.giveaway__heading__name, .featured__heading__medium, .table__column__heading, a`;
-		} else {
-			matchesQuery = `${
-				endless
-					? `.esgst-es-page-${endless} .featured__outer-wrap--giveaway, .esgst-es-page-${endless}.featured__outer-wrap--giveaway`
-					: '.featured__outer-wrap--giveaway'
-			}, ${
-				endless
-					? `.esgst-es-page-${endless} .giveaway__row-outer-wrap, .esgst-es-page-${endless}.giveaway__row-outer-wrap`
-					: '.giveaway__row-outer-wrap'
-			}, ${
-				endless
-					? `.esgst-es-page-${endless} .table__row-outer-wrap, .esgst-es-page-${endless}.table__row-outer-wrap`
-					: '.table__row-outer-wrap'
-			}`;
-			headingNameQuery = `.giveaway__heading__name, .featured__heading__medium, .table__column__heading`;
+			baseSelectors.push(prefixWrap('.markdown table td'));
 		}
-		matches = context.querySelectorAll(matchesQuery);
-		for (i = 0, n = matches.length; i < n; ++i) {
-			game = Scope.findData('main', 'giveaways').filter((x) => x.outerWrap === matches[i])[0];
+
+		const matchesQuery = baseSelectors.join(', ');
+		const headingNameQuery = (this.esgst.discussionPath && main)
+			? `.giveaway__heading__name, .featured__heading__medium, .table__column__heading, a`
+			: `.giveaway__heading__name, .featured__heading__medium, .table__column__heading`;
+
+		const matches = context.querySelectorAll(matchesQuery);
+		for (const match of matches) {
+			let game = Scope.findData('main', 'giveaways').find((x) => x.outerWrap === match);
+
 			if (!game) {
-				game = {
-					isGame: true,
-					outerWrap: matches[i],
-				};
+				game = { isGame: true, outerWrap: match };
 			}
+
 			game.container = game.outerWrap;
-			game.columns = game.container.querySelector(`.giveaway__columns, .featured__columns`);
-			game.table = !!game.container.closest('table');
+			game.columns = game.container.querySelector('.giveaway__columns, .featured__columns');
+			game.table = Boolean(game.container.closest('table'));
 			game.grid = game.container.closest('.esgst-gv-view');
+
 			if (game.grid) {
-				game.gvIcons = game.container.getElementsByClassName('esgst-gv-icons')[0];
+				game.gvIcons = game.container.querySelector('.esgst-gv-icons');
 			}
+
 			game.panel = game.container.querySelector('.esgst-giveaway-panel');
-			info = await this.games_getInfo(game.container, main);
+
+			let info = await this.games_getInfo(game.container, main);
 			game.headingName = game.container.querySelector(headingNameQuery);
-			if (game.headingName) {
-				if (
-					game.headingName.getAttribute('href') &&
-					game.headingName.getAttribute('href').match(/\/(discussion|\/support\/ticket|trade)\//)
-				) {
-					continue;
-				}
-				if (game.table || this.esgst.wishlistPath) {
-					game.heading = game.headingName;
-				} else {
-					game.heading = game.headingName.parentElement;
-				}
-				if (!game.name) {
-					game.name = game.headingName.textContent;
-				}
-				const steamGiftCard = game.name.match(/^\$(.+?)\sSteam\sGift\sCard$/);
-				if (steamGiftCard) {
-					game.points = parseInt(steamGiftCard[1].replace(/,/g, ''));
-					info = {
-						id: `SteamGiftCard${game.points}`,
-						type: 'apps',
-					};
-				}
-				const humbleBundle = game.name.match(/^Humble.+?Bundle/);
-				if (humbleBundle) {
-					info = {
-						id: game.name.replace(/\s/g, ''),
-						type: 'apps',
-					};
-				}
-				if (info) {
-					id = info.id;
-					type = info.type;
-					game.id = id;
-					game.type = type;
-					if (Shared.esgst.games && Shared.esgst.games[game.type][game.id]) {
-						const keys = [
-							'owned',
-							'wishlisted',
-							'previouslyWishlisted',
-							'followed',
-							'hidden',
-							'ignored',
-							'previouslyEntered',
-							'previouslyWon',
-							'reducedCV',
-							'noCV',
-							'banned',
-							'removed',
-						];
-						for (const key of keys) {
-							if (
-								key === 'banned' &&
-								Shared.esgst.delistedGames.banned.indexOf(parseInt(game.id)) > -1
-							) {
-								game[key] = true;
-							} else if (
-								key === 'removed' &&
-								(Shared.esgst.delistedGames.removed.indexOf(parseInt(game.id)) > -1 ||
-									Shared.esgst.games[game.type][game.id].removed)
-							) {
-								game[key] = true;
-							} else if (
-								Shared.esgst.games[game.type][game.id][
-									key === 'previouslyEntered' ? 'entered' : key === 'previouslyWon' ? 'won' : key
-								]
-							) {
-								game[key] = true;
-							}
-						}
-					}
-					if (
-						Settings.get('lastSyncHiddenGames') > 0 &&
-						window.location.pathname.match(/^\/account\/settings\/giveaways\/filters/) &&
-						main
+
+			if (!game.headingName) continue;
+
+			const href = game.headingName.getAttribute('href');
+			if (href?.match(/\/(discussion|\/support\/ticket|trade)\//)) {
+				continue;
+			}
+
+			game.heading = (game.table || this.esgst.wishlistPath)
+				? game.headingName
+				: game.headingName.parentElement;
+
+			game.name ??= game.headingName.textContent;
+
+			const steamGiftCard = game.name.match(/^\$(.+?)\sSteam\sGift\sCard$/);
+			if (steamGiftCard) {
+				game.points = parseInt(steamGiftCard[1].replace(/,/g, ''), 10);
+				info = { id: `SteamGiftCard${game.points}`, type: 'apps' };
+			}
+
+			const humbleBundle = game.name.match(/^Humble.+?Bundle/);
+			if (humbleBundle) {
+				info = { id: game.name.replace(/\s/g, ''), type: 'apps' };
+			}
+
+			if (!info) continue;
+
+			const { id, type } = info;
+			game.id = id;
+			game.type = type;
+
+			const targetGame = Shared.esgst.games?.[game.type]?.[game.id];
+			if (targetGame) {
+				const keys = [
+					'owned', 'wishlisted', 'previouslyWishlisted', 'followed',
+					'hidden', 'ignored', 'previouslyEntered', 'previouslyWon',
+					'reducedCV', 'noCV', 'banned', 'removed'
+				];
+
+				const parsedId = parseInt(game.id, 10);
+				const { delistedGames } = Shared.esgst;
+
+				for (const key of keys) {
+					if (key === 'banned' && delistedGames.banned.includes(parsedId)) {
+						game[key] = true;
+					} else if (
+						key === 'removed' &&
+						(delistedGames.removed.includes(parsedId) || targetGame.removed)
 					) {
-						const removeButton = game.container.getElementsByClassName('table__remove-default')[0];
-						if (removeButton) {
-							removeButton.addEventListener(
-								'click',
-								common.updateHiddenGames.bind(common, id, type, true)
-							);
+						game[key] = true;
+					} else {
+						const targetKey = key === 'previouslyEntered' ? 'entered'
+							: key === 'previouslyWon' ? 'won'
+								: key;
+						if (targetGame[targetKey]) {
+							game[key] = true;
 						}
 					}
-					if (!games[type][id]) {
-						games[type][id] = [];
-					}
-					game.tagContext =
-						(game.container.closest('.poll') &&
-							game.container.getElementsByClassName('table__column__heading')[0]) ||
-						game.headingName;
-					game.tagPosition = 'afterend';
-					game.saved = this.esgst.games[type][id];
-					games[type][id].push(game);
-					games.all.push(game);
 				}
 			}
+
+			if (
+				Settings.get('lastSyncHiddenGames') > 0 &&
+				window.location.pathname.match(/^\/account\/settings\/giveaways\/filters/) &&
+				main
+			) {
+				const removeButton = game.container.querySelector('.table__remove-default');
+				removeButton?.addEventListener(
+					'click',
+					common.updateHiddenGames.bind(common, id, type, true)
+				);
+			}
+
+			games[type][id] ??= [];
+
+			game.tagContext = (game.container.closest('.poll') && game.container.querySelector('.table__column__heading'))
+				|| game.headingName;
+			game.tagPosition = 'afterend';
+			game.saved = this.esgst.games[type]?.[id];
+
+			games[type][id].push(game);
+			games.all.push(game);
 		}
+
 		return games;
 	}
 

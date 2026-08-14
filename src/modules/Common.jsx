@@ -1539,43 +1539,35 @@ class Common extends Module {
 					ugd = savedUser.ugd;
 					if (ugd) {
 						if (ugd.sent) {
-							for (key in ugd.sent.apps) {
-								if (ugd.sent.apps.hasOwnProperty(key)) {
-									giveaways.sent.apps[key] = [];
-									for (i = 0, n = ugd.sent.apps[key].length; i < n; ++i) {
-										ggiveaways[ugd.sent.apps[key][i].code] = ugd.sent.apps[key][i];
-										giveaways.sent.apps[key].push(ugd.sent.apps[key][i].code);
-									}
+							for (const [key, appList] of Object.entries(ugd.sent.apps || {})) {
+								giveaways.sent.apps[key] = [];
+								for (const item of appList) {
+									ggiveaways[item.code] = item;
+									giveaways.sent.apps[key].push(item.code);
 								}
 							}
-							for (key in ugd.sent.subs) {
-								if (ugd.sent.subs.hasOwnProperty(key)) {
-									giveaways.sent.subs[key] = [];
-									for (i = 0, n = ugd.sent.subs[key].length; i < n; ++i) {
-										ggiveaways[ugd.sent.subs[key][i].code] = ugd.sent.subs[key][i];
-										giveaways.sent.subs[key].push(ugd.sent.subs[key][i].code);
-									}
+							for (const [key, subList] of Object.entries(ugd.sent.subs || {})) {
+								giveaways.sent.subs[key] = [];
+								for (const item of subList) {
+									ggiveaways[item.code] = item;
+									giveaways.sent.subs[key].push(item.code);
 								}
 							}
 							giveaways.sentTimestamp = ugd.sentTimestamp;
 						}
 						if (ugd.won) {
-							for (key in ugd.won.apps) {
-								if (ugd.won.apps.hasOwnProperty(key)) {
-									giveaways.won.apps[key] = [];
-									for (i = 0, n = ugd.won.apps[key].length; i < n; ++i) {
-										ggiveaways[ugd.won.apps[key][i].code] = ugd.won.apps[key][i];
-										giveaways.won.apps[key].push(ugd.won.apps[key][i].code);
-									}
+							for (const [key, appList] of Object.entries(ugd.won.apps || {})) {
+								giveaways.won.apps[key] = [];
+								for (const item of appList) {
+									ggiveaways[item.code] = item;
+									giveaways.won.apps[key].push(item.code);
 								}
 							}
-							for (key in ugd.won.subs) {
-								if (ugd.won.subs.hasOwnProperty(key)) {
-									giveaways.won.subs[key] = [];
-									for (i = 0, n = ugd.won.subs[key].length; i < n; ++i) {
-										ggiveaways[ugd.won.subs[key][i].code] = ugd.won.subs[key][i];
-										giveaways.won.subs[key].push(ugd.won.subs[key][i].code);
-									}
+							for (const [key, subList] of Object.entries(ugd.won.subs || {})) {
+								giveaways.won.subs[key] = [];
+								for (const item of subList) {
+									ggiveaways[item.code] = item;
+									giveaways.won.subs[key].push(item.code);
 								}
 							}
 							giveaways.wonTimestamp = ugd.wonTimestamp;
@@ -1889,9 +1881,9 @@ class Common extends Module {
 				if (!savedUsers.users[user.steamId].tags) {
 					savedUsers.users[user.steamId].tags = [];
 				}
-				for (i = 0, n = user.values.tags.length; i < n; ++i) {
-					if (savedUsers.users[user.steamId].tags.indexOf(user.values.tags[i]) < 0) {
-						savedUsers.users[user.steamId].tags.push(user.values.tags[i]);
+				for (const tag of user.values.tags) {
+					if (!savedUsers.users[user.steamId].tags.includes(tag)) {
+						savedUsers.users[user.steamId].tags.push(tag);
 					}
 				}
 			}
@@ -2124,7 +2116,7 @@ class Common extends Module {
 		button.nodes.buttonIcon.title =
 			'ESGST is backing up your data... Please do not close this window.';
 
-		this.esgst.parameters = Object.assign(this.esgst.parameters, { autoBackup: true });
+		this.esgst.parameters = { ...this.esgst.parameters, autoBackup: true };
 		loadDataManagement('export', false, () => {
 			button.nodes.outer.classList.remove('nav__button-container--active');
 			button.nodes.outer.classList.add('nav__button-container--inactive');
@@ -4509,16 +4501,16 @@ class Common extends Module {
 					array[0].outerWrap.parentElement.parentElement;
 			}
 		}
-		for (i = 0, n = array.length; i < n; ++i) {
-			if (!array[i].outerWrap.parentElement) continue;
+		for (const item of array) {
+			if (!item.outerWrap.parentElement) continue;
 
 			if (context) {
-				context.appendChild(array[i].outerWrap.parentElement);
+				context.appendChild(item.outerWrap.parentElement);
 			} else {
-				array[i].outerWrap.parentElement.appendChild(array[i].outerWrap);
+				item.outerWrap.parentElement.appendChild(item.outerWrap);
 			}
 		}
-		for (i = array.length - 1; i > -1; i--) {
+		for (let i = array.length - 1; i >= 0; i--) {
 			if (array[i].isPinned) {
 				array[i].outerWrap.parentElement.insertBefore(
 					array[i].outerWrap,
@@ -4553,332 +4545,257 @@ class Common extends Module {
 	}
 
 	async buildGiveaway(context, url, errorMessage, blacklist) {
-		let ended,
-			avatar,
-			code,
-			column,
-			columns,
-			comments,
-			counts,
-			endTime,
-			endTimeColumn,
-			entered,
-			entries,
-			giveaway,
-			heading,
-			headingName,
-			i,
-			id,
-			icons,
-			image,
-			n,
-			removeEntryButton,
-			started,
-			startTimeColumn,
-			thinHeadings;
-		giveaway = context.getElementsByClassName('featured__outer-wrap--giveaway')[0];
-		if (giveaway) {
-			let match = url.match(/giveaway\/(.+?)\//),
-				sgTools = false;
-			if (match) {
-				code = match[1];
-			} else {
-				match = url.match(/giveaways\/(.+)/);
-				if (match) {
-					code = match[1];
-					sgTools = true;
-				}
+		const giveaway = context.getElementsByClassName('featured__outer-wrap--giveaway')[0];
+		if (!giveaway) return null;
+
+		let code = '';
+		let sgTools = false;
+
+		const giveawayMatch = url.match(/giveaway\/(.+?)\//);
+		if (giveawayMatch) {
+			code = giveawayMatch[1];
+		} else {
+			const sgToolsMatch = url.match(/giveaways\/(.+)/);
+			if (sgToolsMatch) {
+				code = sgToolsMatch[1];
+				sgTools = true;
 			}
-			id = giveaway.getAttribute('data-game-id');
-			heading = giveaway.getElementsByClassName('featured__heading')[0];
-			icons = heading.getElementsByTagName('a');
-			for (i = 0, n = icons.length; i < n; ++i) {
-				icons[i].classList.add('giveaway__icon');
-			}
-			headingName = heading.firstElementChild;
-			this.createElements(headingName, 'atouter', [
+		}
+
+		const id = giveaway.getAttribute('data-game-id');
+		const heading = giveaway.getElementsByClassName('featured__heading')[0];
+		const icons = heading.getElementsByTagName('a');
+		for (const icon of icons) {
+			icon.classList.add('giveaway__icon');
+		}
+
+		const headingName = heading.firstElementChild;
+		this.createElements(headingName, 'atouter', [
+			{
+				attributes: {
+					class: 'giveaway__heading__name',
+					href: url,
+				},
+				type: 'a',
+				children: Array.from(headingName.childNodes).map((x) => ({ context: x })),
+			},
+		]);
+
+		const thinHeadings = Array.from(heading.getElementsByClassName('featured__heading__small'));
+		for (const thinHeading of thinHeadings) {
+			this.createElements(thinHeading, 'atouter', [
 				{
-					attributes: {
-						class: 'giveaway__heading__name',
-						href: url,
-					},
-					type: 'a',
-					children: [
-						...Array.from(headingName.childNodes).map((x) => {
-							return {
-								context: x,
-							};
-						}),
-					],
+					attributes: { class: 'giveaway__heading__thin' },
+					type: 'span',
+					children: Array.from(thinHeading.childNodes).map((x) => ({ context: x })),
 				},
 			]);
-			thinHeadings = heading.getElementsByClassName('featured__heading__small');
-			for (i = 0, n = thinHeadings.length; i < n; ++i) {
-				this.createElements(thinHeadings[0], 'atouter', [
+		}
+
+		const columns = heading.nextElementSibling;
+		const endTimeColumn = columns.firstElementChild;
+		endTimeColumn.classList.remove('featured__column');
+
+		let ended = false;
+		if (sgTools) {
+			const info = await this.esgst.modules.games.games_getInfo(giveaway);
+			if (info) {
+				const gameType = info.type.slice(0, -1);
+				this.createElements(heading, 'beforeend', [
 					{
 						attributes: {
-							class: 'giveaway__heading__thin',
+							class: 'giveaway__icon',
+							href: `https://store.steampowered.com/${gameType}/${info.id}/`,
+							rel: 'nofollow',
+							target: '_blank',
 						},
-						type: 'span',
-						children: [
-							...Array.from(thinHeadings[0].childNodes).map((x) => {
-								return {
-									context: x,
-								};
-							}),
-						],
+						type: 'a',
+						children: [{ attributes: { class: 'fa fa-steam' }, type: 'i' }],
+					},
+					{
+						attributes: {
+							class: 'giveaway__icon',
+							href: `/giveaways/search?${gameType}=${info.id}`,
+						},
+						type: 'a',
+						children: [{ attributes: { class: 'fa fa-search' }, type: 'i' }],
 					},
 				]);
 			}
-			columns = heading.nextElementSibling;
-			endTimeColumn = columns.firstElementChild;
-			endTimeColumn.classList.remove('featured__column');
-			if (sgTools) {
-				let info = await this.esgst.modules.games.games_getInfo(giveaway);
-				if (info) {
-					this.createElements(heading, 'beforeend', [
-						{
-							attributes: {
-								class: 'giveaway__icon',
-								href: `https://store.steampowered.com/${info.type.slice(0, -1)}/${info.id}/`,
-								rel: 'nofollow',
-								target: '_blank',
-							},
-							type: 'a',
-							children: [
-								{
-									attributes: {
-										class: 'fa fa-steam',
-									},
-									type: 'i',
-								},
-							],
-						},
-						{
-							attributes: {
-								class: 'giveaway__icon',
-								href: `/giveaways/search?${info.type.slice(0, -1)}=${info.id}`,
-							},
-							type: 'a',
-							children: [
-								{
-									attributes: {
-										class: 'fa fa-search',
-									},
-									type: 'i',
-								},
-							],
-						},
-					]);
+
+			const date = new Date(`${endTimeColumn.lastElementChild.textContent}Z`).getTime();
+			ended = Date.now() > date;
+
+			const items = [];
+			if (ended) {
+				items.push({ text: 'Ended', type: 'node' });
+			}
+			items.push(
+				{
+					attributes: { ['data-timestamp']: date / 1000 },
+					text: ended ? this.getTimeSince(date) : this.getTimeSince(date, true),
+					type: 'span',
+				},
+				{
+					text: ended ? ' ago ' : ' remaining ',
+					type: 'node',
 				}
-				let date = new Date(`${endTimeColumn.lastElementChild.textContent}Z`).getTime();
-				ended = Date.now() > date;
-				const items = [];
-				if (ended) {
-					items.push({
-						text: 'Ended',
-						type: 'node',
-					});
-				}
-				items.push(
-					{
-						attributes: {
-							['data-timestamp']: date / 1e3,
-						},
-						text: ended ? this.getTimeSince(date) : this.getTimeSince(date, true),
-						type: 'span',
-					},
-					{
-						text: ended ? ' ago ' : ' remaining ',
-						type: 'node',
-					}
-				);
-				this.createElements(endTimeColumn.lastElementChild, 'atouter', items);
-			}
-			endTime = parseInt(endTimeColumn.lastElementChild.getAttribute('data-timestamp')) * 1000;
-			startTimeColumn = endTimeColumn.nextElementSibling;
-			startTimeColumn.classList.remove('featured__column', 'featured__column--width-fill');
-			startTimeColumn.classList.add('giveaway__column--width-fill');
-			if (sgTools) {
-				let date = new Date(`${startTimeColumn.firstElementChild.textContent}Z`).getTime();
-				const items = [];
-				if (ended) {
-					items.push({
-						text: 'Ended ',
-						type: 'node',
-					});
-				}
-				items.push(
-					{
-						attributes: {
-							['data-timestamp']: date / 1e3,
-						},
-						text: this.getTimeSince(date),
-						type: 'span',
-					},
-					{
-						text: ' ago ',
-						type: 'node',
-					}
-				);
-				this.createElements(startTimeColumn.firstElementChild, 'atouter', items);
-			}
-			startTimeColumn.lastElementChild.classList.add('giveaway__username');
-			avatar = columns.lastElementChild;
-			if (sgTools) {
-				avatar.className = 'giveaway_image_avatar';
-			}
-			avatar.remove();
-			startTimeColumn.querySelector(`[style]`).removeAttribute('style');
-			column = startTimeColumn.nextElementSibling;
-			while (column) {
-				column.classList.remove('featured__column');
-				column.className = column.className.replace(/featured/g, 'giveaway');
-				column = column.nextElementSibling;
-			}
-			removeEntryButton = context.getElementsByClassName('sidebar__entry-delete')[0];
-			if (removeEntryButton && !removeEntryButton.classList.contains('is-hidden')) {
-				entered = 'is-faded';
-			} else {
-				entered = '';
-			}
-			counts = context.getElementsByClassName('sidebar__navigation__item__count');
-			if (counts.length > 1) {
-				entries = counts[1].textContent;
-				comments = counts[0].textContent;
-				started = true;
-			} else if (counts.length > 0) {
-				entries = 0;
-				comments = counts[0].textContent;
-				started = false;
-			} else {
-				entries = 0;
-				comments = 0;
-			}
-			image = giveaway
-				.getElementsByClassName('global__image-outer-wrap--game-large')[0]
-				.firstElementChild.getAttribute('src');
-			const attributes = {
-				class: 'giveaway__row-outer-wrap',
-				['data-game-id']: id,
-			};
-			if (errorMessage) {
-				attributes['data-error'] = errorMessage;
-			}
-			if (blacklist) {
-				attributes['data-blacklist'] = true;
-			}
-			const errorButton = context.getElementsByClassName('sidebar__error is-disabled')[0];
-			if (!errorButton || errorButton.textContent.trim() === 'Not Enough Points') {
-				attributes['data-enterable'] = true;
-			}
-			if (context.getElementsByClassName('sidebar__entry-insert')[0]) {
-				attributes['data-currently-enterable'] = true;
-			}
-			if (entered) {
-				attributes['data-entered'] = true;
-			}
-			heading.className = 'giveaway__heading';
-			columns.className = 'giveaway__columns';
-			return {
-				code,
-				html: [
-					{
-						type: 'div',
-						children: [
-							{
-								attributes,
-								type: 'div',
-								children: [
-									{
-										attributes: {
-											class: `giveaway__row-inner-wrap ${entered}`,
-										},
-										type: 'div',
-										children: [
-											{
-												attributes: {
-													class: 'giveaway__summary',
-												},
-												children: [
-													{
-														context: heading,
-													},
-													{
-														context: columns,
-													},
-													{
-														attributes: {
-															class: 'giveaway__links',
-														},
-														type: 'div',
-														children: [
-															{
-																attributes: {
-																	href: `${url}/entries`,
-																},
-																type: 'a',
-																children: [
-																	{
-																		attributes: {
-																			class: 'fa fa-tag',
-																		},
-																		type: 'i',
-																	},
-																	{
-																		text: `${entries} entries`,
-																		type: 'span',
-																	},
-																],
-															},
-															{
-																attributes: {
-																	href: `${url}/comments`,
-																},
-																type: 'a',
-																children: [
-																	{
-																		attributes: {
-																			class: 'fa fa-comment',
-																		},
-																		type: 'i',
-																	},
-																	{
-																		text: `${comments} comments`,
-																		type: 'span',
-																	},
-																],
-															},
-														],
-													},
-												],
-												type: 'div',
-											},
-											{
-												context: avatar,
-											},
-											{
-												attributes: {
-													class: 'giveaway_image_thumbnail',
-													href: url,
-													style: `background-image: url(${image})`,
-												},
-												type: 'a',
-											},
-										],
-									},
-								],
-							},
-						],
-					},
-				],
-				points: parseInt(heading.textContent.match(/\((\d+)P\)/)[1]),
-				started,
-				timestamp: endTime,
-			};
-		} else {
-			return null;
+			);
+			this.createElements(endTimeColumn.lastElementChild, 'atouter', items);
 		}
+
+		const endTime = parseInt(endTimeColumn.lastElementChild.getAttribute('data-timestamp'), 10) * 1000;
+		const startTimeColumn = endTimeColumn.nextElementSibling;
+		startTimeColumn.classList.remove('featured__column', 'featured__column--width-fill');
+		startTimeColumn.classList.add('giveaway__column--width-fill');
+
+		if (sgTools) {
+			const date = new Date(`${startTimeColumn.firstElementChild.textContent}Z`).getTime();
+			const items = [];
+			if (ended) {
+				items.push({ text: 'Ended ', type: 'node' });
+			}
+			items.push(
+				{
+					attributes: { ['data-timestamp']: date / 1000 },
+					text: this.getTimeSince(date),
+					type: 'span',
+				},
+				{ text: ' ago ', type: 'node' }
+			);
+			this.createElements(startTimeColumn.firstElementChild, 'atouter', items);
+		}
+
+		startTimeColumn.lastElementChild.classList.add('giveaway__username');
+
+		const avatar = columns.lastElementChild;
+		if (sgTools) {
+			avatar.className = 'giveaway_image_avatar';
+		}
+		avatar.remove();
+
+		startTimeColumn.querySelector('[style]')?.removeAttribute('style');
+
+		let column = startTimeColumn.nextElementSibling;
+		while (column) {
+			column.classList.remove('featured__column');
+			column.className = column.className.replace(/featured/g, 'giveaway');
+			column = column.nextElementSibling;
+		}
+
+		const removeEntryButton = context.getElementsByClassName('sidebar__entry-delete')[0];
+		const entered = removeEntryButton && !removeEntryButton.classList.contains('is-hidden') ? 'is-faded' : '';
+
+		const counts = context.getElementsByClassName('sidebar__navigation__item__count');
+		let entries = 0;
+		let comments = 0;
+		let started = false;
+
+		if (counts.length > 1) {
+			entries = counts[1].textContent;
+			comments = counts[0].textContent;
+			started = true;
+		} else if (counts.length > 0) {
+			comments = counts[0].textContent;
+		}
+
+		const image = giveaway
+			.getElementsByClassName('global__image-outer-wrap--game-large')[0]
+			?.firstElementChild?.getAttribute('src');
+
+		const attributes = {
+			class: 'giveaway__row-outer-wrap',
+			['data-game-id']: id,
+		};
+
+		if (errorMessage) attributes['data-error'] = errorMessage;
+		if (blacklist) attributes['data-blacklist'] = true;
+
+		const errorButton = context.getElementsByClassName('sidebar__error is-disabled')[0];
+		if (!errorButton || errorButton.textContent.trim() === 'Not Enough Points') {
+			attributes['data-enterable'] = true;
+		}
+
+		if (context.getElementsByClassName('sidebar__entry-insert')[0]) {
+			attributes['data-currently-enterable'] = true;
+		}
+
+		if (entered) {
+			attributes['data-entered'] = true;
+		}
+
+		heading.className = 'giveaway__heading';
+		columns.className = 'giveaway__columns';
+
+		const pointsMatch = heading.textContent.match(/\((\d+)P\)/);
+		const points = pointsMatch ? parseInt(pointsMatch[1], 10) : 0;
+
+		return {
+			code,
+			html: [
+				{
+					type: 'div',
+					children: [
+						{
+							attributes,
+							type: 'div',
+							children: [
+								{
+									attributes: {
+										class: `giveaway__row-inner-wrap ${entered}`,
+									},
+									type: 'div',
+									children: [
+										{
+											attributes: { class: 'giveaway__summary' },
+											type: 'div',
+											children: [
+												{ context: heading },
+												{ context: columns },
+												{
+													attributes: { class: 'giveaway__links' },
+													type: 'div',
+													children: [
+														{
+															attributes: { href: `${url}/entries` },
+															type: 'a',
+															children: [
+																{ attributes: { class: 'fa fa-tag' }, type: 'i' },
+																{ text: `${entries} entries`, type: 'span' },
+															],
+														},
+														{
+															attributes: { href: `${url}/comments` },
+															type: 'a',
+															children: [
+																{ attributes: { class: 'fa fa-comment' }, type: 'i' },
+																{ text: `${comments} comments`, type: 'span' },
+															],
+														},
+													],
+												},
+											],
+										},
+										{ context: avatar },
+										{
+											attributes: {
+												class: 'giveaway_image_thumbnail',
+												href: url,
+												style: `background-image: url(${image})`,
+											},
+											type: 'a',
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+			],
+			points,
+			started,
+			timestamp: endTime,
+		};
 	}
 
 	getCopyIcon(value) {
@@ -5145,9 +5062,8 @@ class Common extends Module {
 	}
 
 	reverseComments(context) {
-		let i, n;
-		let frag = document.createDocumentFragment();
-		for (i = 0, n = context.children.length; i < n; ++i) {
+		const frag = document.createDocumentFragment();
+		while (context.lastElementChild) {
 			frag.appendChild(context.lastElementChild);
 		}
 		context.appendChild(frag);
@@ -5266,10 +5182,10 @@ class Common extends Module {
 	createSidebarNavigation(context, position, options) {
 		const items = [];
 		for (const item of options.items) {
-			const attributes = Object.assign(
-				{ className: 'sidebar__navigation__item__link' },
-				item.url ? { href: item.url } : null
-			);
+			const attributes = {
+				className: 'sidebar__navigation__item__link',
+				...(item.url ? { href: item.url } : null),
+			};
 			const children = (
 				<fragment>
 					<div className="sidebar__navigation__item__name">{item.name}</div>

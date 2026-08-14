@@ -1,22 +1,32 @@
-(function () {
-	function esgst_at_t() {
-		$(document).off("mouseenter", "[data-timestamp]");
-		$(document).on("mouseenter", "[data-timestamp]", function () {
-			var e = $(this).attr("title");
-			if (void 0 === e || !1 === e) {
-				$(this).attr(
-					"data-ui-tooltip",
-					'{"rows":[{"icon":[{"class":"fa-clock-o","color":"#84cfda"}],"columns":[{"name":"' +
-					$(this).attr("data-esgst-timestamp") +
-					'"}]}]}'
-				);
-			}
-		});
-	}
+(() => {
+    const mouseEnter = (event) => {
+        const target = event.target?.closest?.('[data-timestamp]');
+        if (!target) return;
 
-	if (document.readyState === "complete") {
-		esgst_at_t();
-	} else {
-		$(window).on("load", esgst_at_t);
-	}
+        const title = target.getAttribute('title');
+        
+        if (!title) {
+            const timestamp = target.getAttribute('data-esgst-timestamp');
+            const tooltipData = {
+                rows: [
+                    {
+                        icon: [{ class: 'fa-clock-o', color: '#84cfda' }],
+                        columns: [{ name: timestamp }],
+                    },
+                ],
+            };
+            target.setAttribute('data-ui-tooltip', JSON.stringify(tooltipData));
+        }
+    };
+
+    function initListener() {
+        document.removeEventListener('mouseenter', mouseEnter, true);
+        document.addEventListener('mouseenter', mouseEnter, true);
+    }
+
+    if (document.readyState === 'complete') {
+        initListener();
+    } else {
+        window.addEventListener('load', initListener);
+    }
 })();

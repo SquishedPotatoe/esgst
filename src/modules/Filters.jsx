@@ -469,9 +469,8 @@ class Filters extends Module {
 
 		let name = Settings.get(`${obj.id}_preset${obj.type}`);
 		if (name) {
-			let i;
 			const presets = Settings.get(obj.key);
-			for (i = presets.length - 1; i > -1 && presets[i].name !== name; i--) {}
+			const i = presets.findLastIndex((p) => p.name === name);
 			if (i > -1) {
 				obj.rules = presets[i].rules;
 			}
@@ -1699,7 +1698,7 @@ class Filters extends Module {
 				rules: [],
 			};
 			group.each(
-				function (rule) {
+				(rule) => {
 					if (!event) {
 						if (rule.data && rule.data.paused) {
 							rule.$el[0].setAttribute('data-esgst-paused', true);
@@ -1754,7 +1753,7 @@ class Filters extends Module {
 					groupData.rules.push(obj.builder.change('ruleToJson', ruleData, rule));
 					groupData_save.rules.push(obj.builder.change('ruleToJson', ruleData_save, rule));
 				},
-				function (model) {
+				(model) => {
 					if (!event) {
 						if (model.data && model.data.paused) {
 							model.$el[0].setAttribute('data-esgst-paused', true);
@@ -2050,9 +2049,8 @@ class Filters extends Module {
 			name,
 			rules: obj.rules_save,
 		};
-		let i;
 		const presets = Settings.get(obj.key);
-		for (i = presets.length - 1; i > -1 && presets[i].name !== name; i--) {}
+		const i = presets.findLastIndex((p) => p.name === name);
 		if (i > -1) {
 			presets[i] = preset;
 		} else {
@@ -2645,17 +2643,13 @@ class Filters extends Module {
 						break;
 					}
 
-					let i;
-					for (i = list.length - 1; i > -1 && item[key].indexOf(list[i]) < 0; i--) {}
-					filtered = i > -1;
+					filtered = list.some((val) => item[key].includes(val));
 				} else {
 					if (!item[key] || !Array.isArray(item[key])) {
 						break;
 					}
 
-					let i;
-					for (i = list.length - 1; i > -1 && item[key].indexOf(list[i]) < 0; i--) {}
-					filtered = i < 0;
+					filtered = !list.some((val) => item[key].includes(val));
 				}
 
 				break;

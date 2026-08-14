@@ -242,12 +242,12 @@ class GeneralLevelProgressVisualizer extends Module {
 	joinStyles() {
 		let style;
 		if (this.esgst.lpvStyleArray) {
-			style = JSON.parse(JSON.stringify(this.esgst.lpvStyleArray));
+			style = structuredClone(this.esgst.lpvStyleArray);
 			if (this.esgst.pvStyleArray) {
 				for (const [i, item] of style.entries()) {
 					for (const [j, rule] of item.rules.entries()) {
 						rule.values = rule.values.concat(
-							JSON.parse(JSON.stringify(this.esgst.pvStyleArray[i].rules[j].values))
+							structuredClone(this.esgst.pvStyleArray[i].rules[j].values)
 						);
 					}
 					item.rules.push(
@@ -267,7 +267,7 @@ class GeneralLevelProgressVisualizer extends Module {
 				}
 			}
 		} else if (this.esgst.pvStyleArray) {
-			style = JSON.parse(JSON.stringify(this.esgst.pvStyleArray));
+			style = structuredClone(this.esgst.pvStyleArray);
 		}
 		if (!style || !Array.isArray(style)) {
 			return;
@@ -308,73 +308,67 @@ class GeneralLevelProgressVisualizer extends Module {
 		const currentTime = Date.now();
 		for (const type of ['apps', 'subs']) {
 			const items = giveaways.sent[type];
-			for (const id in items) {
-				if (items.hasOwnProperty(id)) {
-					let open = 0;
-					let sent = 0;
-					let value = 0;
-					for (const code of items[id]) {
-						const giveaway = this.esgst.giveaways[code];
-						if (!giveaway) {
-							Logger.info(`Could not find giveaway ${code}...`);
-							continue;
-						}
-						value = giveaway.points;
-						if (currentTime < giveaway.endTime || !giveaway.started) {
-							// giveaway is open or has not started yet
-							open += giveaway.copies;
-						} else {
-							// giveaway is closed
-							if (
-								giveaway.entries >= 5 ||
-								(!giveaway.inviteOnly && !giveaway.group && !giveaway.whitelist)
-							) {
-								// giveaway counts for cv
-								if (Array.isArray(giveaway.winners)) {
-									// user is using the new database, which is more accurate
-									for (const winner of giveaway.winners) {
-										if (winner.status === 'Received') {
-											sent += 1;
-										}
+			for (const [id, codeList] of Object.entries(items || {})) {
+				let open = 0;
+				let sent = 0;
+				let value = 0;
+				for (const code of codeList) {
+					const giveaway = this.esgst.giveaways[code];
+					if (!giveaway) {
+						Logger.info(`Could not find giveaway ${code}...`);
+						continue;
+					}
+					value = giveaway.points;
+					if (currentTime < giveaway.endTime || !giveaway.started) {
+						// giveaway is open or has not started yet
+						open += giveaway.copies;
+					} else {
+						// giveaway is closed
+						if (
+							giveaway.entries >= 5 ||
+							(!giveaway.inviteOnly && !giveaway.group && !giveaway.whitelist)
+						) {
+							// giveaway counts for cv
+							if (Array.isArray(giveaway.winners)) {
+								// user is using the new database, which is more accurate
+								for (const winner of giveaway.winners) {
+									if (winner.status === 'Received') {
+										sent += 1;
 									}
-								} else if (giveaway.winners > 0) {
-									sent += Math.min(giveaway.entries, giveaway.winners);
 								}
+							} else if (giveaway.winners > 0) {
+								sent += Math.min(giveaway.entries, giveaway.winners);
 							}
 						}
 					}
-					const game = this.esgst.games[type][id];
-					if (game) {
-						if (game.noCV) {
-							// game gives no cv
-							value = 0;
-						} else if (game.reducedCV) {
-							// game gives reduced cv (15% of the value)
-							value *= 0.15;
-						}
+				}
+				const game = this.esgst.games[type][id];
+				if (game) {
+					if (game.noCV) {
+						// game gives no cv
+						value = 0;
+					} else if (game.reducedCV) {
+						// game gives reduced cv (15% of the value)
+						value *= 0.15;
 					}
-					if (sent > 5 || sent + open > 5) {
-						// after 5 copies each next copy is worth only 90% of the previous value
-						for (let i = sent - 5; i > 0; i--) {
-							value *= 0.9;
-						}
-						let realValue = 0;
-						for (let i = open; i > 0; i--) {
-							value *= 0.9;
-							realValue += value;
-						}
-						if (realValue > 0) {
-							cv += realValue;
-							//Logger.info(`Adding ${realValue} CV from: http://store.steampowered.com/${type.slice(0, -1)}/${id}${game && game.name ? ` (${game.name})` : ''}`);
-							//Logger.info(`Total CV: ${cv}`);
-						}
-					} else if (open > 0) {
-						value *= open;
-						if (value > 0) {
-							cv += value;
-							//Logger.info(`Adding ${value} CV from: http://store.steampowered.com/${type.slice(0, -1)}/${id}${game && game.name ? ` (${game.name})` : ''}`);
-							//Logger.info(`Total CV: ${cv}`);
-						}
+				}
+				if (sent > 5 || sent + open > 5) {
+					// after 5 copies each next copy is worth only 90% of the previous value
+					if (sent > 5) {
+						value *= 0.9 ** (sent - 5);
+					}
+					let realValue = 0;
+					for (let i = open; i > 0; i--) {
+						value *= 0.9;
+						realValue += value;
+					}
+					if (realValue > 0) {
+						cv += realValue;
+					}
+				} else if (open > 0) {
+					value *= open;
+					if (value > 0) {
+						cv += value;
 					}
 				}
 			}
