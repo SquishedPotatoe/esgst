@@ -1,6 +1,7 @@
 import { DOM } from '../../class/DOM';
 import { FetchRequest } from '../../class/FetchRequest';
 import { Module } from '../../class/Module';
+import { Settings } from '../../class/Settings';
 import { common } from '../Common';
 
 const createElements = common.createElements.bind(common),
@@ -22,7 +23,86 @@ class GiveawaysBlacklistGiveawayLoader extends Module {
 			name: 'Blacklist Giveaway Loader',
 			sg: true,
 			type: 'giveaways',
+			featureMap: {
+				giveaway: this.bgl_getGiveaways.bind(this),
+			},
 		};
+	}
+
+	bgl_getGiveaways(giveaways) {
+		giveaways.forEach((giveaway) => {
+			if (!giveaway.blacklist && !giveaway.outerWrap?.getAttribute('data-blacklist')) return;
+
+			const descriptionButton =
+				giveaway.quickEntryWrap?.querySelector('.giveaway__quick-entry-btn--description') ||
+				giveaway.outerWrap?.querySelector('.giveaway__quick-entry-btn--description');
+
+			if (!descriptionButton || descriptionButton.classList.contains('esgst-bgl-handled')) return;
+			descriptionButton.classList.add('esgst-bgl-handled');
+
+			descriptionButton.addEventListener('click', async (e) => {
+				e.stopPropagation();
+
+				const existingPanel =
+					giveaway.outerWrap.querySelector('.giveaway__description-panel') ||
+					giveaway.outerWrap.closest('.esgst-gv-container')?.querySelector('.giveaway__description-panel');
+
+				if (giveaway.bglDescriptionLoaded) {
+					if (!Settings.get('gv') && existingPanel) {
+						existingPanel.classList.toggle('esgst-hidden');
+					}
+					return;
+				}
+
+				if (giveaway.bglLoadingDescription) return;
+				giveaway.bglLoadingDescription = true;
+
+				const icon = descriptionButton.querySelector('i');
+				if (icon) {
+					icon.className = 'fa fa-circle-o-notch fa-spin';
+				}
+
+				let responseHtml = null;
+				try {
+					const response = await FetchRequest.get(giveaway.url || `/giveaway/${giveaway.code}/`, {
+						loggedOut: true,
+					});
+					responseHtml = response.html;
+				} catch {}
+
+				if (icon) {
+					icon.className = 'fa fa-align-left';
+				}
+
+				giveaway.bglLoadingDescription = false;
+				giveaway.bglDescriptionLoaded = true;
+
+				if (!responseHtml) return;
+
+				const description = responseHtml.querySelector('.page__description');
+				if (description) {
+					DOM.insert(
+						giveaway.outerWrap,
+						'beforeend',
+						<div className="giveaway__description-panel">{description}</div>
+					);
+				} else {
+					const summary = responseHtml.querySelector('.table--summary');
+					const errorMsg = summary
+						? summary.textContent.trim()
+						: 'This is a group/whitelist giveaway and therefore cannot be loaded by Blacklist Giveaway Loader.';
+					DOM.insert(
+						giveaway.outerWrap,
+						'beforeend',
+						<div className="giveaway__description-panel">
+							<div className="esgst-red esgst-bold" style={{ padding: '10px' }}>
+								{errorMsg}
+							</div>
+						</div>
+					);
+				}
+			});
+		});
 	}
 
 	async init() {

@@ -4724,6 +4724,50 @@ class Common extends Module {
 			if (entered) {
 				attributes['data-entered'] = true;
 			}
+			const hasDescription = !sgTools && Boolean(context.querySelector('.page__description'));
+			const quickEntryChildren = [];
+
+			if (hasDescription) {
+				quickEntryChildren.push({
+					attributes: {
+						class: 'giveaway__quick-entry-btn giveaway__quick-entry-btn--description',
+						'data-code': code,
+						'data-ui-tooltip': '{"rows":[{"icon":[{"class":"fa-align-left","color":"var(--color-blue-3)"}],"columns":[{"name":"View Description"}]}]}',
+					},
+					type: 'div',
+					children: [{ attributes: { class: 'fa fa-align-left' }, type: 'i' }],
+				});
+			}
+
+			if (!sgTools) {
+				quickEntryChildren.push({
+					attributes: { class: 'giveaway__quick-entry-form' },
+					type: 'form',
+					children: [
+						{ attributes: { name: 'xsrf_token', type: 'hidden', value: Session.xsrfToken }, type: 'input' },
+						{ attributes: { name: 'do', type: 'hidden', value: '' }, type: 'input' },
+						{ attributes: { name: 'code', type: 'hidden', value: code }, type: 'input' },
+						{
+							attributes: {
+								class: `giveaway__quick-entry-btn giveaway__quick-entry-btn--insert ${hasDescription ? 'is-locked' : ''}`.trim(),
+								'data-do': 'entry_insert',
+								'data-ui-tooltip': '{"rows":[{"icon":[{"class":"fa-plus-circle","color":"var(--color-green-3)"}],"columns":[{"name":"Enter Giveaway"}]}]}',
+							},
+							type: 'div',
+							children: [{ attributes: { class: 'fa fa-plus-circle' }, type: 'i' }],
+						},
+						{
+							attributes: {
+								class: 'giveaway__quick-entry-btn giveaway__quick-entry-btn--delete',
+								'data-do': 'entry_delete',
+								'data-ui-tooltip': '{"rows":[{"icon":[{"class":"fa-minus-circle","color":"var(--color-yellow-3)"}],"columns":[{"name":"Remove Entry"}]}]}',
+							},
+							type: 'div',
+							children: [{ attributes: { class: 'fa fa-minus-circle' }, type: 'i' }],
+						},
+					],
+				});
+			}
 			heading.className = 'giveaway__heading';
 			columns.className = 'giveaway__columns';
 			return {
@@ -4738,7 +4782,7 @@ class Common extends Module {
 								children: [
 									{
 										attributes: {
-											class: `giveaway__row-inner-wrap ${entered}`,
+											class: `giveaway__row-inner-wrap ${entered} ${hasDescription ? 'has-description' : ''}`.trim(),
 										},
 										type: 'div',
 										children: [
@@ -4775,9 +4819,9 @@ class Common extends Module {
 																		text: `${entries} entries`,
 																		type: 'span',
 																	},
-																],
-															},
-															{
+													],
+												},
+												{
 																attributes: {
 																	href: `${url}/comments`,
 																},
@@ -4798,9 +4842,18 @@ class Common extends Module {
 														],
 													},
 												],
-												type: 'div',
-											},
-											{
+														type: 'div',
+													},
+												...(quickEntryChildren.length > 0
+													? [
+														{
+															attributes: { class: 'giveaway__quick-entry-wrap' },
+															type: 'div',
+															children: quickEntryChildren,
+														},
+													  ]
+													: []),
+												{
 												context: avatar,
 											},
 											{
