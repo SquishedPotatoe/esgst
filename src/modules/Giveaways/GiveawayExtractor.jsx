@@ -1079,6 +1079,7 @@ class GiveawaysGiveawayExtractor extends Module {
 
 		let giveaway = null;
 		let responseHtml = null;
+		let resolvedUrl = null;
 
 		try {
 			if (sgTools) {
@@ -1093,6 +1094,7 @@ class GiveawaysGiveawayExtractor extends Module {
 			} else {
 				const response = await FetchRequest.get(`/giveaway/${currentCode}/`);
 				responseHtml = response.html;
+				resolvedUrl = response.url;
 				const button = responseHtml.getElementsByClassName('sidebar__error')[0];
 				giveaway = await buildGiveaway(responseHtml, response.url, button?.textContent);
 			}
@@ -1102,7 +1104,8 @@ class GiveawaysGiveawayExtractor extends Module {
 
 		if (!giveaway && !sgTools) {
 			try {
-				const response = await FetchRequest.get(`/giveaway/${currentCode}/`, { loggedOut: true });
+				const targetUrl = resolvedUrl || `/giveaway/${currentCode}/`;
+				const response = await FetchRequest.get(targetUrl, { loggedOut: true });
 				responseHtml = response.html;
 				giveaway = await buildGiveaway(responseHtml, response.url, null, true);
 			} catch { }
