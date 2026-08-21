@@ -577,7 +577,28 @@ class GiveawaysEnterLeaveGiveawayButton extends Module {
 		) {
 			return;
 		}
-		responseHtml = (await FetchRequest.get(giveaway.url, { doNotQueue: true })).html;
+
+		responseHtml = (await FetchRequest.get(giveaway.url, {
+			doNotQueue: true,
+		})).html;
+
+		if (Settings.get('bgl')) {
+			const hasError = [...responseHtml.querySelectorAll('.table__row-inner-wrap')].some(
+				(row) =>
+					row
+						.querySelector('.table__column--width-small')
+						?.textContent.trim()
+						.toLowerCase() === 'error'
+			);
+
+			if (hasError) {
+				responseHtml = (await FetchRequest.get(giveaway.url, {
+					doNotQueue: true,
+					loggedOut: true,
+				})).html;
+			}
+		}
+
 		if (mainCallback && !responseHtml.getElementsByClassName('featured__outer-wrap--giveaway')[0]) {
 			mainCallback(true);
 			return;
