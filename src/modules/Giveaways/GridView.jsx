@@ -197,11 +197,14 @@ class GiveawaysGridView extends Module {
 		if (this.esgst.userPath && !this.esgst.userWonPath) {
 			avatar = document
 				.getElementsByClassName('global__image-inner-wrap')[0]
-				.style.backgroundImage.match(/\("(.+)"\)/)[1];
+				?.style.backgroundImage?.match(/\("(.+)"\)/)?.[1];
 			username = document
-				.getElementsByClassName('featured__heading__medium')[0].textContent;
+				.getElementsByClassName('featured__heading__medium')[0]?.textContent;
 		}
 		giveaways.forEach((giveaway) => {
+			if (giveaway.grid || giveaway.innerWrap?.classList.contains('esgst-gv-box')) {
+				return;
+			}
 			giveaway.grid = true;
 			let popup =
 				giveaway.outerWrap.closest('.esgst-popup-scrollable') ||
@@ -307,7 +310,7 @@ class GiveawaysGridView extends Module {
 					</div>
 				</div>
 			);
-			if (this.esgst.userPath && !this.esgst.userWonPath && source !== 'gb') {
+			if (this.esgst.userPath && !this.esgst.userWonPath && source !== 'gb' && username) {
 				giveaway.creatorContainer = (<a className="giveaway__username" href={`/user/${username}`}> {username}</a>);
 				giveaway.avatar = (<a href={`/user/${username}`} className="giveaway_image_avatar" style={`background-image:url(${avatar});`}></a>);
 			}
@@ -321,18 +324,20 @@ class GiveawaysGridView extends Module {
 			if (giveaway.endTimeColumn?.nextElementSibling) {
 				temp.after(giveaway.endTimeColumn.nextElementSibling);
 			}
-			giveaway.endTimeColumn.classList.add('esgst-hidden');
-			if (giveaway.startTimeColumn) {
-				giveaway.startTimeColumn.classList.add('esgst-hidden');
+			giveaway.endTimeColumn?.classList.add('esgst-hidden');
+			giveaway.startTimeColumn?.classList.add('esgst-hidden');
+			if (giveaway.entriesLink?.lastElementChild) {
+				giveaway.entriesLink.lastElementChild.textContent = giveaway.entriesLink.textContent.replace(
+					/[^\d,]+/g,
+					''
+				);
 			}
-			giveaway.entriesLink.lastElementChild.textContent = giveaway.entriesLink.textContent.replace(
-				/[^\d,]+/g,
-				''
-			);
-			giveaway.commentsLink.lastElementChild.textContent = giveaway.commentsLink.textContent.replace(
-				/[^\d,]+/g,
-				''
-			);
+			if (giveaway.commentsLink?.lastElementChild) {
+				giveaway.commentsLink.lastElementChild.textContent = giveaway.commentsLink.textContent.replace(
+					/[^\d,]+/g,
+					''
+				);
+			}
 			if (giveaway.quickEntryWrap && !Settings.get('elgb')) {
 				DOM.insert(temp, 'afterend', (
 					<div className="esgst-qe-panel">
