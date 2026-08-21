@@ -63,6 +63,11 @@ class GiveawaysFollowedGamesPage extends Module {
 			url: Shared.esgst.searchUrl,
 		};
 		if (!obj.container) return;
+
+		if (Shared.esgst.pinnedGiveaways) {
+			await Shared.common.endless_load(Shared.esgst.pinnedGiveaways, true);
+		}
+
 		if (Shared.esgst.es) {
 			Shared.esgst.es.paused = true;
 			const buttonIds = [
