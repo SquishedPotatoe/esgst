@@ -3263,9 +3263,17 @@ function addStyle() {
 		filter: grayscale(0);
 	}
 
-	.esgst-button-container {
+	.esgst-button-container, .esgst-ge-sgt-button.esgst-giveaway-column-button {
 		padding: 0;
 		border: none;
+	}
+
+	.esgst-ge-sgt-button .form__submit-button, .esgst-ge-sgt-button .form__submit-button:not(.is-disabled):hover, .esgst-ge-sgt-button .form__submit-button:not(.is-disabled):active {
+		background-image: linear-gradient(#A7D1EE 0%, #8AC4DF 50%, #6AA2C9 100%);
+		border-color: #93BBD3 #699DBC #427BA4 #70ACC8;
+		box-shadow: none;
+		color: inherit;
+		text-shadow: none;
 	}
 
 	.esgst-button-container.esgst-elgb-button {
