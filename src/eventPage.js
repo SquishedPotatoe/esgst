@@ -617,7 +617,15 @@ async function doFetch(parameters, request, sender, callbackOrPort) {
 		} catch (e) { console.warn('[SW] Failed to modify Steam cookies', e); }
 	}
 
+	let anonRuleId = null;
+
 	try {
+		if (request.loggedOut) {
+			const ruleRes = await startLoggedOutFetch(request.url, sender?.tab?.id);
+			if (!ruleRes.success) throw new Error(ruleRes.error || 'Failed to start logged-out request');
+			anonRuleId = ruleRes.ruleId;
+		}
+
 		if (request.fileName) parameters.body = await getZip(parameters.body, request.fileName);
 		const applySgToolsCsrfHeader = async (force = false) => {
 			if (!isSgTools || !canReadCookies) return;
@@ -658,6 +666,29 @@ async function doFetch(parameters, request, sender, callbackOrPort) {
 			});
 			await refreshResponse.text().catch(() => { });
 			if (refreshResponse.ok) {
+				await applySgToolsCsrfHeader(true);
+				response = await fetchWithTimeout(request.url, parameters);
+			}
+		}
+
+		const isCfBlocked = (response.status === 403 || response.status === 503) &&
+			(response.headers.get('server')?.toLowerCase().includes('cloudflare') || isSgStTab(request.url));
+
+		if (isCfBlocked) {
+			console.warn('[SW] Cloudflare 403/503 encountered. Triggering challenge resolution...');
+
+			if (anonRuleId !== null) {
+				await endLoggedOutFetch(anonRuleId);
+				anonRuleId = null;
+			}
+
+			const resolved = await resolveCloudflareChallenge(request.url);
+			if (resolved) {
+				if (request.loggedOut) {
+					const ruleRes = await startLoggedOutFetch(request.url, sender?.tab?.id);
+					if (ruleRes.success) anonRuleId = ruleRes.ruleId;
+				}
+
 				await applySgToolsCsrfHeader(true);
 				response = await fetchWithTimeout(request.url, parameters);
 			}
@@ -707,6 +738,10 @@ async function doFetch(parameters, request, sender, callbackOrPort) {
 			try { callbackOrPort(errorResult); } catch { }
 		}
 	} finally {
+		if (anonRuleId !== null) {
+			await endLoggedOutFetch(anonRuleId);
+		}
+
 		if (setSteamCookies) {
 			try {
 				if (originalBirthtime) await chrome.cookies.set({ ...originalBirthtime });
@@ -716,6 +751,68 @@ async function doFetch(parameters, request, sender, callbackOrPort) {
 			} catch (e) { console.warn('[SW] Failed to restore Steam cookies', e); }
 		}
 	}
+}
+
+let cfChallengePromise = null;
+
+async function resolveCloudflareChallenge(targetUrl) {
+	if (cfChallengePromise) return cfChallengePromise;
+
+	cfChallengePromise = (async () => {
+		try {
+			const urlObj = new URL(targetUrl);
+			const domain = urlObj.hostname.replace(/^www\./, '');
+
+			return await new Promise((resolve) => {
+				let tempTabId = null;
+				let timeoutId = null;
+
+				const cleanup = () => {
+					if (timeoutId) clearTimeout(timeoutId);
+					chrome.cookies.onChanged.removeListener(cookieListener);
+					cfChallengePromise = null;
+				};
+
+				const cookieListener = (changeInfo) => {
+					const { cookie, removed } = changeInfo;
+					if (!removed && cookie.name === 'cf_clearance' && cookie.domain.includes(domain)) {
+						cleanup();
+						if (tempTabId) chrome.tabs.remove(tempTabId).catch(() => {});
+						resolve(true);
+					}
+				};
+
+				chrome.cookies.onChanged.addListener(cookieListener);
+
+				timeoutId = setTimeout(() => {
+					cleanup();
+					resolve(false);
+				}, 120000);
+
+				(async () => {
+					const openTabs = await getOpenTabs();
+					const existing = openTabs.find((t) => t.url && t.url.includes(domain));
+
+					if (existing?.id) {
+						await chrome.tabs.update(existing.id, { active: true });
+						await chrome.tabs.reload(existing.id).catch(() => {});
+					} else {
+						const newTab = await chrome.tabs.create({
+							url: `https://${urlObj.hostname}/`,
+							active: true,
+						});
+						tempTabId = newTab.id;
+					}
+				})();
+			});
+		} catch (err) {
+			console.error('[SW] Cloudflare challenge resolution failed', err);
+			cfChallengePromise = null;
+			return false;
+		}
+	})();
+
+	return cfChallengePromise;
 }
 
 const LOGGED_OUT_RULE_ID_START = 1001;
