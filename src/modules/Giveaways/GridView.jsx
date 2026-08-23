@@ -120,7 +120,7 @@ class GiveawaysGridView extends Module {
 			`
 			);
 			if ((this.esgst.groupPath && Settings.get('gv_grp')) || (this.esgst.gamePath && Settings.get('gv_gp')) || this.esgst.giveawaysPath || (this.esgst.userPath && Settings.get('gv_pro'))) {
-				let button, display, element, popout, spacing, slider;
+				let button, display, element, elements, i, n, popout, spacing, slider;
 				button = createHeadingButton({
 					id: 'gv',
 					icons: ['fa-th-large'],
