@@ -204,42 +204,53 @@ class GeneralTableSorter extends Module {
 	}
 
 	ts_parseMiscValue(value, element) {
-		let numericMatch = value.match(/^[+-]?\d{1,3}(,\d{3})*(?:\.\d+)?(?!\w)|^[+-]?\d+(\.\d+)?(?!\w)/);
+		const trimmed = value.trim();
+
+		let percentMatch = trimmed.match(/^([+-]?\d+(?:\.\d+)?)\s*%/);
+		if (percentMatch) {
+			element.value = parseFloat(percentMatch[1]);
+			if (isNaN(element.value)) element.value = 0;
+			return true;
+		}
+
+		let numericMatch = trimmed.match(/^[+-]?\d{1,3}(?:,\d{3})*(?:\.\d+)?(?!\w)|^[+-]?\d+(?:\.\d+)?(?!\w)/);
 		if (numericMatch) {
 			element.value = parseFloat(numericMatch[0].replace(/,/g, ''));
 			if (isNaN(element.value)) element.value = 0;
 			return true;
 		}
-		if (/^(from\s*)?[-+]?[A-Z]{0,3}[$€£¥₹]\d[\d,\.]*$/i.test(value)) {
-			let cleaned = value.replace(/^from\s*/i, '').replace(/^[+]/, '').replace(/[A-Z]{0,3}[$€£¥₹]/i, '').replace(/,/g, '').trim();
+
+		if (/^(from\s*)?[-+]?[A-Z]{0,3}[$€£¥₹]\d[\d,\.]*$/i.test(trimmed)) {
+			let cleaned = trimmed.replace(/^from\s*/i, '').replace(/^[+]/, '').replace(/[A-Z]{0,3}[$€£¥₹]/i, '').replace(/,/g, '').trim();
 			element.value = parseFloat(cleaned);
 			if (isNaN(element.value)) element.value = 0;
 			return true;
 		}
-		element.value = value.replace(/[^\x00-\x7F]/gu, '').trimStart() || value;
+
+		element.value = trimmed.replace(/[^\x00-\x7F]/gu, '').trimStart() || trimmed;
 		return false;
 	}
 
 	ts_getArray(columnName, i, table) {
-		let array, column, element, j, n, row, rows, value;
-		array = [];
-		rows = table.querySelectorAll(`.table__row-outer-wrap, .row_outer_wrap, tbody tr`);
+		let array = [];
+		let rows = table.querySelectorAll(`.table__row-outer-wrap, .row_outer_wrap, tbody tr`);
 		let isNumeric = false;
 		const now = Date.now();
-		for (j = 0, n = rows.length; j < n; ++j) {
-			row = rows[j];
-			column = row.querySelectorAll(
+
+		for (let j = 0, n = rows.length; j < n; ++j) {
+			let row = rows[j];
+			let column = row.querySelectorAll(
 				`.table__column--width-fill, .table__column--width-medium, .table__column--width-small, .column_flex, .column_medium, .column_small, td`
 			)[i];
-			value = column && column.textContent.trim();
+			let value = column && column.textContent.trim();
 			const hasSortValue = column && column.hasAttribute('data-sort-value');
-			element = {
+			let element = {
 				outerWrap: row,
 				sortIndex: 0,
 				value: undefined,
 			};
 			if (row.hasAttribute('data-sort-index')) {
-				element.sortIndex = parseInt(row.getAttribute('data-sort-index'));
+				element.sortIndex = parseInt(row.getAttribute('data-sort-index'), 10);
 			} else {
 				element.sortIndex = j;
 				row.setAttribute('data-sort-index', j);
@@ -247,12 +258,14 @@ class GeneralTableSorter extends Module {
 			if (hasSortValue || (value && value.length > 0) || columnName === 'Trending') {
 				if (hasSortValue) {
 					element.value = parseFloat(column.getAttribute('data-sort-value'));
+					isNumeric = true;
 				} else {
 					switch (columnName) {
 						case 'Trending':
 							element.value =
 								column.getElementsByClassName('fa-caret-up').length -
 								column.getElementsByClassName('fa-caret-down').length;
+							isNumeric = true;
 							break;
 						case 'Added':
 						case 'Creation Date':
@@ -266,11 +279,13 @@ class GeneralTableSorter extends Module {
 								element.value = value.match(/Online|Open/)
 									? now
 									: parseInt(
-											column.querySelector(`[data-timestamp]`).getAttribute('data-timestamp')
-									  ) * 1e3;
+										column.querySelector(`[data-timestamp]`).getAttribute('data-timestamp'),
+										10
+									) * 1e3;
 							} catch (e) {
 								element.value = 0;
 							}
+							isNumeric = true;
 							break;
 						case 'Game':
 						case 'Giveaway':
@@ -283,30 +298,37 @@ class GeneralTableSorter extends Module {
 							element.value = value;
 							break;
 						default: {
-							if (!value || value === '―' || value === '-') {
+							if (!value || /^[-―—–]$/.test(value)) {
 								element.value = '';
 							} else {
 								const dateSubstring = this.ts_getDateSubstring(value, dateRegex, 0.7);
+								let rowIsNumeric = false;
 								if (dateSubstring) {
 									const parsedDate = this.ts_handleDate(dateSubstring);
-									isNumeric = parsedDate ? (element.value = parsedDate.getTime(), true) : this.ts_parseMiscValue(value, element);
+									if (parsedDate) {
+										element.value = parsedDate.getTime();
+										rowIsNumeric = true;
+									} else {
+										rowIsNumeric = this.ts_parseMiscValue(value, element);
+									}
 								} else {
-									isNumeric = this.ts_parseMiscValue(value, element);
+									rowIsNumeric = this.ts_parseMiscValue(value, element);
 								}
+								isNumeric = isNumeric || rowIsNumeric;
 							}
 							break;
 						}
 					}
 				}
 			} else {
-				element.value = 0;
+				element.value = '';
 			}
 			array.push(element);
 		}
 		if (isNumeric) {
 			for (let i = array.length - 1; i > -1; i--) {
 				let element = array[i];
-				if (typeof element.value === 'string') {
+				if (typeof element.value === 'string' || element.value === undefined || element.value === null) {
 					element.value = 0;
 				}
 			}
