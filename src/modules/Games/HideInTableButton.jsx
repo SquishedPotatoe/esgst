@@ -88,8 +88,19 @@ function initTable(table, esgst) {
 	const theadRow = table.querySelector('thead tr');
 	if (!theadRow) return;
 
+	const bodyRows = Array.from(table.querySelectorAll('tbody tr'));
+	const maxCols = Math.max(theadRow.children.length, ...bodyRows.map(tr => tr.children.length));
+
+	for (const tr of bodyRows) {
+		const missing = maxCols - tr.children.length;
+		if (missing > 0) {
+			tr.append(...Array.from({ length: missing }, () => document.createElement('td')));
+		}
+	}
+
 	const header = document.createElement('th');
 	header.className = 'esgst-hgitb-col';
+	header.style.textAlign = 'center';
 
 	const control = document.createElement('span');
 	control.className = 'esgst-hgitb-header esgst-clickable';
@@ -108,7 +119,7 @@ function initTable(table, esgst) {
 	theadRow.appendChild(header);
 	state.header = header;
 
-	state.giveaways = Array.from(table.querySelectorAll('tbody tr'))
+	state.giveaways = bodyRows
 		.map(tr => initRow(tr, state))
 		.filter(Boolean);
 
@@ -303,8 +314,9 @@ function markUnknown(g) {
 }
 
 function getSortValue(g) {
-	if (g.hidden) return 2;
-	if (g.notFound || g.unknown) return 1;
+	if (g.hidden) return 1;
+	if (g.unknown) return 2;
+	if (g.notFound) return 3;
 	return 0;
 }
 
