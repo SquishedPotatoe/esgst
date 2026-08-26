@@ -34,8 +34,6 @@ class GeneralPointsVisualizer extends Module {
 		EventDispatcher.subscribe(Events.POINTS_UPDATED, this.pv_setStyle.bind(this));
 
 		this.pv_setStyle(null, Session.counters.points);
-
-		this.esgst.modules.generalLevelProgressVisualizer.joinStyles();
 	}
 
 	pv_setStyle(oldPoints, newPoints) {
@@ -159,6 +157,7 @@ class GeneralPointsVisualizer extends Module {
 				],
 			},
 		];
+		this.esgst.modules.generalLevelProgressVisualizer.joinStyles();
 	}
 }
 
