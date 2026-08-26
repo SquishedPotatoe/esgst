@@ -58,6 +58,10 @@ class GeneralTimeToPointCapCalculator extends Module {
 			Settings.get('ttpcc_a') ? `P / ${time} to 400` : ''
 		}`;
 		pointsNode.title = common.getFeatureTooltip('ttpcc', `${time} to 400P`);
+
+		if (Settings.get('pv') && Settings.get('ttpcc_a')) {
+			this.esgst.modules.generalPointsVisualizer.pv_setStyle(oldPoints, newPoints);
+		}
 	}
 }
 
