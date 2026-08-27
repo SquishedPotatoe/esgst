@@ -239,16 +239,18 @@ class Games extends Module {
 		if (!context) {
 			return null;
 		}
-		const link = context.querySelector(
-			`[href*="store.steampowered.com/app/"], [href*="store.steampowered.com/sub/"], [href*="store.steampowered.com/bundle/"], [href*="steamcommunity.com/app/"], [href*="steamcommunity.com/sub/"], [href*="steamcommunity.com/bundle/"], [href*="s.team/a/"]`
-		);
+		const steamLinkSelector = `[href*="store.steampowered.com/app/"], [href*="store.steampowered.com/sub/"], [href*="store.steampowered.com/bundle/"], [href*="steamcommunity.com/app/"], [href*="steamcommunity.com/sub/"], [href*="steamcommunity.com/bundle/"], [href*="s.team/a/"]`;
+		const link = context.querySelector(steamLinkSelector);
 		if (!link && Settings.get('gc_row')) {
 			const fanatical = context.querySelector(`[href*="fanatical.com/"]`);
 			if (fanatical) {
 				const row = context.closest('tr');
 				if (row) {
-					row.style.backgroundColor = Settings.get('gc_row_bgColor');
-					row.title = 'ESGST cannot check this game';
+					const steamLink = row.querySelector(steamLinkSelector);
+					if (!steamLink) {
+						row.style.backgroundColor = Settings.get('gc_row_bgColor');
+						row.title = 'ESGST cannot check this game';
+					}
 				}
 			}
 		}
