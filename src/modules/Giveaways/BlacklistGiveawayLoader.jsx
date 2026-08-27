@@ -130,7 +130,17 @@ class GiveawaysBlacklistGiveawayLoader extends Module {
 				type: 'span',
 			},
 		]);
-		let responseHtml = (await FetchRequest.get(window.location.pathname, { anon: true })).html;
+		let responseHtml;
+		try {
+			const response = await FetchRequest.get(window.location.pathname, { loggedOut: true });
+			responseHtml = response.html;
+		} catch {}
+
+		if (!responseHtml) {
+			createElements(this.esgst.pageOuterWrap, 'atinner', backup);
+			return;
+		}
+
 		if (responseHtml.getElementsByClassName('table--summary')[0]) {
 			createElements(this.esgst.pageOuterWrap, 'atinner', backup);
 			createElements(

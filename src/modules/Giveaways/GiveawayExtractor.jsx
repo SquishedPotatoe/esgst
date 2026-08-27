@@ -1103,7 +1103,7 @@ class GiveawaysGiveawayExtractor extends Module {
 
 		if (!giveaway && !sgTools) {
 			try {
-				const response = await FetchRequest.get(`/giveaway/${currentCode}/`, { anon: true });
+				const response = await FetchRequest.get(`/giveaway/${currentCode}/`, { loggedOut: true });
 				responseHtml = response.html;
 				giveaway = await buildGiveaway(responseHtml, response.url, null, true);
 			} catch (err) {
