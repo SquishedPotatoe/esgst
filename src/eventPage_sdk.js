@@ -20,6 +20,81 @@ const workerUrls = new Map();
 let storage = {};
 let tdsData = [];
 let updateCheckTimer = null;
+let cfChallengePromise = null;
+let nextLoggedOutRequestId = 0;
+const loggedOutRequests = new Map();
+let hasAddedHttpObserver = false;
+
+function isLoggedOutRequest(url) {
+	if (!url) return false;
+	const now = Date.now();
+	for (const [id, req] of loggedOutRequests.entries()) {
+		if (req.timestamp && now - req.timestamp > 60000) {
+			loggedOutRequests.delete(id);
+			continue;
+		}
+		if (url === req.url || url.startsWith(req.url)) {
+			return true;
+		}
+	}
+	return false;
+}
+
+const httpObserver = {
+	observe: (subject, topic) => {
+		try {
+			if (topic === 'http-on-modify-request') {
+				const httpChannel = subject.QueryInterface(Ci.nsIHttpChannel);
+				const url = httpChannel.URI.spec;
+				if (isLoggedOutRequest(url)) {
+					try {
+						const cookieHeader = httpChannel.getRequestHeader('Cookie');
+						if (cookieHeader) {
+							const filteredCookies = cookieHeader
+								.split(/;\s*/)
+								.filter((c) => !c.trim().toLowerCase().startsWith('phpsessid='))
+								.join('; ');
+
+							if (filteredCookies) {
+								httpChannel.setRequestHeader('Cookie', filteredCookies, false);
+							} else {
+								httpChannel.setRequestHeader('Cookie', '', false);
+								httpChannel.loadFlags |= Ci.nsIRequest.LOAD_ANONYMOUS;
+							}
+						} else {
+							httpChannel.loadFlags |= Ci.nsIRequest.LOAD_ANONYMOUS;
+						}
+					} catch (e) {
+						httpChannel.loadFlags |= Ci.nsIRequest.LOAD_ANONYMOUS;
+					}
+				}
+			} else if (
+				topic === 'http-on-examine-response' ||
+				topic === 'http-on-examine-cached-response' ||
+				topic === 'http-on-examine-merged-response'
+			) {
+				const httpChannel = subject.QueryInterface(Ci.nsIHttpChannel);
+				const url = httpChannel.URI.spec;
+				if (isLoggedOutRequest(url)) {
+					try {
+						httpChannel.setResponseHeader('Set-Cookie', '', false);
+					} catch (e) {}
+				}
+			}
+		} catch (e) {
+			Cu.reportError('[ESGST] httpObserver error: ' + e);
+		}
+	},
+};
+
+function addHttpObserver() {
+	if (hasAddedHttpObserver) return;
+	hasAddedHttpObserver = true;
+	Services.obs.addObserver(httpObserver, 'http-on-modify-request', false);
+	Services.obs.addObserver(httpObserver, 'http-on-examine-response', false);
+	Services.obs.addObserver(httpObserver, 'http-on-examine-cached-response', false);
+	Services.obs.addObserver(httpObserver, 'http-on-examine-merged-response', false);
+}
 
 RequestQueue.getLastRequest = (key) => {
 	return lastRequests[key] ?? 0;
@@ -173,6 +248,28 @@ function load() {
 				sendMessage('storageChanged', worker, { changes, areaName: 'local' });
 			});
 
+			worker.port.on('start_logged_out_fetch', (request) => {
+				addHttpObserver();
+				const requestId = ++nextLoggedOutRequestId;
+				loggedOutRequests.set(requestId, {
+					url: request.url,
+					worker,
+					timestamp: Date.now(),
+				});
+				worker.port.emit(
+					`start_logged_out_fetch_${request.uuid}_response`,
+					{ success: true, requestId }
+				);
+			});
+
+			worker.port.on('end_logged_out_fetch', (request) => {
+				loggedOutRequests.delete(request.requestId);
+				worker.port.emit(
+					`end_logged_out_fetch_${request.uuid}_response`,
+					{ success: true }
+				);
+			});
+
 			worker.port.on('fetch', async (request) => {
 				parameters = JSON.parse(request.parameters);
 				const response = await doFetch(parameters, request);
@@ -181,7 +278,7 @@ function load() {
 
 			worker.port.on('getPackageJson', (request) => {
 				// @ts-ignore
-				worker.port.emit(`getPackageJson_${request.uuid}_response`, JSON.stringify(packageJson));
+				worker.port.emit(`getPackageJson_${request.uuid}_response`, JSON.stringify(typeof packageJson !== 'undefined' ? packageJson : {}));
 			});
 
 			worker.port.on('getStorage', async (request) => {
@@ -219,13 +316,13 @@ function load() {
 
 			worker.port.on('register_tab', async (request) => {
 				workerUrls.set(worker, request.url);
-				await deliverPendingUpdate(worker);
 				worker.port.emit(`register_tab_${request.uuid}_response`, 'null');
+				deliverPendingUpdate(worker).catch((err) => Cu.reportError('[ESGST] deliverPendingUpdate error: ' + err));
 			});
 
 			worker.port.on('pendingUpdateCheck', async (request) => {
-				await deliverPendingUpdate(worker);
 				worker.port.emit(`pendingUpdateCheck_${request.uuid}_response`, 'null');
+				deliverPendingUpdate(worker).catch((err) => Cu.reportError('[ESGST] deliverPendingUpdate error: ' + err));
 			});
 
 			worker.port.on('manualCheckVersion', async (request) => {
@@ -240,10 +337,14 @@ function load() {
 			});
 
 			worker.port.on('dismissUpdateNotification', async (request) => {
-				const values = await handle_storage(TYPE_GET, { updateCheckState: '{}' });
-				const updateCheckState = JSON.parse(values.updateCheckState);
-				delete updateCheckState.pendingUpdateNotification;
-				await handle_storage(TYPE_SET, { updateCheckState: JSON.stringify(updateCheckState) });
+				try {
+					const values = await handle_storage(TYPE_GET, { updateCheckState: '{}' });
+					const updateCheckState = JSON.parse(values.updateCheckState || '{}');
+					delete updateCheckState.pendingUpdateNotification;
+					await handle_storage(TYPE_SET, { updateCheckState: JSON.stringify(updateCheckState) });
+				} catch (e) {
+					Cu.reportError('[ESGST] Error dismissing update notification: ' + e);
+				}
 				worker.port.emit(`dismissUpdateNotification_${request.uuid}_response`, 'null');
 			});
 
@@ -269,8 +370,8 @@ function isNewerVersion(candidate, current) {
 
 function getUpdateUrls(settings) {
 	const urls = [];
-	if (settings.notifyNewVersion_sg) urls.push('https://www.steamgifts.com');
-	if (settings.notifyNewVersion_st) urls.push('https://www.steamtrades.com');
+	if (settings && settings.notifyNewVersion_sg) urls.push('https://www.steamgifts.com');
+	if (settings && settings.notifyNewVersion_st) urls.push('https://www.steamtrades.com');
 	return urls;
 }
 
@@ -279,35 +380,74 @@ function scheduleUpdateChecks(settings) {
 		clearTimeout(updateCheckTimer);
 		updateCheckTimer = null;
 	}
-	if (!settings.notifyNewVersion_sg && !settings.notifyNewVersion_st) return;
+	if (!settings || (!settings.notifyNewVersion_sg && !settings.notifyNewVersion_st)) return;
 
-	const period = Math.max(1, Number(settings.updateCheckInterval) || 7) * 24 * 60 * 60 * 1000;
-	updateCheckTimer = setTimeout(async () => {
-		const result = await checkRemoteVersion();
-		if (result.isNewVersion) await notifyAboutUpdate(result.currentVersion, result.latestVersion);
-		const values = await handle_storage(TYPE_GET, { settings: '{}' });
-		scheduleUpdateChecks(JSON.parse(values.settings));
+	const intervalDays = Math.max(1, Number(settings.updateCheckInterval) || 7);
+	const period = intervalDays * 24 * 60 * 60 * 1000;
+
+	updateCheckTimer = setTimeout(function () {
+		checkRemoteVersion()
+			.then(function (result) {
+				if (result && result.isNewVersion) {
+					return notifyAboutUpdate(result.currentVersion, result.latestVersion);
+				}
+			})
+			.catch(function (err) {
+				Cu.reportError('[ESGST] Update check failed: ' + err);
+			})
+			.then(function () {
+				return handle_storage(TYPE_GET, { settings: '{}' });
+			})
+			.then(function (values) {
+				if (values && values.settings) {
+					scheduleUpdateChecks(JSON.parse(values.settings));
+				}
+			})
+			.catch(function (err) {
+				Cu.reportError('[ESGST] Reschedule failed: ' + err);
+			});
 	}, period);
 }
 
-async function checkRemoteVersion() {
-	try {
-		const response = await fetch('https://api.github.com/repos/SquishedPotatoe/esgst/tags?per_page=100');
-		if (!response.ok) throw new Error(`GitHub returned ${response.status}`);
-		const versions = (await response.json())
-			.map((tag) => /^v(\d+\.\d+\.\d+)$/.exec(tag.name))
-			.filter(Boolean)
-			.map((match) => match[1]);
-		const latestVersion = versions.reduce(
-			(latest, version) => (!latest || isNewerVersion(version, latest) ? version : latest),
-			null
-		);
-		const currentVersion = packageJson.version;
-		return { currentVersion, latestVersion, isNewVersion: !!latestVersion && isNewerVersion(latestVersion, currentVersion) };
-	} catch (error) {
-		console.warn('[ESGST] Update check failed', error);
-		return { currentVersion: packageJson.version, latestVersion: null, isNewVersion: false };
-	}
+function checkRemoteVersion() {
+	return new Promise((resolve) => {
+		const currentVersion = typeof packageJson !== 'undefined' && packageJson ? packageJson.version : '0.0.0';
+
+		try {
+			Request({
+				url: 'https://api.github.com/repos/SquishedPotatoe/esgst/tags?per_page=100',
+				headers: {
+					'User-Agent': 'ESGST-Extension',
+				},
+				onComplete: function (response) {
+					try {
+						if (response.status >= 200 && response.status < 300) {
+							const tags = response.json || JSON.parse(response.text);
+							const versions = tags
+								.map(function (tag) {
+									const match = /^v(\d+\.\d+\.\d+)$/.exec(tag.name);
+									return match ? match[1] : null;
+								})
+								.filter(Boolean);
+
+							const latestVersion = versions.reduce(function (latest, version) {
+								return !latest || isNewerVersion(version, latest) ? version : latest;
+							}, null);
+
+							const isNew = !!latestVersion && isNewerVersion(latestVersion, currentVersion);
+							resolve({ currentVersion, latestVersion, isNewVersion: isNew });
+						} else {
+							resolve({ currentVersion, latestVersion: null, isNewVersion: false });
+						}
+					} catch (e) {
+						resolve({ currentVersion, latestVersion: null, isNewVersion: false });
+					}
+				},
+			}).get();
+		} catch (e) {
+			resolve({ currentVersion, latestVersion: null, isNewVersion: false });
+		}
+	});
 }
 
 function sendUpdateMessage(worker, action, values) {
@@ -316,8 +456,8 @@ function sendUpdateMessage(worker, action, values) {
 
 async function notifyAboutUpdate(currentVersion, latestVersion) {
 	const values = await handle_storage(TYPE_GET, { settings: '{}', updateCheckState: '{}' });
-	const settings = JSON.parse(values.settings);
-	const updateCheckState = JSON.parse(values.updateCheckState);
+	const settings = JSON.parse(values.settings || '{}');
+	const updateCheckState = JSON.parse(values.updateCheckState || '{}');
 	if (updateCheckState.lastNotifiedVersion === latestVersion) return;
 
 	const state = { ...updateCheckState, lastNotifiedVersion: latestVersion };
@@ -337,14 +477,20 @@ async function notifyAboutUpdate(currentVersion, latestVersion) {
 }
 
 async function deliverPendingUpdate(worker) {
-	const values = await handle_storage(TYPE_GET, { settings: '{}', updateCheckState: '{}' });
-	const settings = JSON.parse(values.settings);
-	const updateCheckState = JSON.parse(values.updateCheckState);
-	if (!updateCheckState.pendingUpdateNotification) return;
-	if (!getUpdateUrls(settings).some((url) => workerUrls.get(worker)?.startsWith(url))) return;
+	const workerUrl = workerUrls.get(worker);
+	if (!workerUrl) return;
 
+	const values = await handle_storage(TYPE_GET, { settings: '{}', updateCheckState: '{}' });
+	const settings = JSON.parse(values.settings || '{}');
+	const updateCheckState = JSON.parse(values.updateCheckState || '{}');
+	if (!updateCheckState.pendingUpdateNotification) return;
+
+	const allowedUrls = getUpdateUrls(settings);
+	if (!allowedUrls.some((url) => workerUrl.startsWith(url))) return;
+
+	const currentVersion = typeof packageJson !== 'undefined' && packageJson ? packageJson.version : '0.0.0';
 	sendUpdateMessage(worker, 'showUpdatePopup', {
-		currentVersion: packageJson.version,
+		currentVersion,
 		latestVersion: updateCheckState.pendingUpdateNotification,
 	});
 	delete updateCheckState.pendingUpdateNotification;
@@ -487,56 +633,184 @@ async function readZip(data) {
 
 function doFetch(parameters, request) {
 	return new Promise(async (resolve) => {
-		if (request.fileName) {
-			parameters.body = await getZip(parameters.body, request.fileName);
+		let loggedOutId = null;
+		if (request.loggedOut) {
+			addHttpObserver();
+			loggedOutId = ++nextLoggedOutRequestId;
+			loggedOutRequests.set(loggedOutId, {
+				url: request.url,
+				timestamp: Date.now(),
+			});
 		}
 
-		let response = null;
-		let responseText = null;
 		try {
-			const abortController = new window.AbortController();
+			if (request.fileName) {
+				parameters.body = await getZip(parameters.body, request.fileName);
+			}
 
-			const { timeout = 10000 } = request;
-			const timeoutId = setTimeout(() => abortController.abort(), timeout);
+			const isSgStRequest = /.*:\/\/(.*\.)?(steamgifts|steamtrades)\.com\/.*/.test(request.url);
 
-			parameters.signal = abortController.signal;
-			response = await fetch(request.url, parameters);
+			const performXhr = (url, opts) => {
+				return new Promise((xhrResolve, xhrReject) => {
+					const xhr = Cc['@mozilla.org/xmlextras/xmlhttprequest;1'].createInstance(Ci.nsIXMLHttpRequest);
+					const method = (opts.method || 'GET').toUpperCase();
+					xhr.open(method, url, true);
 
-			clearTimeout(timeoutId);
+					if (request.timeout) {
+						xhr.timeout = request.timeout;
+					}
 
-			if (request.blob) {
-				const blob = await response.blob();
-				const reader = new FileReader();
-				const binaryString = await new Promise((resolve) => {
-					reader.onload = () => resolve(reader.result);
-					reader.readAsBinaryString(blob);
+					if (opts.headers) {
+						for (const [key, val] of Object.entries(opts.headers)) {
+							try {
+								xhr.setRequestHeader(key, val);
+							} catch (e) {}
+						}
+					}
+
+					if (request.blob) {
+						xhr.responseType = 'arraybuffer';
+					}
+
+					xhr.onload = () => {
+						xhrResolve({
+							status: xhr.status,
+							url: xhr.responseURL || url,
+							headers: xhr.getAllResponseHeaders(),
+							responseText: request.blob ? xhr.response : xhr.responseText,
+							ok: xhr.status >= 200 && xhr.status < 300,
+						});
+					};
+
+					xhr.onerror = () => xhrReject(new TypeError('NetworkError when attempting to fetch resource.'));
+					xhr.ontimeout = () => xhrReject(new TypeError('Request timed out.'));
+
+					xhr.send(opts.body || null);
 				});
-				responseText = (await readZip(binaryString))[0].value;
-			} else {
-				responseText = await response.text();
+			};
+
+			let response = null;
+			let responseText = null;
+
+			try {
+				response = await performXhr(request.url, parameters);
+
+				const isCfBlocked =
+					(response.status === 403 || response.status === 503) &&
+					(response.headers.toLowerCase().includes('cloudflare') || isSgStRequest);
+
+				if (isCfBlocked && (await resolveCloudflareChallenge(request.url))) {
+					response = await performXhr(request.url, parameters);
+				}
+
+				if (request.blob) {
+					const binaryString = String.fromCharCode.apply(null, new Uint8Array(response.responseText));
+					responseText = (await readZip(binaryString))[0].value;
+				} else {
+					responseText = response.responseText;
+				}
+
+				if (!response.ok) {
+					throw responseText;
+				}
+			} catch (error) {
+				resolve(JSON.stringify({ error: typeof error === 'object' ? error.message || error : error }));
+				return;
 			}
-			if (!response.ok) {
-				throw responseText;
+
+			resolve(
+				JSON.stringify({
+					status: response.status,
+					url: response.url,
+					redirected: response.url !== request.url,
+					text: responseText,
+				})
+			);
+		} catch (err) {
+			resolve(JSON.stringify({ error: err.message || err }));
+		} finally {
+			if (loggedOutId !== null) {
+				loggedOutRequests.delete(loggedOutId);
 			}
-		} catch (error) {
-			resolve(JSON.stringify({ error }));
-			return;
 		}
-		resolve(
-			JSON.stringify({
-				status: response.status,
-				url: response.url,
-				redirected: response.redirected,
-				text: responseText,
-			})
-		);
 	});
+}
+
+async function resolveCloudflareChallenge(targetUrl) {
+	if (cfChallengePromise) return cfChallengePromise;
+
+	cfChallengePromise = (async () => {
+		try {
+			const urlObj = new URL(targetUrl);
+			const domain = urlObj.hostname.replace(/^www\./, '');
+
+			return await new Promise((resolve) => {
+				let temporaryTab = null;
+				let timeoutId = null;
+
+				const cleanup = () => {
+					if (timeoutId) clearTimeout(timeoutId);
+					Services.obs.removeObserver(cookieObserver, 'cookie-changed');
+					cfChallengePromise = null;
+				};
+
+				const cookieObserver = {
+					observe(subject, topic, data) {
+						if (topic !== 'cookie-changed' || data === 'deleted') return;
+
+						const cookie = subject.QueryInterface(Ci.nsICookie2);
+						const cookieDomain = cookie.host.replace(/^\./, '');
+						if (cookie.name !== 'cf_clearance' || !domain.endsWith(cookieDomain)) return;
+
+						cleanup();
+						if (temporaryTab) temporaryTab.close();
+						resolve(true);
+					},
+				};
+
+				Services.obs.addObserver(cookieObserver, 'cookie-changed', false);
+				timeoutId = setTimeout(() => {
+					cleanup();
+					resolve(false);
+				}, 120000);
+
+				try {
+					const existingTab = Array.from(workers)
+						.map((worker) => worker.tab)
+						.find((tab) => tab.url && tab.url.includes(domain));
+
+					if (existingTab) {
+						existingTab.activate();
+						existingTab.reload();
+					} else {
+                        // @ts-ignore
+						temporaryTab = tabs.open(`https://${urlObj.hostname}/`);
+					}
+				} catch (error) {
+					console.error('[ESGST] Cloudflare challenge resolution failed', error);
+					cleanup();
+					resolve(false);
+				}
+			});
+		} catch (error) {
+			console.error('[ESGST] Cloudflare challenge resolution failed', error);
+			cfChallengePromise = null;
+			return false;
+		}
+	})();
+
+	return cfChallengePromise;
 }
 
 async function detachWorker(worker) {
 	//Cu.reportError(worker);
 	workers.delete(worker);
 	workerUrls.delete(worker);
+	for (const [id, req] of loggedOutRequests.entries()) {
+		if (req.worker === worker) {
+			loggedOutRequests.delete(id);
+		}
+	}
 }
 
 function do_lock(lock) {

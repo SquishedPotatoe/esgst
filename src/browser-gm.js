@@ -72,16 +72,24 @@ const browser = {
 					}
 					case 'fetch': {
 						const parameters = JSON.parse(obj.parameters);
+
+						if ((!parameters.method || parameters.method.toUpperCase() === 'GET') && parameters.headers) {
+							delete parameters.headers['Content-Type'];
+							delete parameters.headers['content-type'];
+						}
+
 						if (parameters.credentials === 'omit') {
 							parameters.headers['Esgst-Cookie'] = '';
 						}
-						browser.gm.xmlHttpRequest({
+
+						const request = {
+							anonymous: false,
 							binary: !!obj.fileName,
 							data: obj.fileName
 								? await Shared.common.getZip(parameters.body, obj.fileName, 'binarystring')
 								: parameters.body,
 							headers: parameters.headers,
-							method: parameters.method,
+							method: parameters.method || 'GET',
 							overrideMimeType: obj.blob ? `text/plain; charset=x-user-defined` : '',
 							timeout: obj.timeout ?? 10000,
 							url: obj.url,
@@ -100,7 +108,87 @@ const browser = {
 								});
 							},
 							onerror: (response) => resolve({ error: response.responseText }),
-						});
+						};
+
+						if (obj.loggedOut) {
+							if (!browser.gm.cookie?.list) {
+								resolve({ error: 'Logged-out requests require GM.cookie support.' });
+								break;
+							}
+
+							try {
+								const [standardCookies, partitionedCookies] = await Promise.all([
+									browser.gm.cookie.list({ url: obj.url }),
+									browser.gm.cookie.list({ url: obj.url, partitionKey: {} }).catch(() => []),
+								]);
+								const cookieMap = new Map();
+								for (const item of [...standardCookies, ...partitionedCookies]) {
+									const key = [
+										item.name,
+										item.domain,
+										item.path,
+										item.partitionKey?.topLevelSite || '',
+									].join('|');
+									cookieMap.set(key, item);
+								}
+								const cookies = Array.from(cookieMap.values());
+								const nonSessionCookies = cookies.filter((item) => item.name !== 'PHPSESSID');
+
+								if (browser.gm.info.scriptHandler === 'Violentmonkey') {
+									const phpCookies = cookies.filter((item) => item.name === 'PHPSESSID');
+
+									for (const c of phpCookies) {
+										await browser.gm.cookie.set({
+											url: obj.url,
+											name: 'PHPSESSID',
+											value: 'invalid_session_id',
+											domain: c.domain,
+											path: c.path,
+											secure: c.secure,
+											httpOnly: c.httpOnly,
+										});
+									}
+
+									const restoreCookies = async () => {
+										for (const c of phpCookies) {
+											await browser.gm.cookie.set({
+												url: obj.url,
+												name: c.name,
+												value: c.value,
+												domain: c.domain,
+												path: c.path,
+												secure: c.secure,
+												httpOnly: c.httpOnly,
+												expirationDate: c.expirationDate,
+											});
+										}
+									};
+
+									const vmRequest = {
+										...request,
+										onload: async (response) => {
+											await restoreCookies();
+											request.onload(response);
+										},
+										onerror: async (response) => {
+											await restoreCookies();
+											request.onerror(response);
+										},
+									};
+
+									browser.gm.xmlHttpRequest(vmRequest);
+									break;
+								} else {
+									const cookieString = nonSessionCookies.map((item) => `${item.name}=${item.value}`).join('; ');
+									request.cookie = ['PHPSESSID=', cookieString].filter(Boolean).join('; ');
+								}
+							} catch (error) {
+								resolve({ error: error?.message || String(error) });
+								break;
+							}
+						}
+
+						browser.gm.xmlHttpRequest(request);
 						break;
 					}
 					case 'open_tab': {

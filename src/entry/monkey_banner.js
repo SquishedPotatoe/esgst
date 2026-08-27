@@ -25,8 +25,6 @@
 // @connect isthereanydeal.com
 // @connect esgst.rafaelgomes.xyz
 // @connect raw.githubusercontent.com
-// @connect script.google.com
-// @connect script.googleusercontent.com
 // @connect steam-tracker.com
 // @connect steamcommunity.com
 // @connect store.steampowered.com
@@ -39,6 +37,7 @@
 // @grant GM_setValue
 // @grant GM_xmlhttpRequest
 // @grant GM_openInTab
+// @grant GM_cookie
 // @grant GM_getResourceURL
 // @grant GM.addValueChangeListener
 // @grant GM.deleteValue
@@ -48,6 +47,7 @@
 // @grant GM.setValue
 // @grant GM.xmlHttpRequest
 // @grant GM.openInTab
+// @grant GM.cookie
 // @grant GM.getResourceUrl
 // @require https://greasemonkey.github.io/gm4-polyfill/gm4-polyfill.js
 // @require https://cdn.jsdelivr.net/npm/interactjs@1.10.27/dist/interact.min.js

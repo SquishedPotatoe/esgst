@@ -15,6 +15,7 @@ export interface FetchOptions {
 	doNotQueue?: boolean;
 	timeout?: number;
 	anon?: boolean;
+	loggedOut?: boolean;
 	blob?: string;
 	fileName?: string;
 }
@@ -64,6 +65,8 @@ export class FetchRequest {
 
 		let response = null;
 		let lock = null;
+		let loggedOutRequestId: number | null = null;
+		const isUserscript = (await Shared.common.getBrowserInfo()).name === 'userscript';
 
 		url = url
 			.replace(/^\//, `https://${window.location.hostname}/`)
@@ -102,9 +105,33 @@ export class FetchRequest {
 				await lock.lock();
 			}
 
-			if (isInternal) {
-				response = await FetchRequest.sendInternal(url, options);
+			if (options.loggedOut && !isUserscript) {
+				if (!isInternal) {
+					throw new Error('Logged-out requests are only supported for the current site');
+				}
 
+				let res = await browser.runtime.sendMessage({
+					action: 'start_logged_out_fetch',
+					url,
+				});
+				if (typeof res === 'string') {
+					try {
+						res = JSON.parse(res);
+					} catch (e) {}
+				}
+				if (!res?.success || !Number.isInteger(res.requestId)) {
+					throw new Error(`Could not start logged-out request: ${res?.error || 'unknown error'}`);
+				}
+				loggedOutRequestId = res.requestId;
+			}
+
+			if (isInternal && !(isUserscript && options.loggedOut)) {
+				response = await FetchRequest.sendInternal(url, options);
+			} else {
+				response = await FetchRequest.sendExternal(url, options);
+			}
+
+			if (isInternal) {
 				Shared.esgst.requestLog.unshift({
 					url,
 					timestamp: Date.now(),
@@ -116,8 +143,6 @@ export class FetchRequest {
 					});
 				}
 				await Shared.common.setValue('requestLog', JSON.stringify(Shared.esgst.requestLog));
-			} else {
-				response = await FetchRequest.sendExternal(url, options);
 			}
 
 			if (lock) {
@@ -146,6 +171,12 @@ export class FetchRequest {
 			}
 
 			throw err;
+		} finally {
+			if (loggedOutRequestId !== null) {
+				await browser.runtime
+					.sendMessage({ action: 'end_logged_out_fetch', requestId: loggedOutRequestId })
+					.catch(() => { });
+			}
 		}
 	}
 
@@ -183,6 +214,7 @@ export class FetchRequest {
 			action: 'fetch',
 			blob: options.blob,
 			fileName: options.fileName,
+			loggedOut: options.loggedOut,
 			manipulateCookies,
 			parameters: JSON.stringify(FetchRequest.getFetchOptions(options, manipulateCookies)),
 			timeout: options.timeout,

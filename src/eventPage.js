@@ -2,6 +2,10 @@ import JSZip from '@progress/jszip-esm';
 import { RequestQueue } from './class/Queue';
 
 const lastRequests = {};
+const loggedOutRequests = new Map();
+const activeLoggedOutWebRequests = new Set();
+let nextLoggedOutRequestId = 0;
+let cfChallengePromise = null;
 
 RequestQueue.getLastRequest = (key) => {
 	return lastRequests[key] ?? 0;
@@ -188,6 +192,25 @@ browser.tabs.onRemoved.addListener(async (tabId) => {
 	openTabs = openTabs.filter((tab) => tab.id !== tabId);
 });
 
+function isLoggedOutRequest(details) {
+	if (activeLoggedOutWebRequests.has(details.requestId)) {
+		return true;
+	}
+
+	const matched = Array.from(loggedOutRequests.values()).some((request) => {
+		return (
+			(details.url === request.url || details.url.startsWith(request.url)) &&
+			(request.tabId === null || details.tabId === request.tabId)
+		);
+	});
+
+	if (matched) {
+		activeLoggedOutWebRequests.add(details.requestId);
+	}
+
+	return matched;
+}
+
 function addWebRequestListener() {
 	hasAddedWebRequestListener = true;
 
@@ -202,22 +225,82 @@ function addWebRequestListener() {
 		],
 	};
 
+	const optionsSend = ['blocking', 'requestHeaders'];
+	const optionsReceive = ['blocking', 'responseHeaders'];
+
+	if (browser.webRequest.OnBeforeSendHeadersOptions?.hasOwnProperty('EXTRA_HEADERS')) {
+		optionsSend.push('extraHeaders');
+	}
+	if (browser.webRequest.OnHeadersReceivedOptions?.hasOwnProperty('EXTRA_HEADERS')) {
+		optionsReceive.push('extraHeaders');
+	}
+
+	browser.webRequest.onCompleted.addListener(
+		(details) => activeLoggedOutWebRequests.delete(details.requestId),
+		webRequestFilters
+	);
+
+	browser.webRequest.onErrorOccurred.addListener(
+		(details) => activeLoggedOutWebRequests.delete(details.requestId),
+		webRequestFilters
+	);
+
 	browser.webRequest.onBeforeSendHeaders.addListener(
 		(details) => {
-			const esgstCookie = details.requestHeaders.filter(
+			let headersModified = false;
+			let requestHeaders = details.requestHeaders;
+
+			if (isLoggedOutRequest(details)) {
+				requestHeaders = requestHeaders.filter((header) => {
+					if (header.name.toLowerCase() === 'cookie') {
+						const filteredCookies = header.value
+							.split(/;\s*/)
+							.filter((c) => {
+								const lower = c.trim().toLowerCase();
+								return !lower.startsWith('phpsessid=');
+							});
+
+						if (filteredCookies.length > 0) {
+							header.value = filteredCookies.join('; ');
+							return true;
+						}
+						return false;
+					}
+					return true;
+				});
+				headersModified = true;
+			}
+			const esgstCookieIndex = requestHeaders.findIndex(
 				(header) => header.name.toLowerCase() === 'esgst-cookie'
-			)[0];
+			);
 
-			if (esgstCookie) {
-				esgstCookie.name = 'Cookie';
+			if (esgstCookieIndex !== -1) {
+				requestHeaders = requestHeaders.filter(
+					(header) => header.name.toLowerCase() !== 'cookie'
+				);
+				requestHeaders[esgstCookieIndex].name = 'Cookie';
+				headersModified = true;
+			}
 
-				return {
-					requestHeaders: details.requestHeaders,
-				};
+			if (headersModified) {
+				return { requestHeaders };
 			}
 		},
 		webRequestFilters,
-		['blocking', 'requestHeaders']
+		optionsSend
+	);
+
+	browser.webRequest.onHeadersReceived.addListener(
+		(details) => {
+			if (isLoggedOutRequest(details)) {
+				const responseHeaders = details.responseHeaders.filter(
+					(header) => header.name.toLowerCase() !== 'set-cookie'
+				);
+				return { responseHeaders };
+			}
+		},
+		webRequestFilters,
+		optionsReceive
 	);
 }
 
@@ -338,6 +421,17 @@ async function doFetch(parameters, request, sender, callback) {
 			}
 		}
 
+		const requestHost = new URL(request.url).hostname;
+		const isSgStRequest =
+			requestHost.endsWith('.steamgifts.com') || requestHost.endsWith('.steamtrades.com');
+		const isCfBlocked =
+			(response.status === 403 || response.status === 503) &&
+			(response.headers.get('server')?.toLowerCase().includes('cloudflare') || isSgStRequest);
+
+		if (isCfBlocked && (await resolveCloudflareChallenge(request.url))) {
+			response = await fetchWithTimeout(request.url, parameters);
+		}
+
 		responseText = request.blob
 			? (await readZip(await response.blob()))[0].value
 			: await response.text();
@@ -356,6 +450,70 @@ async function doFetch(parameters, request, sender, callback) {
 			text: responseText,
 		})
 	);
+}
+
+async function resolveCloudflareChallenge(targetUrl) {
+	if (cfChallengePromise) return cfChallengePromise;
+
+	cfChallengePromise = (async () => {
+		try {
+			const urlObj = new URL(targetUrl);
+			const domain = urlObj.hostname.replace(/^www\./, '');
+
+			return await new Promise((resolve) => {
+				let tempTabId = null;
+				let timeoutId = null;
+
+				const cleanup = () => {
+					if (timeoutId) clearTimeout(timeoutId);
+					browser.cookies.onChanged.removeListener(cookieListener);
+					cfChallengePromise = null;
+				};
+
+				const cookieListener = ({ cookie, removed }) => {
+					if (!removed && cookie.name === 'cf_clearance' && cookie.domain.includes(domain)) {
+						cleanup();
+						if (tempTabId) browser.tabs.remove(tempTabId).catch(() => {});
+						resolve(true);
+					}
+				};
+
+				browser.cookies.onChanged.addListener(cookieListener);
+				timeoutId = setTimeout(() => {
+					cleanup();
+					resolve(false);
+				}, 120000);
+
+				(async () => {
+					try {
+						const tabs = await queryTabs({});
+						const existing = tabs.find((tab) => tab.url && tab.url.includes(domain));
+
+						if (existing?.id) {
+							await browser.tabs.update(existing.id, { active: true });
+							await browser.tabs.reload(existing.id);
+						} else {
+							const tab = await browser.tabs.create({
+								url: `https://${urlObj.hostname}/`,
+								active: true,
+							});
+							tempTabId = tab.id;
+						}
+					} catch (error) {
+						console.error('[doFetch] Cloudflare challenge resolution failed', error);
+						cleanup();
+						resolve(false);
+					}
+				})();
+			});
+		} catch (error) {
+			console.error('[doFetch] Cloudflare challenge resolution failed', error);
+			cfChallengePromise = null;
+			return false;
+		}
+	})();
+
+	return cfChallengePromise;
 }
 
 const locks = {};
@@ -412,6 +570,23 @@ browser.runtime.onMessage.addListener((request, sender) => {
 	return new Promise(async (resolve) => {
 		let parameters;
 		switch (request.action) {
+			case 'start_logged_out_fetch': {
+				if (!hasAddedWebRequestListener && browser.webRequest) {
+					addWebRequestListener();
+				}
+				const requestId = ++nextLoggedOutRequestId;
+				loggedOutRequests.set(requestId, {
+					url: request.url,
+					tabId: typeof sender.tab?.id === 'number' ? sender.tab.id : null,
+				});
+				resolve({ success: true, requestId });
+				break;
+			}
+			case 'end_logged_out_fetch': {
+				loggedOutRequests.delete(request.requestId);
+				resolve({ success: true });
+				break;
+			}
 			case 'get-tds':
 				({ tdsData = [] } = await browser.storage.local.get('tdsData'));
 				resolve(JSON.stringify(tdsData));
