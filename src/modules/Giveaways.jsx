@@ -164,14 +164,15 @@ class Giveaways extends Module {
 					'reducedCV', 'noCV', 'banned', 'removed',
 				];
 
+				const numericId = parseInt(giveaway.id, 10);
+				const isBanned = Shared.esgst.delistedGames.banned.includes(numericId);
+				const isRemoved = Shared.esgst.delistedGames.removed.includes(numericId) || cachedGame.removed;
+
 				for (const key of gameKeys) {
-					if (key === 'banned' && Shared.esgst.delistedGames.banned.includes(parseInt(giveaway.id, 10))) {
-						giveaway[key] = true;
-					} else if (
-						key === 'removed' &&
-						(Shared.esgst.delistedGames.removed.includes(parseInt(giveaway.id, 10)) || cachedGame.removed)
-					) {
-						giveaway[key] = true;
+					if (key === 'banned' && isBanned) {
+						giveaway.banned = true;
+					} else if (key === 'removed' && isRemoved) {
+						giveaway.removed = true;
 					} else {
 						const mappedKey = key === 'previouslyEntered' ? 'entered' : key === 'previouslyWon' ? 'won' : key;
 						if (Shared.esgst.games?.[giveaway.type]?.[giveaway.id]?.[mappedKey]) {
@@ -261,7 +262,9 @@ class Giveaways extends Module {
 			}
 		}
 
-		giveaway.columns = giveaway.innerWrap?.querySelector('.giveaway__columns, .featured__columns');
+		giveaway.columns = giveaway.innerWrap?.querySelector(
+			'.giveaway__columns:not(.esgst-gv-icons), .featured__columns'
+		);
 
 		if (giveaway.columns && (!paths.archive || !main)) {
 			giveaway.endTimeColumn = giveaway.columns.firstElementChild;
@@ -437,7 +440,7 @@ class Giveaways extends Module {
 			}
 		}
 
-		if (giveaway.sgTools && !giveaway.panel?.getElementsByClassName('esgst-ge-sgt-button')[0]) {
+		if (giveaway.sgTools && !giveaway.outerWrap?.getElementsByClassName('esgst-ge-sgt-button')[0]) {
 			createElements(giveaway.panel, 'beforeend', [
 				{
 					attributes: {
@@ -699,7 +702,9 @@ class Giveaways extends Module {
 					) {
 						element.classList.remove('giveaway__icon');
 					}
-					element.classList.add(this.esgst.giveawayPath ? 'featured__column' : 'giveaway__column');
+					if (!giveaway.gvIcons) {
+						element.classList.add(this.esgst.giveawayPath ? 'featured__column' : 'giveaway__column');
+					}
 					if (element.getAttribute('data-color')) {
 						element.firstElementChild.style.color = element.getAttribute('data-bgColor');
 						element.style.color = '';

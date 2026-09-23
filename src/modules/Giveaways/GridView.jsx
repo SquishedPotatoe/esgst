@@ -206,7 +206,12 @@ class GiveawaysGridView extends Module {
 				.getElementsByClassName('featured__heading__medium')[0]?.textContent;
 		}
 		giveaways.forEach((giveaway) => {
-			if (giveaway.grid || giveaway.innerWrap?.classList.contains('esgst-gv-box')) {
+			if (giveaway.grid) {
+				return;
+			}
+			if (giveaway.innerWrap?.classList.contains('esgst-gv-box')) {
+				giveaway.grid = true;
+				new Popout('', giveaway.outerWrap, 100, false, giveaway.summary);
 				return;
 			}
 			giveaway.grid = true;
