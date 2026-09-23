@@ -4,6 +4,7 @@ import { FetchRequest } from '../../class/FetchRequest';
 import { LocalStorage } from '../../class/LocalStorage';
 import { Logger } from '../../class/Logger';
 import { Module } from '../../class/Module';
+import { permissions } from '../../class/Permissions';
 import { Popup } from '../../class/Popup';
 import { Scope } from '../../class/Scope';
 import { Session } from '../../class/Session';
@@ -111,7 +112,56 @@ class GiveawaysEnterLeaveGiveawayButton extends Module {
 				(main && (Settings.get('elgb_p') || this.esgst.createdPath || this.esgst.wonPath))
 			)
 				return;
-			if (giveaway.innerWrap.getElementsByClassName('esgst-elgb-button')[0]) {
+			const elgbButton = giveaway.innerWrap.getElementsByClassName('esgst-elgb-button')[0];
+			if (elgbButton) {
+				if (giveaway.elgbButton) {
+					return;
+				}
+				elgbButton.replaceChildren();
+
+				if (this.esgst.enteredPath && main) {
+					this.elgb_setEntryButton(giveaway);
+				} else if (
+					!Settings.get('elgb_db') &&
+					(
+						giveaway.blacklist ||
+						(giveaway.inviteOnly && !giveaway.url) ||
+						!giveaway.started ||
+						giveaway.ended ||
+						giveaway.created ||
+						giveaway.level > Session.counters.level.base ||
+						(giveaway.id &&
+							this.esgst.games[giveaway.type][giveaway.id] &&
+							(this.esgst.games[giveaway.type][giveaway.id].owned ||
+								this.esgst.games[giveaway.type][giveaway.id].won ||
+								(this.esgst.games[giveaway.type][giveaway.id].hidden && Settings.get('hgebd'))))
+					)
+				) {
+					return;
+				} else if (this.esgst.giveawayPath && main) {
+					let sidebarButton = document.getElementsByClassName('sidebar__error is-disabled')[0];
+					if (!sidebarButton || sidebarButton.textContent.trim() !== 'Not Enough Points') {
+						return;
+					}
+					giveaway.elgbPanel = createElements(sidebarButton.parentElement, 'afterbegin', [
+						{
+							type: 'div',
+						},
+					]);
+					sidebarButton.remove();
+					this.elgb_addButton(giveaway, main, source);
+				} else {
+					this.elgb_addButton(giveaway, main, source);
+				}
+				if (giveaway.elgbButton) {
+					const newButton = giveaway.elgbButton.nodes.outer;
+					const newDescButton = newButton.previousElementSibling;
+
+					if (newDescButton?.classList.contains('esgst-elgb-desc-shortcut')) {
+						elgbButton.appendChild(newDescButton);
+					}
+					elgbButton.appendChild(newButton);
+				}
 				return;
 			}
 			if (this.esgst.enteredPath && main) {
@@ -131,7 +181,7 @@ class GiveawaysEnterLeaveGiveawayButton extends Module {
 						this.esgst.games[giveaway.type][giveaway.id] &&
 						(this.esgst.games[giveaway.type][giveaway.id].owned ||
 							this.esgst.games[giveaway.type][giveaway.id].won ||
-							(this.esgst.games[giveaway.type][giveaway.id].hidden && Settings.get('hgebd'))))
+							(this.esgst.games[giveaway.type][giveaway.type]?.hidden && Settings.get('hgebd'))))
 				)
 
 			) {
@@ -584,7 +634,7 @@ class GiveawaysEnterLeaveGiveawayButton extends Module {
 			})
 		).html;
 
-		if (Settings.get('bgl')) {
+		if (Settings.get('bgl') && (await permissions.contains([['cookies']]))) {
 			const hasError = [...responseHtml.querySelectorAll('.table__row-inner-wrap')].some(
 				(row) =>
 					row
