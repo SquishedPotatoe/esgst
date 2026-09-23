@@ -200,6 +200,94 @@ class GiveawaysGiveawayExtractor extends Module {
 		}
 	}
 
+	async ge_saveCache(ge) {
+		const existingCache = JSON.parse(common.getValue('geCache', '{}'));
+		const existingData = existingCache[ge.cacheId] || { codes: [], giveaways: {} };
+		const currentData = ge.cache[ge.cacheId] || { codes: [], giveaways: {} };
+
+		const isRootPage = Boolean(
+			this.esgst.discussionPath ||
+			this.esgst.pageOuterWrap?.querySelector('.featured__heading')
+		);
+
+		const isPartial = Boolean(ge.extractOnward && !isRootPage);
+
+		const currentIth = Array.from(currentData.ithLinks || []);
+		const existingIth = Array.from(existingData.ithLinks || []);
+		const mergedIth = Array.from(new Set([...existingIth, ...currentIth]));
+
+		const currentJigidi = Array.from(currentData.jigidiLinks || []);
+		const existingJigidi = Array.from(existingData.jigidiLinks || []);
+		const mergedJigidi = Array.from(new Set([...existingJigidi, ...currentJigidi]));
+
+		const mergedCodes = Array.from(
+			new Set([...(existingData.codes || []), ...(currentData.codes || [])])
+		);
+
+		ge.cache[ge.cacheId] = {
+			...existingData,
+			...currentData,
+			codes: mergedCodes,
+			giveaways: {
+				...(existingData.giveaways || {}),
+				...(currentData.giveaways || {}),
+			},
+			bumpLink: ge.bumpLink || currentData.bumpLink || existingData.bumpLink || '',
+			ithLinks: mergedIth,
+			jigidiLinks: mergedJigidi,
+			timestamp: Date.now(),
+			isPartial: existingData.isPartial === false ? false : isPartial,
+		};
+
+		try {
+			await common.setValue('geCache', JSON.stringify(ge.cache));
+		} catch (err) {
+			console.error('[GiveawayExtractor] Failed to write geCache:', err);
+		}
+	}
+
+	updatePuzzleBar(ge) {
+		const ithLinks = Array.from(ge.cache?.[ge.cacheId]?.ithLinks || []);
+		const jigidiLinks = Array.from(ge.cache?.[ge.cacheId]?.jigidiLinks || []);
+		const allLinks = [...ithLinks, ...jigidiLinks];
+
+		if (allLinks.length === 0) {
+			if (ge.puzzleProgressBar) {
+				ge.puzzleProgressBar.hide();
+			}
+			return;
+		}
+
+		const formattedLinks = allLinks.map((link) => {
+			let finalLink = link;
+			if (Settings.get('ge_j')) {
+				const id = this.extractJigidiId(link);
+				if (id) {
+					finalLink = `https://www.jigidi.com/jigsaw-puzzle/${id}`;
+				}
+			}
+			return `<a href="${finalLink}" target="_blank" rel="noopener noreferrer">${finalLink}</a>`;
+		});
+
+		if (!ge.puzzleProgressBar && ge.popup?.description) {
+			ge.puzzleProgressBar = NotificationBar.create()
+				.insert(ge.progressBar?.nodes?.outer, 'afterend')
+				.hide();
+		}
+
+		if (ge.puzzleProgressBar) {
+			ge.puzzleProgressBar
+				.show()
+				.setInfo(`${allLinks.length} Puzzle Link(s) Found. (Hover to view)`);
+
+			const barElem = ge.puzzleProgressBar.nodes?.outer;
+			if (barElem) {
+				barElem.classList.add('esgst-puzzle-bar');
+				common.createTooltip(barElem, formattedLinks.join('<br>'));
+			}
+		}
+	}
+
 	async ge_openPopup(ge) {
 		if (ge.popup) {
 			ge.popup.open();
@@ -282,7 +370,7 @@ class GiveawaysGiveawayExtractor extends Module {
 		ge.results = createElements(ge.popup.scrollable, 'beforeend', [
 			{
 				attributes: {
-					class: 'esgst-text-left',
+					class: `esgst-text-left${Settings.get('gv') ? ' esgst-gv-view' : ''}`,
 				},
 				type: 'div',
 			},
@@ -383,7 +471,7 @@ class GiveawaysGiveawayExtractor extends Module {
 		ge.cacheWarning = null;
 		const onExtractClick = () => {
 			return new Promise((resolve) => {
-				if (ge.hasScrolled && ge.isComplete) {
+				if (!ge.reExtract && ge.hasScrolled && ge.isComplete) {
 					resolve();
 					return;
 				}
@@ -419,6 +507,7 @@ class GiveawaysGiveawayExtractor extends Module {
 						jigidiLinks: new Set(),
 						timestamp: now,
 					};
+					this.updatePuzzleBar(ge);
 				}
 				ge.mainCallback = resolve;
 				if (ge.callback) {
@@ -501,6 +590,7 @@ class GiveawaysGiveawayExtractor extends Module {
 			},
 		]).insert(ge.heading.nodes.outer, 'beforeend');
 		ge.progressBar = NotificationBar.create().insert(ge.popup.description, 'beforeend').hide();
+		ge.puzzleProgressBar = NotificationBar.create().insert(ge.popup.description, 'beforeend').hide();
 		ge.popup.open();
 		if (
 			ge.flushCache &&
@@ -509,18 +599,24 @@ class GiveawaysGiveawayExtractor extends Module {
 		) {
 			delete ge.cache[ge.cacheId];
 		}
-		if (!ge.extractOnward && ge.cache[ge.cacheId]) {
+		if (ge.cache[ge.cacheId]?.codes?.length > 0) {
+			ge.reExtract = true;
+			ge.extractButton.build(5);
 			ge.cache[ge.cacheId].ithLinks = new Set(ge.cache[ge.cacheId].ithLinks);
 			ge.cache[ge.cacheId].jigidiLinks = new Set(ge.cache[ge.cacheId].jigidiLinks);
+			const isPartial = Boolean(ge.cache[ge.cacheId].isPartial);
+			const timeAgo = common.getTimeSince(ge.cache[ge.cacheId].timestamp);
+			const formattedTime = this.esgst.modules.generalAccurateTimestamp.at_formatTimestamp(
+				ge.cache[ge.cacheId].timestamp
+			);
+			const cacheMessageText = isPartial
+				? `These results were loaded from a partial cache from ${timeAgo} ago (${formattedTime}). Some earlier giveaways in the train may be missing. If you want to update the cache, you will have to extract again.`
+				: `These results were retrieved from the cache from ${timeAgo} ago (${formattedTime}). If you want to update the cache, you will have to extract again.`;
 			DOM.insert(
 				ge.popup.description,
 				'beforeend',
 				<div ref={(ref) => (ge.cacheWarning = ref)}>
-					{`These results were retrieved from the cache from ${common.getTimeSince(
-						ge.cache[ge.cacheId].timestamp
-					)} ago (${this.esgst.modules.generalAccurateTimestamp.at_formatTimestamp(
-						ge.cache[ge.cacheId].timestamp
-					)}). If you want to update the cache, you will have to extract again.`}
+					{cacheMessageText}
 				</div>
 			);
 
@@ -533,7 +629,7 @@ class GiveawaysGiveawayExtractor extends Module {
 				}
 
 				const giveaway = ge.cache[ge.cacheId].giveaways[code];
-				if (giveaway) {
+				if (giveaway && (Settings.get('bgl') || !giveaway.html.includes('data-blacklist'))) {
 					html += giveaway.html;
 					points += giveaway.points;
 					total += 1;
@@ -555,6 +651,11 @@ class GiveawaysGiveawayExtractor extends Module {
 				ge.results.insertAdjacentHTML('beforeend', html);
 				ge.results.lastElementChild.classList.add(`esgst-es-page-${ge.endless}`);
 			}
+			ge.points = points;
+			ge.total = total;
+			if (ge.progressBarCounter) {
+				ge.progressBarCounter.textContent = total;
+			}
 			ge.progressBar
 				.setInfo(
 					<fragment>
@@ -563,7 +664,6 @@ class GiveawaysGiveawayExtractor extends Module {
 					</fragment>
 				)
 				.show();
-			ge.progressBarCounter.textContent = total;
 			await endless_load(ge.results, false, 'ge', ge.endless);
 			const items = [
 				{
@@ -592,26 +692,7 @@ class GiveawaysGiveawayExtractor extends Module {
 				text: `${points}P required to enter all giveaways.`,
 				type: 'node',
 			});
-			for (let link of [...ge.cache[ge.cacheId].ithLinks, ...ge.cache[ge.cacheId].jigidiLinks]) {
-				if (Settings.get('ge_j')) {
-					const id = this.extractJigidiId(link);
-					if (id) {
-						link = `https://www.jigidi.com/jigsaw-puzzle/${id}`;
-					}
-				}
-				items[0].children.push(
-					{
-						type: 'br',
-					},
-					{
-						attributes: {
-							href: link,
-						},
-						text: link,
-						type: 'a',
-					}
-				);
-			}
+			this.updatePuzzleBar(ge);
 			createElements(ge.results, 'afterbegin', items);
 			createElements(ge.results, 'beforeend', items);
 		} else {
@@ -636,6 +717,7 @@ class GiveawaysGiveawayExtractor extends Module {
 		if (
 			!ge.cacheWarning &&
 			!ge.isCanceled &&
+			!ge.isComplete &&
 			ge.extractButton &&
 			!ge.extractButton.isBusy &&
 			(ge.popup.scrollable.scrollTop + ge.popup.scrollable.offsetHeight >=
@@ -981,6 +1063,7 @@ class GiveawaysGiveawayExtractor extends Module {
 			}
 
 			ge.endless++;
+			await this.ge_saveCache(ge);
 			if (Settings.get('es') && Settings.get('es_ge')) {
 				this.checkScroll(ge, filtered);
 			}
@@ -1102,12 +1185,14 @@ class GiveawaysGiveawayExtractor extends Module {
 			console.error('[ESGST] SGTools giveaway fetch failed', error);
 		}
 
-		if (!giveaway && !sgTools) {
+		if (!giveaway && !sgTools && Settings.get('bgl')) {
 			try {
-				const targetUrl = resolvedUrl || `/giveaway/${currentCode}/`;
-				const response = await FetchRequest.get(targetUrl, { loggedOut: true });
-				responseHtml = response.html;
-				giveaway = await buildGiveaway(responseHtml, response.url, null, true);
+				if (await permissions.contains([['cookies']])) {
+					const targetUrl = resolvedUrl || `/giveaway/${currentCode}/`;
+					const response = await FetchRequest.get(targetUrl, { loggedOut: true });
+					responseHtml = response.html;
+					giveaway = await buildGiveaway(responseHtml, response.url, null, true);
+				}
 			} catch { }
 		}
 
@@ -1127,11 +1212,15 @@ class GiveawaysGiveawayExtractor extends Module {
 				lastChild.querySelector('.giveaway__row-inner-wrap')?.classList.add('has-description');
 			}
 
+			giveaway.html = lastChild.outerHTML;
+
 			if (Settings.get('gv')) {
 				await endless_load(lastChild, false, 'ge', ge.endless);
 			}
 
-			giveaway.html = lastChild.outerHTML;
+			if (!ge.cache[ge.cacheId]) {
+				ge.cache[ge.cacheId] = { codes: [], giveaways: {} };
+			}
 			ge.cache[ge.cacheId].codes.push(currentCode);
 			ge.cache[ge.cacheId].giveaways[currentCode] = giveaway;
 			ge.points += giveaway.points;
@@ -1282,6 +1371,16 @@ class GiveawaysGiveawayExtractor extends Module {
 		} else {
 			ithLinks = context.querySelectorAll(ithSelectors.map((x) => `.markdown ${x}`).join(`, `));
 		}
+		if (!ge.cache[ge.cacheId]) {
+			ge.cache[ge.cacheId] = {};
+		}
+		if (!(ge.cache[ge.cacheId].ithLinks instanceof Set)) {
+			ge.cache[ge.cacheId].ithLinks = new Set(ge.cache[ge.cacheId].ithLinks || []);
+		}
+		if (!(ge.cache[ge.cacheId].jigidiLinks instanceof Set)) {
+			ge.cache[ge.cacheId].jigidiLinks = new Set(ge.cache[ge.cacheId].jigidiLinks || []);
+		}
+
 		for (const link of ithLinks) {
 			const url = link.getAttribute('href');
 			ge.cache[ge.cacheId].ithLinks.add(url);
@@ -1311,6 +1410,7 @@ class GiveawaysGiveawayExtractor extends Module {
 			}
 			ge.cache[ge.cacheId].jigidiLinks.add(url);
 		}
+		this.updatePuzzleBar(ge);
 		return giveaways;
 	}
 
@@ -1423,22 +1523,6 @@ class GiveawaysGiveawayExtractor extends Module {
 			},
 			text: `${ge.points}P required to enter all giveaways.`,
 		});
-		const ithLinks = ge.cache?.[ge.cacheId]?.ithLinks ?? [];
-		const jigidiLinks = ge.cache?.[ge.cacheId]?.jigidiLinks ?? [];
-		for (const link of [...ithLinks, ...jigidiLinks]) {
-			items[0].children.push(
-				{
-					type: 'br',
-				},
-				{
-					attributes: {
-						href: link,
-					},
-					text: link,
-					type: 'a',
-				}
-			);
-		}
 		createElements(ge.results, 'afterbegin', items);
 		const hasGiveaways = ge.results.children.length > items.length;
 
@@ -1446,18 +1530,10 @@ class GiveawaysGiveawayExtractor extends Module {
 			createElements(ge.results, 'beforeend', items);
 		}
 		ge.extractButton.build(5);
-		ge.reExtract = true;
+		ge.reExtract = false;
 		ge.isComplete = true;
-		if (!ge.isCanceled && !ge.extractOnward) {
-			if (!ge.cache[ge.cacheId]) {
-				ge.cache[ge.cacheId] = {};
-			}
-			ge.cache[ge.cacheId].ithLinks = Array.from(ge.cache?.[ge.cacheId]?.ithLinks ?? []);
-			ge.cache[ge.cacheId].jigidiLinks = Array.from(ge.cache?.[ge.cacheId]?.jigidiLinks ?? []);
-			await common.setValue('geCache', JSON.stringify(ge.cache));
-		}
-		document.querySelectorAll('.esgst-gv-icons [data-draggable-id]')
-			.forEach(el => el.classList.remove('featured__column'));
+		this.updatePuzzleBar(ge);
+		await this.ge_saveCache(ge);
 	}
 
 	extractJigidiId(url) {
