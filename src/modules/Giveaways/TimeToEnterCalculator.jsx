@@ -53,6 +53,9 @@ class GiveawaysTimeToEnterCalculator extends Module {
 			giveaways.forEach((giveaway) => {
 				if (!giveaway.ended && !giveaway.entered && giveaway.points > Session.counters.points) {
 					if (!giveaway.ttec) {
+						giveaway.ttec = giveaway.outerWrap?.querySelector('.esgst-ttec');
+					}
+					if (!giveaway.ttec) {
 						giveaway.ttec = createElements(
 							giveaway.panel,
 							Settings.get('gv') &&
