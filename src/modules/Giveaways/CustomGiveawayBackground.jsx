@@ -22,7 +22,8 @@ class GiveawaysCustomGiveawayBackground extends Module {
 								Shows a colored border on top of the giveaway in Grid View
 							</li>
 						</ul>
-					), name: 'Enable for Grid View.',
+					),
+					name: 'Enable for Grid View.',
 					sg: true,
 				},
 				cgb_brd: {
@@ -79,14 +80,23 @@ class GiveawaysCustomGiveawayBackground extends Module {
 		};
 	}
 
-	color(giveaways) {
+	init() {
 		if (this.esgst.giveawayPath || this.esgst.createdPath || this.esgst.enteredPath || this.esgst.wonPath || (Settings.get('gv') && !Settings.get('cgb_gv')))
 			return;
+		this.esgst.endlessFeatures.push(this.color.bind(this));
+	}
+
+	color(giveaways) {
+		const items = Array.isArray(giveaways) ? giveaways : (giveaways?.giveaways || []);
+		if (!items.length) return;
+
 		const classesToAdd = ['esgst-cgb'];
 		if (Settings.get('cgb_brd')) {
 			classesToAdd.push('esgst-cgb-border');
 		}
-		for (const giveaway of giveaways) {
+
+		for (const giveaway of items) {
+			if (!giveaway || !giveaway.outerWrap) continue;
 			giveaway.outerWrap.classList.add(...classesToAdd);
 			const matchedColors = [];
 			if (Settings.get('cgb_b') && giveaway.outerWrap.getAttribute('data-blacklist')) {
@@ -95,13 +105,14 @@ class GiveawaysCustomGiveawayBackground extends Module {
 			if (Settings.get('cgb_sgt') && giveaway.sgTools) {
 				matchedColors.push(Settings.get('cgb_sgt_bgColor'));
 			}
-			const { color: levelColor } = Settings.get('cgb_levelColors').filter(
+			const levelColors = Settings.get('cgb_levelColors') || [];
+			const matchedLevel = levelColors.find(
 				(colors) =>
-					giveaway.level >= parseInt(colors.lower) && giveaway.level <= parseInt(colors.upper)
-			)[0] || { color: undefined };
-
-			if (levelColor) {
-				matchedColors.push(levelColor);
+					giveaway.level >= parseInt(colors.lower, 10) &&
+					giveaway.level <= parseInt(colors.upper, 10)
+			);
+			if (matchedLevel?.color) {
+				matchedColors.push(matchedLevel.color);
 			}
 			if (Settings.get('cgb_w') && giveaway.whitelist) {
 				matchedColors.push(Settings.get('cgb_w_bgColor'));
