@@ -266,6 +266,7 @@ class GiveawaysGiveawayBookmarks extends Module {
 				const popup = new Popup({
 					addScrollable: 'left',
 					isTemp: true,
+					className: 'esgst-gb-popup'
 				});
 				this.heading = PageHeading.create('gb', [
 					{
@@ -316,6 +317,16 @@ class GiveawaysGiveawayBookmarks extends Module {
 			name: 'View Raw List',
 			onClick: this.gb_openList.bind(this, { bookmarked }),
 		}).insert(this.heading.nodes.outer, 'beforeend');
+		const isGridView = Settings.get('gv');
+		const batchSize = isGridView ? 25 : 5;
+
+		if (isGridView) {
+			const gridHeight = (Settings.get('cgb') ? 325 : 310) + (Number(Settings.get('gv_spacing')) || 0) * 7;
+			context.style.maxHeight = `${gridHeight}px`;
+		} else {
+			context.style.maxHeight = '575px';
+		}
+		context.style.overflowY = 'auto';
 		const loadMoreButton = ButtonComponent.create([
 			{
 				color: 'green',
@@ -324,9 +335,9 @@ class GiveawaysGiveawayBookmarks extends Module {
 				onClick: () => {
 					return new Promise((resolve) => {
 						// noinspection JSIgnoredPromiseFromCall
-						this.gb_loadGiveaways(i, i + 5, bookmarked, gbGiveaways, info, popup, (value) => {
+						this.gb_loadGiveaways(i, i + batchSize, bookmarked, gbGiveaways, info, popup, (value) => {
 							i = value;
-							if (i > n) {
+							if (i >= n) {
 								loadMoreButton.destroy();
 							} else if (Settings.get('es_gb') && context.scrollHeight <= context.offsetHeight) {
 								loadMoreButton.onClick(true);
@@ -373,7 +384,7 @@ class GiveawaysGiveawayBookmarks extends Module {
 			context.addEventListener('scroll', () => {
 				if (
 					context.scrollTop + context.offsetHeight >= context.scrollHeight &&
-					!loadMoreButton.isBusy
+					!loadMoreButton.isBusy && i < n
 				) {
 					loadMoreButton.onClick();
 				}
@@ -524,7 +535,8 @@ class GiveawaysGiveawayBookmarks extends Module {
 				giveaway.code &&
 				giveaway.code.length === 5 &&
 				giveaway.url &&
-				!giveaway.gbButton
+				!giveaway.gbButton &&
+				!giveaway.outerWrap?.querySelector('.esgst-gb-button')
 			) {
 				giveaway.bookmarked =
 					this.esgst.giveaways[giveaway.code] && this.esgst.giveaways[giveaway.code].bookmarked;
