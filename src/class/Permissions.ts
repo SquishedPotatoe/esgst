@@ -20,6 +20,7 @@ class Permissions {
 			},
 			cookies: {
 				messages: {
+					bgl: 'Required by Blacklist Giveaway Loader to load blacklisted giveaways in anonymous mode.',
 					ge: 'Required by Giveaway Extractor when checking eligibility and when unlocking giveaways from SGTools',
 					manipulateCookies: 'Required if the option to manipulate cookies is enabled.',
 				},
