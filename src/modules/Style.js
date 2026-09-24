@@ -3360,6 +3360,17 @@ function addStyle() {
 	.esgst-mgc-table .table__row-inner-wrap > * {
 		padding: 0;
 	}
+
+	.esgst-gb-popup {
+		max-width: min(1475px, calc(100% - 150px)) !important;
+		width: 100% !important;
+		padding: 25px 65px;
+	}
+
+	.esgst-popup .esgst-gv-view {
+		margin: 10px 4px !important;
+		padding: 10px 5px !important;
+	}
 `;
 	if (!Shared.esgst.sg) {
 		style += `
