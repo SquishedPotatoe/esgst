@@ -1,6 +1,7 @@
 import { DOM } from '../../class/DOM';
 import { FetchRequest } from '../../class/FetchRequest';
 import { Module } from '../../class/Module';
+import { permissions } from '../../class/Permissions';
 import { Settings } from '../../class/Settings';
 import { common } from '../Common';
 
@@ -21,6 +22,7 @@ class GiveawaysBlacklistGiveawayLoader extends Module {
 			),
 			id: 'bgl',
 			name: 'Blacklist Giveaway Loader',
+			permissions: ['cookies'],
 			sg: true,
 			type: 'giveaways',
 			featureMap: {
@@ -56,6 +58,20 @@ class GiveawaysBlacklistGiveawayLoader extends Module {
 
 				if (giveaway.bglLoadingDescription) return;
 				giveaway.bglLoadingDescription = true;
+
+				if (!(await permissions.contains([['cookies']]))) {
+					giveaway.bglLoadingDescription = false;
+					DOM.insert(
+						giveaway.outerWrap,
+						'beforeend',
+						<div className="giveaway__description-panel">
+							<div className="esgst-red esgst-bold" style={{ padding: '10px' }}>
+								Blacklist Giveaway Loader requires the "cookies" permission to load giveaways in anonymous mode. Please grant it in ESGST Settings &gt; Permissions.
+							</div>
+						</div>
+					);
+					return;
+				}
 
 				const icon = descriptionButton.querySelector('i');
 				if (icon) {
@@ -121,6 +137,31 @@ class GiveawaysBlacklistGiveawayLoader extends Module {
 		if (!summary) return;
 		let match = summary.textContent.match(/you\s(have\s(been\s)?|previously\s)blacklisted/);
 		if (!match) return;
+
+		if (!(await permissions.contains([['cookies']]))) {
+			createElements(
+				summary,
+				'beforeend',
+				[
+					{
+						type: 'br',
+					},
+					{
+						type: 'br',
+					},
+					{
+						attributes: {
+							class: 'esgst-red esgst-bold',
+						},
+						text:
+							'Blacklist Giveaway Loader requires the "cookies" permission to load giveaways in anonymous mode. Please grant it in ESGST Settings > Permissions.',
+						type: 'span',
+					},
+				]
+			);
+			return;
+		}
+
 		createElements(this.esgst.pageOuterWrap, 'atinner', [
 			{
 				attributes: {
