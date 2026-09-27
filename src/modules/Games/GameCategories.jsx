@@ -1442,109 +1442,107 @@ class GamesGameCategories extends Module {
 								}
 							)
 					  ).json;
-			let data;
-			if ((data = getSteamStoreResponseData(responseJson, id, type))) {
-				if (data) {
-					if (data.steam_appid && id != data.steam_appid) {
-						if (!Shared.esgst.games[type][id]) {
-							Shared.esgst.games[type][id] = {};
-						}
-						Shared.esgst.games[type][id].alias = data.steam_appid;
+			const data = getSteamStoreResponseData(responseJson, id, type);
+			if (data) {
+				if (data.steam_appid && id != data.steam_appid) {
+					if (!Shared.esgst.games[type][id]) {
+						Shared.esgst.games[type][id] = {};
 					}
-					if (type === 'apps' && data.packages) {
-						if (!Shared.esgst.games.apps[id]) {
-							Shared.esgst.games.apps[id] = {};
-						}
-						Shared.esgst.games.apps[id].subs = null;
-						Shared.esgst.games.apps[id].packages = data.packages.map((x) => parseInt(x));
+					Shared.esgst.games[type][id].alias = data.steam_appid;
+				}
+				if (type === 'apps' && data.packages) {
+					if (!Shared.esgst.games.apps[id]) {
+						Shared.esgst.games.apps[id] = {};
 					}
-					if (type === 'subs' && data.apps) {
-						if (!Shared.esgst.games.subs[id]) {
-							Shared.esgst.games.subs[id] = {};
-						}
-						Shared.esgst.games.subs[id].apps = data.apps.map((x) => parseInt(x.id));
-						for (const appId of Shared.esgst.games.subs[id].apps) {
-							if (
-								item.hasIndex &&
-								!gc.cache.apps[appId] &&
-								!toFetch.filter((x) => x.type === 'apps' && x.id == appId)[0]
-							) {
-								item.isComplete = false;
-								item.dependencies.push(appId);
-								toFetch.push({
-									id: appId,
-									lastCheck: 0,
-									priority: this.PRIORITIES.MISSING,
-									type: 'apps',
-								});
-							}
+					Shared.esgst.games.apps[id].subs = null;
+					Shared.esgst.games.apps[id].packages = data.packages.map((x) => parseInt(x));
+				}
+				if (type === 'subs' && data.apps) {
+					if (!Shared.esgst.games.subs[id]) {
+						Shared.esgst.games.subs[id] = {};
+					}
+					Shared.esgst.games.subs[id].apps = data.apps.map((x) => parseInt(x.id));
+					for (const appId of Shared.esgst.games.subs[id].apps) {
+						if (
+							item.hasIndex &&
+							!gc.cache.apps[appId] &&
+							!toFetch.filter((x) => x.type === 'apps' && x.id == appId)[0]
+						) {
+							item.isComplete = false;
+							item.dependencies.push(appId);
+							toFetch.push({
+								id: appId,
+								lastCheck: 0,
+								priority: this.PRIORITIES.MISSING,
+								type: 'apps',
+							});
 						}
 					}
-					if (data.categories) {
-						for (let i = 0, n = data.categories.length; i < n; ++i) {
-							switch (data.categories[i].description.toLowerCase()) {
-								case 'steam achievements':
-									categories.achievements = 1;
-									break;
-								case 'single-player':
-									categories.singleplayer = 1;
-									break;
-								case 'multi-player':
-								case 'online multi-player':
-								case 'co-op':
-								case 'local co-op':
-								case 'online co-op':
-								case 'shared/split screen':
-									categories.multiplayer = 1;
-									break;
-								case 'steam cloud':
-									categories.steamCloud = 1;
-									break;
-								case 'steam trading cards':
-									categories.tradingCards = 1;
-									break;
-								default:
-									break;
-							}
+				}
+				if (data.categories) {
+					for (let i = 0, n = data.categories.length; i < n; ++i) {
+						switch (data.categories[i].description.toLowerCase()) {
+							case 'steam achievements':
+								categories.achievements = 1;
+								break;
+							case 'single-player':
+								categories.singleplayer = 1;
+								break;
+							case 'multi-player':
+							case 'online multi-player':
+							case 'co-op':
+							case 'local co-op':
+							case 'online co-op':
+							case 'shared/split screen':
+								categories.multiplayer = 1;
+								break;
+							case 'steam cloud':
+								categories.steamCloud = 1;
+								break;
+							case 'steam trading cards':
+								categories.tradingCards = 1;
+								break;
+							default:
+								break;
 						}
 					}
-					if (categories.achievements && data.achievements && data.achievements.total) {
-						categories.achievements = data.achievements.total;
+				}
+				if (categories.achievements && data.achievements && data.achievements.total) {
+					categories.achievements = data.achievements.total;
+				}
+				categories.free = !!data.is_free;
+				categories.dlc = data.type === 'dlc' ? 1 : 0;
+				if (categories.dlc && data.fullgame && data.fullgame.appid) {
+					categories.base = parseInt(data.fullgame.appid);
+				} else if (data.dlc) {
+					categories.dlcs = data.dlc;
+				}
+				let genres = [];
+				if (data.genres) {
+					for (let i = 0, n = data.genres.length; i < n; ++i) {
+						genres.push(data.genres[i].description.trim());
 					}
-					categories.free = !!data.is_free;
-					categories.dlc = data.type === 'dlc' ? 1 : 0;
-					if (categories.dlc && data.fullgame && data.fullgame.appid) {
-						categories.base = parseInt(data.fullgame.appid);
-					} else if (data.dlc) {
-						categories.dlcs = data.dlc;
-					}
-					let genres = [];
-					if (data.genres) {
-						for (let i = 0, n = data.genres.length; i < n; ++i) {
-							genres.push(data.genres[i].description.trim());
-						}
-					}
-					genres.sort((a, b) => {
-						return a.localeCompare(b, {
-							sensitivity: 'base',
-						});
+				}
+				genres.sort((a, b) => {
+					return a.localeCompare(b, {
+						sensitivity: 'base',
 					});
-					categories.earlyAccess = genres.indexOf('Early Access') >= 0 ? 1 : 0;
-					categories.genres = genres.join(`, `);
-					let platforms = data.platforms;
-					categories.linux = platforms.linux ? 1 : 0;
-					categories.mac = platforms.mac ? 1 : 0;
-					categories.name = data.name;
-					let price = data.price || data.price_overview;
-					categories.price = price
-						? price.currency === 'USD'
-							? Math.ceil(price.initial / 100)
-							: -1
-						: 0;
-					if (data.release_date && data.release_date.date) {
-						// @ts-ignore
-						categories.releaseDate = new Date(data.release_date.date).getTime();
-					}
+				});
+				categories.earlyAccess = genres.indexOf('Early Access') >= 0 ? 1 : 0;
+				categories.genres = genres.join(`, `);
+				let platforms = data.platforms;
+				categories.linux = platforms.linux ? 1 : 0;
+				categories.mac = platforms.mac ? 1 : 0;
+				categories.name = data.name;
+				let price = data.price || data.price_overview;
+				categories.price = price
+					? price.currency === 'USD'
+						? Math.ceil(price.initial / 100)
+						: -1
+					: 0;
+				if (data.release_date && data.release_date.date) {
+					// @ts-ignore
+					categories.releaseDate = new Date(data.release_date.date).getTime();
 				}
 			}
 			if (
