@@ -14,6 +14,19 @@ import { common } from '../Common';
 const createElements = common.createElements.bind(common),
 	getFeatureTooltip = common.getFeatureTooltip.bind(common),
 	lockAndSaveGames = common.lockAndSaveGames.bind(common);
+export function getSteamStoreResponseData(responseJson, id, type) {
+	if (!responseJson) return null;
+	if (responseJson[id]) return responseJson[id].data;
+	if (type !== 'apps') return null;
+
+	// Steam can key an appdetails response by a DLC ID while keeping the requested
+	// app ID in data.steam_appid. Only accept an unambiguous match.
+	const matches = Object.values(responseJson).filter(
+		(result) => result && result.data && String(result.data.steam_appid) === String(id)
+	);
+	return matches.length === 1 ? matches[0].data : null;
+}
+
 class GamesGameCategories extends Module {
 	constructor() {
 		super();
@@ -1430,8 +1443,7 @@ class GamesGameCategories extends Module {
 							)
 					  ).json;
 			let data;
-			if (responseJson && responseJson[id]) {
-				data = responseJson[id].data;
+			if ((data = getSteamStoreResponseData(responseJson, id, type))) {
 				if (data) {
 					if (data.steam_appid && id != data.steam_appid) {
 						if (!Shared.esgst.games[type][id]) {
