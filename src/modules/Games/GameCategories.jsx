@@ -1426,10 +1426,8 @@ class GamesGameCategories extends Module {
 								}
 							)
 					  ).json;
-			let data;
-			if (responseJson && responseJson[id]) {
-				data = responseJson[id].data;
-				if (data) {
+			const data = common.getSteamStoreResponseData(responseJson, id, type);
+			if (data) {
 					if (data.steam_appid && id != data.steam_appid) {
 						if (!Shared.esgst.games[type][id]) {
 							Shared.esgst.games[type][id] = {};
@@ -1530,7 +1528,6 @@ class GamesGameCategories extends Module {
 						// @ts-ignore
 						categories.releaseDate = new Date(data.release_date.date).getTime();
 					}
-				}
 			}
 			if (
 				(typeof id !== 'string' || !id.match(/^SteamBundle/)) &&
@@ -3199,7 +3196,7 @@ class GamesGameCategories extends Module {
 									class: 'esgst-gc esgst-gc-releaseDate',
 									['data-draggable-id']: 'gc_rd',
 									['data-timestamp']:
-										cache.releaseDate === ' ? ' ? cache.releaseDate : cache.releaseDate / 1e3,
+										cache.releaseDate === '?' ? cache.releaseDate : cache.releaseDate / 1e3,
 									href: this.replacePlaceholders(Settings.get('gc_rdUrl'), placeholderValues),
 									title: getFeatureTooltip('gc_rd', 'Release Date'),
 								},
@@ -3398,11 +3395,13 @@ class GamesGameCategories extends Module {
 					delete Shared.esgst.gcToFetch[type][id];
 				}
 			}
-			const oldElements = games[i].container.querySelectorAll('.esgst-gc');
-			for (const element of oldElements) {
-				element.remove();
-			}
 			panel = games[i].container.getElementsByClassName('esgst-gc-panel')[0];
+			if (!panel || !panel.getAttribute('data-gcReady')) {
+				const oldElements = games[i].container.querySelectorAll('.esgst-gc');
+				for (const element of oldElements) {
+					element.remove();
+				}
+			}
 			if (panel && !panel.getAttribute('data-gcReady')) {
 				if (Settings.get('gc_il') && !Shared.esgst.giveawayPath) {
 					panel.previousElementSibling.style.display = 'inline-block';

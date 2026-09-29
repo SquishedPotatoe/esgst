@@ -2125,6 +2125,17 @@ class Common extends Module {
 		});
 	}
 
+	getSteamStoreResponseData(responseJson, id, type) {
+		if (!responseJson) return null;
+		if (responseJson[id]) return responseJson[id].data || null;
+		if (type !== 'apps' || typeof responseJson !== 'object') return null;
+
+		const match = Object.values(responseJson).find(
+			(result) => result?.data && String(result.data.steam_appid) === String(id)
+		);
+		return match ? match.data : null;
+	} 
+
 	async getGameNames(context) {
 		const elements = context.getElementsByTagName('a');
 		for (let i = elements.length - 1; i > -1; --i) {
@@ -2138,7 +2149,8 @@ class Common extends Module {
 						match[1] === 'app' ? 'appdetails?appids' : 'packagedetails?packageids'
 					}=${id}&filters=basic`
 				);
-				element.textContent = response.json[id].data.name;
+				const data = this.getSteamStoreResponseData(response.json, id, match[1] === 'app' ? 'apps' : 'subs');
+				element.textContent = data.name;
 			} catch (e) {
 				element.classList.add('esgst-red');
 				element.title = 'Unable to retrieve name for this game';
