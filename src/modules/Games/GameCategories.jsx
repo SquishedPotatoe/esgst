@@ -14,18 +14,6 @@ import { common } from '../Common';
 const createElements = common.createElements.bind(common),
 	getFeatureTooltip = common.getFeatureTooltip.bind(common),
 	lockAndSaveGames = common.lockAndSaveGames.bind(common);
-export function getSteamStoreResponseData(responseJson, id, type) {
-	if (!responseJson) return null;
-	if (responseJson[id]) return responseJson[id].data;
-	if (type !== 'apps') return null;
-
-	// Steam can key an appdetails response by a DLC ID while keeping the requested
-	// app ID in data.steam_appid. Only accept an unambiguous match.
-	const matches = Object.values(responseJson).filter(
-		(result) => result && result.data && String(result.data.steam_appid) === String(id)
-	);
-	return matches.length === 1 ? matches[0].data : null;
-}
 
 class GamesGameCategories extends Module {
 	constructor() {
@@ -1442,7 +1430,7 @@ class GamesGameCategories extends Module {
 								}
 							)
 					  ).json;
-			const data = getSteamStoreResponseData(responseJson, id, type);
+			const data = common.getSteamStoreResponseData(responseJson, id, type);
 			if (data) {
 				if (data.steam_appid && id != data.steam_appid) {
 					if (!Shared.esgst.games[type][id]) {
@@ -3215,7 +3203,7 @@ class GamesGameCategories extends Module {
 									class: 'esgst-gc esgst-gc-releaseDate',
 									['data-draggable-id']: 'gc_rd',
 									['data-timestamp']:
-										cache.releaseDate === ' ? ' ? cache.releaseDate : cache.releaseDate / 1e3,
+										cache.releaseDate === '?' ? cache.releaseDate : cache.releaseDate / 1e3,
 									href: this.replacePlaceholders(Settings.get('gc_rdUrl'), placeholderValues),
 									title: getFeatureTooltip('gc_rd', 'Release Date'),
 								},
@@ -3414,11 +3402,13 @@ class GamesGameCategories extends Module {
 					delete Shared.esgst.gcToFetch[type][id];
 				}
 			}
-			const oldElements = games[i].container.querySelectorAll('.esgst-gc');
-			for (const element of oldElements) {
-				element.remove();
-			}
 			panel = games[i].container.getElementsByClassName('esgst-gc-panel')[0];
+			if (!panel || !panel.getAttribute('data-gcReady')) {
+				const oldElements = games[i].container.querySelectorAll('.esgst-gc');
+				for (const element of oldElements) {
+					element.remove();
+				}
+			}
 			if (panel && !panel.getAttribute('data-gcReady')) {
 				if (Settings.get('gc_il') && !Shared.esgst.giveawayPath) {
 					panel.previousElementSibling.style.display = 'inline-block';

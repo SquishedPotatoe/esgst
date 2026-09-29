@@ -1475,6 +1475,7 @@ class GroupsGroupLibraryWishlistChecker extends Module {
 
 				if (!match || match[1] === 'none') {
 					div.setAttribute('data-fixed', 'true');
+					this._setBrokenThumbnailFallback(div);
 					resolve();
 					return;
 				}
@@ -1502,10 +1503,10 @@ class GroupsGroupLibraryWishlistChecker extends Module {
 									anon: true,
 								}
 							);
-							const json = response.json;
+							const data = common.getSteamStoreResponseData(response.json, appId, 'apps');
 
-							if (json && json[appId] && json[appId].success) {
-								const newLogoUrl = json[appId].data.header_image;
+							if (data) {
+								const newLogoUrl = data.header_image;
 								div.style.backgroundImage = `url("${newLogoUrl}")`;
 								fallbackSuccess = true;
 							}
@@ -1530,17 +1531,10 @@ class GroupsGroupLibraryWishlistChecker extends Module {
 		thumbnail.style.display = 'flex';
 		thumbnail.style.justifyContent = 'center';
 		thumbnail.style.alignItems = 'center';
-		thumbnail.replaceChildren(
-			createElements(document.createDocumentFragment(), 'atinner', [
-				{
-					attributes: {
-						class: 'fa fa-picture-o',
-						style: 'font-size: 26px;',
-					},
-					type: 'i',
-				},
-			]).firstElementChild
-		);
+		const icon = document.createElement('i');
+		icon.className = 'fa fa-picture-o';
+		icon.style.fontSize = '26px';
+		thumbnail.replaceChildren(icon);
 	}
 
 }

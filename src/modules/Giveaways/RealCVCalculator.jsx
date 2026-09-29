@@ -49,15 +49,19 @@ class GiveawaysRealCVCalculator extends Module {
 					let headings = document.getElementsByClassName('featured__heading__small');
 					let copies = headings.length > 1 ? parseInt(headings[0].textContent.match(/\d+/)[0]) : 1;
 					try {
-						let responseJson = (
+						const responseJson = (
 							await FetchRequest.get(
 								`http://store.steampowered.com/api/${
 									type === 'apps' ? 'appdetails?appids' : 'packagedetails?packageids'
 								}=${id}&cc=us&filters=price,price_overview`
 							)
-						).json[id].data;
+						).json;
+						const responseData = type === 'apps'
+							? common.getSteamStoreResponseData(responseJson, id, type)
+							: responseJson[id]?.data;
+						if (!responseData) throw new Error('Steam Store response did not contain matching game data');
 						let value = Math.ceil(
-							(responseJson.price_overview || responseJson.price).initial / 100
+							(responseData.price_overview || responseData.price).initial / 100
 						);
 						let games, user;
 						games = JSON.parse(getValue('games'));
