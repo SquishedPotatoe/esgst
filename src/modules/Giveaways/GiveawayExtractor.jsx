@@ -314,6 +314,8 @@ class GiveawaysGiveawayExtractor extends Module {
 			(pathMatch && pathMatch[0]);
 		ge.count = 0;
 		ge.endless = 0;
+		ge.lastScrollTop = 0;
+		ge.pendingScrollDown = false;
 		ge.total = 0;
 		ge.extracted = [];
 		ge.bumpLink = '';
@@ -713,17 +715,26 @@ class GiveawaysGiveawayExtractor extends Module {
 		}
 	}
 
-	checkScroll(ge, filtered) {
+	checkScroll(ge) {
+		const scrollTop = ge.popup.scrollable.scrollTop;
+		const scrolledDown = scrollTop > ge.lastScrollTop;
+		ge.lastScrollTop = scrollTop;
+		const reachedBottom =
+			scrollTop + ge.popup.scrollable.offsetHeight >= ge.popup.scrollable.scrollHeight;
+		ge.pendingScrollDown = scrolledDown && reachedBottom;
+		this.continueAfterScroll(ge);
+	}
+
+	continueAfterScroll(ge) {
 		if (
+			ge.pendingScrollDown &&
 			!ge.cacheWarning &&
 			!ge.isCanceled &&
 			!ge.isComplete &&
 			ge.extractButton &&
-			!ge.extractButton.isBusy &&
-			(ge.popup.scrollable.scrollTop + ge.popup.scrollable.offsetHeight >=
-				ge.popup.scrollable.scrollHeight ||
-				filtered)
+			!ge.extractButton.isBusy
 		) {
+			ge.pendingScrollDown = false;
 			ge.hasScrolled = true;
 			ge.extractButton.onClick();
 		}
@@ -1049,23 +1060,17 @@ class GiveawaysGiveawayExtractor extends Module {
 			ge.mainCallback = null;
 			ge.count = 0;
 
-			await endless_load(ge.results, false, 'ge', ge.endless);
+			if (!Settings.get('gv')) {
+				await endless_load(ge.results, false, 'ge', ge.endless);
+			}
 			ge.extractButton.build(3);
 			ge.progressBar.setInfo();
 			ge.callback = this.ge_extractGiveaway.bind(this, ge, code, callback);
 
-			const children = ge.results.querySelectorAll(`:scope > .esgst-es-page-${ge.endless}`);
-			let filtered = false;
-			for (let i = children.length - 1; i >= 0 && !filtered; --i) {
-				if (children[i].firstElementChild?.classList.contains('esgst-hidden')) {
-					filtered = true;
-				}
-			}
-
 			ge.endless++;
 			await this.ge_saveCache(ge);
 			if (Settings.get('es') && Settings.get('es_ge')) {
-				this.checkScroll(ge, filtered);
+				this.continueAfterScroll(ge);
 			}
 			return;
 		}
