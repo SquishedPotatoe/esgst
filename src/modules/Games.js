@@ -93,7 +93,10 @@ class Games extends Module {
 			? `.giveaway__heading__name, .featured__heading__medium, .table__column__heading, a`
 			: `.giveaway__heading__name, .featured__heading__medium, .table__column__heading`;
 
-		const matches = context.querySelectorAll(matchesQuery);
+		const matches = [
+			...(context.matches?.(matchesQuery) ? [context] : []),
+			...context.querySelectorAll(matchesQuery),
+		];
 		for (const match of matches) {
 			let game = Scope.findData('main', 'giveaways').find((x) => x.outerWrap === match);
 
