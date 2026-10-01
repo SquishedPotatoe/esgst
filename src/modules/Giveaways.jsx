@@ -103,7 +103,10 @@ class Giveaways extends Module {
 				key = 'giveaway';
 			}
 		}
-		matches = context.querySelectorAll(query);
+		matches = [
+			...(context.matches?.(query) ? [context] : []),
+			...context.querySelectorAll(query),
+		];
 		for (const match of matches) {
 			giveaway = await this.giveaways_getInfo(
 				match,

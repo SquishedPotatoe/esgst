@@ -114,7 +114,10 @@ class Games extends Module {
 			}`;
 			headingNameQuery = `.giveaway__heading__name, .featured__heading__medium, .table__column__heading`;
 		}
-		matches = context.querySelectorAll(matchesQuery);
+		matches = [
+			...(context.matches?.(matchesQuery) ? [context] : []),
+			...context.querySelectorAll(matchesQuery),
+		];
 		for (i = 0, n = matches.length; i < n; ++i) {
 			game = Scope.findData('main', 'giveaways').filter((x) => x.outerWrap === matches[i])[0];
 			if (!game) {
