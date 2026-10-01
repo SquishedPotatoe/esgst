@@ -9,6 +9,7 @@ class _Settings {
 		this.aliases = {};
 
 		this.defaultValues = {
+			mgl_index: 0,
 			limitSteamStore_sg: true,
 			customAdaReqLim_default: 0.25,
 			customAdaReqLim_minute50: 0.5,
