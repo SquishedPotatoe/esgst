@@ -350,6 +350,7 @@ class GiveawaysEnterLeaveGiveawayButton extends Module {
 				if (
 					Settings.get('elgb_b') &&
 					Settings.get('gb') &&
+					responseJson.msg === 'Not Enough Points' &&
 					giveaway.gbButton &&
 					giveaway.gbButton.index === 1
 				) {
@@ -932,6 +933,7 @@ class GiveawaysEnterLeaveGiveawayButton extends Module {
 			if (
 				Settings.get('elgb_b') &&
 				Settings.get('gb') &&
+				responseJson.msg === 'Not Enough Points' &&
 				giveaway.gbButton &&
 				giveaway.gbButton.index === 1
 			) {
