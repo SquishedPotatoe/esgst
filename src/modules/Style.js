@@ -2878,7 +2878,7 @@ function addStyle() {
 		margin: -18px 0 0 !important;
 	}
 
-	.esgst-gv-icons .esgst-gc, .esgst-gv-icons .esgst-gwc, .esgst-gv-icons .esgst-gwr, .esgst-gv-icons .esgst-gptw, .esgst-gv-icons .esgst-ttec, .esgst-gv-time, .esgst-gv-icons .esgst-ged-source {
+	.esgst-gv-icons .esgst-gc, .esgst-gv-icons .esgst-gwc, .esgst-gv-icons .esgst-gwr, .esgst-gv-icons .esgst-gptw, .esgst-gv-icons .esgst-ttec, .esgst-gv-time, .esgst-gv-icons .esgst-ged-source, .esgst-gv-icons [data-draggable-id="search"] {
 		background-color: #fff;
 		line-height: 16px !important;
 		padding: 0 2px !important;
@@ -2892,7 +2892,7 @@ function addStyle() {
 		font-weight: bold;
 	}
 
-	.esgst-gv-time i {
+	.esgst-gv-time i, .esgst-gv-icons [data-draggable-id="search"] i {
 		font-size: 12px;
 		vertical-align: baseline;
 	}

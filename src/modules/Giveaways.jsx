@@ -580,7 +580,10 @@ class Giveaways extends Module {
 					child.setAttribute('data-draggable-id', 'steam');
 				} else if (child.matches('.giveaway__icon.fa-camera[data-lightbox-id]')) {
 					child.setAttribute('data-draggable-id', 'screenshots-videos');
-				} else if (child.getAttribute('href')?.includes('/giveaways/search')) {
+				} else if (
+					child.getAttribute('href')?.includes('/giveaways/search') ||
+					child.querySelector('.fa-search')
+				) {
 					child.setAttribute('data-draggable-id', 'search');
 				}
 			}
