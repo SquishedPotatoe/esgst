@@ -260,6 +260,8 @@ const StorageManager = (() => {
 	return { load, saveNow, get, set, update, getLastRequest, setLastRequest };
 })();
 
+let storageInitialization = Promise.resolve();
+
 const RequestQueue = (() => {
 	const MAX_QUEUE_LENGTH = 750;
 	const queues = {};
@@ -364,9 +366,15 @@ const RequestQueue = (() => {
 		let spacing = (q.minSpacing || 0) * 1000;
 		const ratio = q.counts.minute / q.limits.minute;
 
+		spacing = Math.max(spacing, q.thresholds.default * 1000);
+		if (ratio > 0.50) spacing = Math.max(spacing, q.thresholds.minute50 * 1000);
 		if (ratio > 0.75) spacing = Math.max(spacing, q.thresholds.minute75 * 1000);
-		else if (ratio > 0.50) spacing = Math.max(spacing, q.thresholds.minute50 * 1000);
-		else spacing = Math.max(spacing, q.thresholds.default * 1000);
+		if (q.counts.hour > q.limits.hour * 0.75) {
+			spacing = Math.max(spacing, q.thresholds.hourly75 * 1000);
+		}
+		if (q.counts.day > q.limits.day * 0.75) {
+			spacing = Math.max(spacing, q.thresholds.daily75 * 1000);
+		}
 
 		const last = q.highPrecision[q.highPrecision.length - 1];
 		if (last) {
@@ -379,6 +387,7 @@ const RequestQueue = (() => {
 	const init = async (key) => {
 		if (initPromises.has(key)) return initPromises.get(key);
 		const task = (async () => {
+			await storageInitialization;
 			if (queues[key]) return;
 			const q = structuredClone(template);
 			const config = queueConfigs[key] || queueConfigs.default;
@@ -760,53 +769,175 @@ async function resolveCloudflareChallenge(targetUrl) {
 
 	cfChallengePromise = (async () => {
 		try {
-			const urlObj = new URL(targetUrl);
+			const canReadCookies = await runPermissionsAction('contains', { permissions: ['cookies'] });
+			if (!canReadCookies) {
+				return false;
+			}
+
+			const urlObj = new URL(targetUrl, 'https://www.steamgifts.com');
 			const domain = urlObj.hostname.replace(/^www\./, '');
 
 			return await new Promise((resolve) => {
 				let tempTabId = null;
+				let originalTabId = null;
 				let timeoutId = null;
+				let challengeRuleId = null;
 
-				const cleanup = () => {
-					if (timeoutId) clearTimeout(timeoutId);
-					chrome.cookies.onChanged.removeListener(cookieListener);
-					cfChallengePromise = null;
-				};
-
-				const cookieListener = (changeInfo) => {
-					const { cookie, removed } = changeInfo;
-					if (!removed && cookie.name === 'cf_clearance' && cookie.domain.includes(domain)) {
-						cleanup();
-						if (tempTabId) chrome.tabs.remove(tempTabId).catch(() => {});
-						resolve(true);
+				const restoreOriginalTab = () => {
+					if (originalTabId !== null) {
+						chrome.tabs.update(originalTabId, {
+							active: true,
+						}).catch(() => { });
 					}
 				};
 
-				chrome.cookies.onChanged.addListener(cookieListener);
+				const cleanup = async () => {
+					if (timeoutId) {
+						clearTimeout(timeoutId);
+						timeoutId = null;
+					}
 
-				timeoutId = setTimeout(() => {
-					cleanup();
-					resolve(false);
+					try {
+						if (chrome.cookies?.onChanged) {
+							chrome.cookies.onChanged.removeListener(cookieListener);
+						}
+					} catch { }
+
+					try {
+						chrome.tabs.onUpdated.removeListener(tabUpdateListener);
+					} catch { }
+
+					if (challengeRuleId !== null) {
+						await endLoggedOutFetch(challengeRuleId).catch(() => { });
+						challengeRuleId = null;
+					}
+
+					cfChallengePromise = null;
+				};
+				
+				const finishChallenge = async (success) => {
+					const tabId = tempTabId;
+
+					await cleanup();
+
+					if (tabId !== null) {
+						chrome.tabs.remove(tabId).catch(() => { });
+					}
+
+					restoreOriginalTab();
+
+					resolve(success);
+				};
+
+				const cookieListener = async (changeInfo) => {
+					const { cookie, removed } = changeInfo;
+
+					if (
+						!removed &&
+						cookie.name === 'cf_clearance' &&
+						cookie.domain.includes(domain)
+					) {
+						await finishChallenge(true);
+					}
+				};
+
+				const tabUpdateListener = async (tabId, changeInfo) => {
+					if (tabId === tempTabId && changeInfo.status === 'complete') {
+						try {
+							const domainCookies =
+								await chrome.cookies?.getAll({
+									domain,
+								}).catch(() => []);
+
+							const hasClearance = domainCookies?.some(
+								(c) => c.name === 'cf_clearance' && c.value
+							);
+
+							if (hasClearance) {
+								await finishChallenge(true);
+							}
+						} catch { }
+					}
+				};
+
+				try {
+					if (chrome.cookies?.onChanged) {
+						chrome.cookies.onChanged.addListener(cookieListener);
+					}
+				} catch (e) {
+					console.warn(
+						'[SW] Could not register cookieListener:',
+						e
+					);
+				}
+
+				try {
+					chrome.tabs.onUpdated.addListener(tabUpdateListener);
+				} catch (e) {
+					console.warn(
+						'[SW] Could not register tabUpdateListener:',
+						e
+					);
+				}
+
+				timeoutId = setTimeout(async () => {
+					console.warn(
+						'[SW] Challenge resolution timed out after 120 seconds for:',
+						targetUrl
+					);
+
+					await finishChallenge(false);
 				}, 120000);
 
 				(async () => {
-					const openTabs = await getOpenTabs();
-					const existing = openTabs.find((t) => t.url && t.url.includes(domain));
+					try {
+						const activeTabs = await chrome.tabs.query({
+							active: true,
+							currentWindow: true,
+						});
 
-					if (existing?.id) {
-						await chrome.tabs.update(existing.id, { active: true });
-						await chrome.tabs.reload(existing.id).catch(() => {});
-					} else {
+						if (activeTabs[0]?.id !== undefined) {
+							originalTabId = activeTabs[0].id;
+						}
+
+						const challengeUrl = new URL(
+							targetUrl,
+							'https://www.steamgifts.com'
+						).href;
+
 						const newTab = await chrome.tabs.create({
-							url: `https://${urlObj.hostname}/`,
+							url: 'about:blank',
 							active: true,
 						});
 						tempTabId = newTab.id;
+
+						const ruleRes = await startLoggedOutFetch(
+							challengeUrl,
+							tempTabId,
+							true
+						);
+
+						if (ruleRes?.success) {
+							challengeRuleId = ruleRes.ruleId;
+						}
+
+						await chrome.tabs.update(tempTabId, {
+							url: challengeUrl,
+						});
+					} catch (e) {
+						console.error(
+							'[SW] Cloudflare Failed to open Cloudflare challenge tab',
+							e
+						);
 					}
 				})();
 			});
 		} catch (err) {
-			console.error('[SW] Cloudflare challenge resolution failed', err);
+			console.error(
+				'[SW] Cloudflare challenge resolution failed',
+				err
+			);
+
 			cfChallengePromise = null;
 			return false;
 		}
@@ -818,18 +949,52 @@ async function resolveCloudflareChallenge(targetUrl) {
 const LOGGED_OUT_RULE_ID_START = 1001;
 const LOGGED_OUT_RULE_ID_END = 1999;
 
-async function startLoggedOutFetch(url, tabId) {
+async function startLoggedOutFetch(url, tabId, isChallengeTab = false) {
 	try {
 		const targetUrl = new URL(url);
 		if (!targetUrl.hostname.endsWith('.steamgifts.com')) {
 			return { success: false, error: 'Logged-out requests are only supported for SteamGifts' };
 		}
 
-		const [standardCookies, partitionedCookies, rules] = await Promise.all([
-			chrome.cookies.getAll({ url: targetUrl.href }),
-			chrome.cookies.getAll({ url: targetUrl.href, partitionKey: {} }).catch(() => []),
-			chrome.declarativeNetRequest.getSessionRules(),
-		]);
+		const canReadCookies = await runPermissionsAction('contains', { permissions: ['cookies'] });
+		if (!canReadCookies) {
+			return { success: false, error: 'Missing cookies permission required for logged-out requests' };
+		}
+
+		let standardCookies = [];
+		let domainCookies = [];
+		let partitionedCookies = [];
+		let rules = [];
+		try {
+			[
+				standardCookies,
+				domainCookies,
+				partitionedCookies,
+				rules
+			] = await Promise.all([
+				chrome.cookies?.getAll
+					? chrome.cookies.getAll({ url: targetUrl.href }).catch(() => [])
+					: Promise.resolve([]),
+
+				chrome.cookies?.getAll
+					? chrome.cookies.getAll({ domain: 'steamgifts.com' }).catch(() => [])
+					: Promise.resolve([]),
+
+				chrome.cookies?.getAll
+					? chrome.cookies.getAll({
+						url: targetUrl.href,
+						partitionKey: {}
+					}).catch(() => [])
+					: Promise.resolve([]),
+
+				chrome.declarativeNetRequest.getSessionRules(),
+			]);
+		} catch {
+			rules = await chrome.declarativeNetRequest
+				.getSessionRules()
+				.catch(() => []);
+		}
+
 		const usedRuleIds = new Set(rules.map(rule => rule.id));
 		const ruleId = Array.from(
 			{ length: LOGGED_OUT_RULE_ID_END - LOGGED_OUT_RULE_ID_START + 1 },
@@ -840,39 +1005,43 @@ async function startLoggedOutFetch(url, tabId) {
 		}
 
 		const cookieMap = new Map(
-			[...standardCookies, ...partitionedCookies].map((c) => [c.name, c])
+			[...domainCookies, ...standardCookies, ...partitionedCookies].map(c => [c.name, c])
 		);
 
 		const cookieHeaderValue = Array.from(cookieMap.values())
-			.filter((c) => c.name !== 'PHPSESSID')
-			.map((c) => `${c.name}=${c.value}`)
+			.filter(c => c.name !== 'PHPSESSID')
+			.map(c => `${c.name}=${c.value}`)
 			.join('; ');
 
 		const requestHeaders = cookieHeaderValue
 			? [{ header: 'cookie', operation: 'set', value: cookieHeaderValue }]
 			: [{ header: 'cookie', operation: 'remove' }];
 
+		const pathPrefix = targetUrl.pathname.replace(/\/+$/, '');
+		const urlFilter = `||${targetUrl.hostname}${pathPrefix}*`;
+
+		const dnrRule = {
+			id: ruleId,
+			priority: 10,
+			action: {
+				type: 'modifyHeaders',
+				requestHeaders,
+				...(isChallengeTab ? {} : { responseHeaders: [{ header: 'set-cookie', operation: 'remove' }] }),
+			},
+			condition: {
+				urlFilter,
+				resourceTypes: ['main_frame', 'sub_frame', 'xmlhttprequest', 'other'],
+				...(typeof tabId === 'number' ? { tabIds: [tabId] } : {}),
+			},
+		};
+
 		await chrome.declarativeNetRequest.updateSessionRules({
-			addRules: [
-				{
-					id: ruleId,
-					priority: 10,
-					action: {
-						type: 'modifyHeaders',
-						requestHeaders,
-						responseHeaders: [{ header: 'set-cookie', operation: 'remove' }],
-					},
-					condition: {
-						urlFilter: `|${targetUrl.origin}${targetUrl.pathname}${targetUrl.search}`,
-						resourceTypes: ['xmlhttprequest'],
-						...(typeof tabId === 'number' ? { tabIds: [tabId] } : {}),
-					},
-				},
-			],
+			addRules: [dnrRule],
 		});
 
 		return { success: true, ruleId };
 	} catch (error) {
+		console.error('[SW] LoggedOutFetch Failed to apply DNR rule:', error);
 		return { success: false, error: error?.message };
 	}
 }
@@ -1016,6 +1185,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 				case 'end_logged_out_fetch': {
 					const res = await endLoggedOutFetch(request.ruleId);
 					sendResponse(res);
+					break;
+				}
+				case 'resolve_cloudflare': {
+					const resolved = await resolveCloudflareChallenge(request.url);
+					sendResponse({ success: true, resolved });
 					break;
 				}
 				case 'get-tds': {
@@ -1403,7 +1577,7 @@ async function bootstrap() {
 	if (self._bootstrapped) return;
 	self._bootstrapped = true;
 
-	self.SW_VERSION = '4.0.6';
+	self.SW_VERSION = '4.0.7';
 
 	const originalLog = console.log;
 	const originalWarn = console.warn;
@@ -1431,10 +1605,13 @@ async function bootstrap() {
 	debugLog('Bootstrap starting');
 
 	try {
-		await ServiceWorkerSettings();
-		debugLog('ServiceWorkerSettings initialized');
-		await StorageManager.load();
-		debugLog('StorageManager loaded');
+		storageInitialization = (async () => {
+			await ServiceWorkerSettings();
+			debugLog('ServiceWorkerSettings initialized');
+			await StorageManager.load();
+			debugLog('StorageManager loaded');
+		})();
+		await storageInitialization;
 		await refreshCachedPermissions();
 		debugLog('Permissions cache loaded');
 

@@ -150,20 +150,60 @@ export class FetchRequest {
 					throw new Error('Logged-out requests are only supported for the current site');
 				}
 
-				const res = await chrome.runtime.sendMessage({
-					action: 'start_logged_out_fetch',
-					url,
-				});
-				if (!res?.success || !Number.isInteger(res.ruleId)) {
-					throw new Error(`Could not start logged-out request: ${res?.error || 'unknown error'}`);
+				if (loggedOutRuleId === null) {
+					const res = await chrome.runtime.sendMessage({
+						action: 'start_logged_out_fetch',
+						url,
+					});
+					if (!res?.success || !Number.isInteger(res.ruleId)) {
+						throw new Error(`Could not start logged-out request: ${res?.error || 'unknown error'}`);
+					}
+					loggedOutRuleId = res.ruleId;
 				}
-				loggedOutRuleId = res.ruleId;
 			}
 
-			if (isInternal) {
-				response = await FetchRequest.sendInternal(url, options);
-			} else {
-				response = await FetchRequest.sendExternal(url, options);
+			try {
+				if (isInternal) {
+					response = await FetchRequest.sendInternal(url, options);
+				} else {
+					response = await FetchRequest.sendExternal(url, options);
+				}
+			} catch (err: any) {
+				if (!err?.cfBlocked) {
+					throw err;
+				}
+
+				if (loggedOutRuleId !== null) {
+					await chrome.runtime
+						.sendMessage({ action: 'end_logged_out_fetch', ruleId: loggedOutRuleId })
+						.catch(() => { });
+					loggedOutRuleId = null;
+				}
+
+				const cfRes = await chrome.runtime
+					.sendMessage({ action: 'resolve_cloudflare', url })
+					.catch(() => null);
+
+				if (!cfRes?.resolved) {
+					throw new Error('Cloudflare challenge could not be resolved');
+				}
+
+				if (options.loggedOut) {
+					const res = await chrome.runtime.sendMessage({
+						action: 'start_logged_out_fetch',
+						url,
+					});
+					if (!res?.success || !Number.isInteger(res.ruleId)) {
+						throw new Error(`Could not restart logged-out request: ${res?.error || 'unknown error'}`);
+					}
+					loggedOutRuleId = res.ruleId;
+				}
+
+				if (isInternal) {
+					response = await FetchRequest.sendInternal(url, options);
+				} else {
+					response = await FetchRequest.sendExternal(url, options);
+				}
 			}
 
 			if (lock) {
@@ -200,6 +240,8 @@ export class FetchRequest {
 			}
 		}
 	}
+
+	static readonly CF_BLOCKED = Symbol('CF_BLOCKED');
 
 	static async sendInternal(url: string, options: FetchOptions): Promise<FetchResponse> {
 		const { fetchObj, fetchOptions } = await this.getFetchObj(options);
@@ -265,6 +307,14 @@ export class FetchRequest {
 					);
 				}
 				continue;
+			}
+
+			if (response.status === 403 || response.status === 503) {
+				const cfMitigated = response.headers.get('cf-mitigated')?.toLowerCase();
+
+				if (cfMitigated === 'challenge') {
+					throw Object.assign(new Error('CF_BLOCKED'), { cfBlocked: true, url });
+				}
 			}
 
 			const text = await response.text();
