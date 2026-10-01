@@ -132,6 +132,7 @@ import { giveawaysOneClickHideGiveawayButton } from './Giveaways/OneClickHideGiv
 import { giveawaysVisibleInviteOnlyGiveaways } from './Giveaways/VisibleInviteOnlyGiveaways';
 import { giveawaysGiveawayWinnersLink } from './Giveaways/GiveawayWinnersLink';
 import { giveawaysTimeToEnterCalculator } from './Giveaways/TimeToEnterCalculator';
+import { giveawaysMoreGiveawaysLink } from './Giveaways/MoreGiveawaysLink';
 import { generalContentLoader } from './General/ContentLoader';
 import { commentsReceivedReplyBoxPopup } from './Comments/ReceivedReplyBoxPopup';
 import { giveawaysModule as giveaways } from './Giveaways';
@@ -300,6 +301,7 @@ const modules = {
 	giveawaysOneClickHideGiveawayButton,
 	giveawaysGiveawayWinnersLink,
 	giveawaysTimeToEnterCalculator,
+	giveawaysMoreGiveawaysLink,
 	commentsReceivedReplyBoxPopup,
 	giveaways,
 	discussions,
