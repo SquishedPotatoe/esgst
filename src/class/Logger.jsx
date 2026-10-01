@@ -34,6 +34,7 @@ class _Logger {
 	}
 
 	error() {
+		if (window.location.search.includes('__cf_chl_')) return;
 		const message = this.getMessage(arguments);
 		window.console.error(message);
 		this.logs.push({ level: ERROR, message });

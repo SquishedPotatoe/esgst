@@ -125,10 +125,61 @@ export class FetchRequest {
 				loggedOutRequestId = res.requestId;
 			}
 
-			if (isInternal && !(isUserscript && options.loggedOut)) {
-				response = await FetchRequest.sendInternal(url, options);
-			} else {
-				response = await FetchRequest.sendExternal(url, options);
+			try {
+				if (isInternal && !(isUserscript && options.loggedOut)) {
+					response = await FetchRequest.sendInternal(url, options);
+				} else {
+					response = await FetchRequest.sendExternal(url, options);
+				}
+			} catch (err: any) {
+				if (!err?.cfBlocked || isUserscript) {
+					throw err;
+				}
+
+				if (loggedOutRequestId !== null) {
+					await browser.runtime
+						.sendMessage({ action: 'end_logged_out_fetch', requestId: loggedOutRequestId })
+						.catch(() => { });
+					loggedOutRequestId = null;
+				}
+
+				let cfRes = await browser.runtime
+					.sendMessage({ action: 'resolve_cf_challenge', url })
+					.catch(() => null);
+
+				if (typeof cfRes === 'string') {
+					try {
+						cfRes = JSON.parse(cfRes);
+					} catch (e) { }
+				}
+
+				if (!cfRes?.success) {
+					throw new Error('Cloudflare challenge could not be resolved');
+				}
+
+				if (options.loggedOut) {
+					let res = await browser.runtime.sendMessage({
+						action: 'start_logged_out_fetch',
+						url,
+					});
+
+					if (typeof res === 'string') {
+						try {
+							res = JSON.parse(res);
+						} catch (e) { }
+					}
+
+					if (!res?.success || !Number.isInteger(res.requestId)) {
+						throw new Error(`Could not restart logged-out request: ${res?.error || 'unknown error'}`);
+					}
+					loggedOutRequestId = res.requestId;
+				}
+
+				if (isInternal && !(isUserscript && options.loggedOut)) {
+					response = await FetchRequest.sendInternal(url, options);
+				} else {
+					response = await FetchRequest.sendExternal(url, options);
+				}
 			}
 
 			if (isInternal) {
@@ -187,9 +238,22 @@ export class FetchRequest {
 		const timeoutId = window.setTimeout(() => abortController.abort(), timeout);
 
 		fetchOptions.signal = abortController.signal;
-		const response = await fetchObj(url, fetchOptions);
 
-		window.clearTimeout(timeoutId);
+		let response: Response;
+
+		try {
+			response = await fetchObj(url, fetchOptions);
+		} finally {
+			window.clearTimeout(timeoutId);
+		}
+
+		if (response.status === 403 || response.status === 503) {
+			const cfMitigated = response.headers.get('cf-mitigated')?.toLowerCase();
+
+			if (cfMitigated === 'challenge') {
+				throw Object.assign(new Error('CF_BLOCKED'), { cfBlocked: true, url });
+			}
+		}
 
 		const text = await response.text();
 

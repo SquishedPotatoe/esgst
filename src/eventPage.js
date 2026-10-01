@@ -215,7 +215,7 @@ function addWebRequestListener() {
 	hasAddedWebRequestListener = true;
 
 	const webRequestFilters = {
-		types: ['xmlhttprequest'],
+		types: ['main_frame', 'sub_frame', 'xmlhttprequest', 'other'],
 		urls: [
 			'*://*.steamgifts.com/*',
 			'*://*.steamtrades.com/*',
@@ -293,6 +293,9 @@ function addWebRequestListener() {
 	browser.webRequest.onHeadersReceived.addListener(
 		(details) => {
 			if (isLoggedOutRequest(details)) {
+				if (details.type === 'main_frame' || details.type === 'sub_frame') {
+					return;
+				}
 				const responseHeaders = details.responseHeaders.filter(
 					(header) => header.name.toLowerCase() !== 'set-cookie'
 				);
@@ -428,8 +431,12 @@ async function doFetch(parameters, request, sender, callback) {
 			(response.status === 403 || response.status === 503) &&
 			(response.headers.get('server')?.toLowerCase().includes('cloudflare') || isSgStRequest);
 
-		if (isCfBlocked && (await resolveCloudflareChallenge(request.url))) {
-			response = await fetchWithTimeout(request.url, parameters);
+		if (isCfBlocked) {
+			const resolved = await resolveCloudflareChallenge(request.url);
+
+			if (resolved) {
+				response = await fetchWithTimeout(request.url, parameters);
+			}
 		}
 
 		responseText = request.blob
@@ -453,55 +460,124 @@ async function doFetch(parameters, request, sender, callback) {
 }
 
 async function resolveCloudflareChallenge(targetUrl) {
-	if (cfChallengePromise) return cfChallengePromise;
+	if (cfChallengePromise) {
+		return cfChallengePromise;
+	}
 
 	cfChallengePromise = (async () => {
 		try {
-			const urlObj = new URL(targetUrl);
+			const urlObj = new URL(targetUrl, 'https://www.steamgifts.com');
 			const domain = urlObj.hostname.replace(/^www\./, '');
 
 			return await new Promise((resolve) => {
 				let tempTabId = null;
+				let originalTabId = null;
 				let timeoutId = null;
+				let challengeRequestId = null;
+
+				const restoreOriginalTab = () => {
+					if (originalTabId !== null) {
+						browser.tabs.update(originalTabId, {
+							active: true,
+						}).catch(() => { });
+					}
+				};
 
 				const cleanup = () => {
-					if (timeoutId) clearTimeout(timeoutId);
-					browser.cookies.onChanged.removeListener(cookieListener);
+					if (timeoutId) {
+						clearTimeout(timeoutId);
+						timeoutId = null;
+					}
+
+					try {
+						browser.cookies.onChanged.removeListener(cookieListener);
+					} catch { }
+
+					if (challengeRequestId !== null) {
+						loggedOutRequests.delete(challengeRequestId);
+						challengeRequestId = null;
+					}
+
 					cfChallengePromise = null;
 				};
 
 				const cookieListener = ({ cookie, removed }) => {
-					if (!removed && cookie.name === 'cf_clearance' && cookie.domain.includes(domain)) {
+					if (
+						!removed &&
+						cookie.name === 'cf_clearance' &&
+						cookie.domain.includes(domain)
+					) {
+						const tabId = tempTabId;
+
 						cleanup();
-						if (tempTabId) browser.tabs.remove(tempTabId).catch(() => {});
+
+						if (tabId !== null) {
+							browser.tabs.remove(tabId).catch(() => { });
+						}
+
+						restoreOriginalTab();
+
 						resolve(true);
 					}
 				};
 
 				browser.cookies.onChanged.addListener(cookieListener);
+
 				timeoutId = setTimeout(() => {
+					const tabId = tempTabId;
+
 					cleanup();
+
+					if (tabId !== null) {
+						browser.tabs.remove(tabId).catch(() => { });
+					}
+
+					restoreOriginalTab();
+
 					resolve(false);
 				}, 120000);
 
 				(async () => {
 					try {
-						const tabs = await queryTabs({});
-						const existing = tabs.find((tab) => tab.url && tab.url.includes(domain));
-
-						if (existing?.id) {
-							await browser.tabs.update(existing.id, { active: true });
-							await browser.tabs.reload(existing.id);
-						} else {
-							const tab = await browser.tabs.create({
-								url: `https://${urlObj.hostname}/`,
-								active: true,
-							});
-							tempTabId = tab.id;
+						if (!hasAddedWebRequestListener && browser.webRequest) {
+							addWebRequestListener();
 						}
+
+						const activeTabs = await browser.tabs.query({
+							active: true,
+							currentWindow: true,
+						});
+
+						if (activeTabs[0]?.id !== undefined) {
+							originalTabId = activeTabs[0].id;
+						}
+
+						const tab = await browser.tabs.create({
+							url: targetUrl,
+							active: true,
+						});
+
+						tempTabId = tab.id;
+
+						challengeRequestId = ++nextLoggedOutRequestId;
+
+						loggedOutRequests.set(challengeRequestId, {
+							url: targetUrl,
+							tabId: tempTabId,
+						});
 					} catch (error) {
-						console.error('[doFetch] Cloudflare challenge resolution failed', error);
+						console.error('[doFetch] Cloudflare challenge tab creation failed', error);
+
+						const tabId = tempTabId;
+
 						cleanup();
+
+						if (tabId !== null) {
+							browser.tabs.remove(tabId).catch(() => { });
+						}
+
+						restoreOriginalTab();
+
 						resolve(false);
 					}
 				})();
@@ -585,6 +661,11 @@ browser.runtime.onMessage.addListener((request, sender) => {
 			case 'end_logged_out_fetch': {
 				loggedOutRequests.delete(request.requestId);
 				resolve({ success: true });
+				break;
+			}
+			case 'resolve_cf_challenge': {
+				const resolved = await resolveCloudflareChallenge(request.url);
+				resolve({ success: !!resolved });
 				break;
 			}
 			case 'get-tds':

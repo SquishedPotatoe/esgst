@@ -48,7 +48,15 @@ const httpObserver = {
 				const url = httpChannel.URI.spec;
 				if (isLoggedOutRequest(url)) {
 					try {
-						const cookieHeader = httpChannel.getRequestHeader('Cookie');
+						let cookieHeader = '';
+						try {
+							cookieHeader = httpChannel.getRequestHeader('Cookie');
+						} catch (e) {
+							try {
+								cookieHeader = Services.cookies.getCookieString(httpChannel.URI, httpChannel);
+							} catch (e2) {}
+						}
+
 						if (cookieHeader) {
 							const filteredCookies = cookieHeader
 								.split(/;\s*/)
@@ -61,13 +69,19 @@ const httpObserver = {
 								httpChannel.setRequestHeader('Cookie', '', false);
 								httpChannel.loadFlags |= Ci.nsIRequest.LOAD_ANONYMOUS;
 							}
-						} else {
-							httpChannel.loadFlags |= Ci.nsIRequest.LOAD_ANONYMOUS;
 						}
 					} catch (e) {
-						httpChannel.loadFlags |= Ci.nsIRequest.LOAD_ANONYMOUS;
+						Cu.reportError('[ESGST] httpObserver cookie filter error: ' + e);
 					}
 				}
+
+				try {
+					const esgstCookie = httpChannel.getRequestHeader('esgst-cookie');
+					if (esgstCookie) {
+						httpChannel.setRequestHeader('Cookie', esgstCookie, false);
+						httpChannel.setRequestHeader('esgst-cookie', '', false);
+					}
+				} catch (e) {}
 			} else if (
 				topic === 'http-on-examine-response' ||
 				topic === 'http-on-examine-cached-response' ||
@@ -267,6 +281,14 @@ function load() {
 				worker.port.emit(
 					`end_logged_out_fetch_${request.uuid}_response`,
 					{ success: true }
+				);
+			});
+
+			worker.port.on('resolve_cf_challenge', async (request) => {
+				const resolved = await resolveCloudflareChallenge(request.url);
+				worker.port.emit(
+					`resolve_cf_challenge_${request.uuid}_response`,
+					{ success: !!resolved }
 				);
 			});
 
@@ -747,10 +769,28 @@ async function resolveCloudflareChallenge(targetUrl) {
 			return await new Promise((resolve) => {
 				let temporaryTab = null;
 				let timeoutId = null;
+				let challengeRequestId = null;
+				let originalTab = null;
+
+				try {
+					originalTab = tabs.activeTab;
+				} catch (e) {}
+
+				const restoreOriginalTab = () => {
+					if (originalTab) {
+						try {
+							originalTab.activate();
+						} catch (e) {}
+					}
+				};
 
 				const cleanup = () => {
 					if (timeoutId) clearTimeout(timeoutId);
 					Services.obs.removeObserver(cookieObserver, 'cookie-changed');
+					if (challengeRequestId !== null) {
+						loggedOutRequests.delete(challengeRequestId);
+						challengeRequestId = null;
+					}
 					cfChallengePromise = null;
 				};
 
@@ -764,6 +804,7 @@ async function resolveCloudflareChallenge(targetUrl) {
 
 						cleanup();
 						if (temporaryTab) temporaryTab.close();
+						restoreOriginalTab();
 						resolve(true);
 					},
 				};
@@ -771,24 +812,27 @@ async function resolveCloudflareChallenge(targetUrl) {
 				Services.obs.addObserver(cookieObserver, 'cookie-changed', false);
 				timeoutId = setTimeout(() => {
 					cleanup();
+					if (temporaryTab) temporaryTab.close();
+					restoreOriginalTab();
 					resolve(false);
 				}, 120000);
 
 				try {
-					const existingTab = Array.from(workers)
-						.map((worker) => worker.tab)
-						.find((tab) => tab.url && tab.url.includes(domain));
+					addHttpObserver();
 
-					if (existingTab) {
-						existingTab.activate();
-						existingTab.reload();
-					} else {
-                        // @ts-ignore
-						temporaryTab = tabs.open(`https://${urlObj.hostname}/`);
-					}
+					challengeRequestId = ++nextLoggedOutRequestId;
+					loggedOutRequests.set(challengeRequestId, {
+						url: targetUrl,
+						timestamp: Date.now(),
+					});
+
+					// @ts-ignore
+					temporaryTab = tabs.open(targetUrl);
 				} catch (error) {
 					console.error('[ESGST] Cloudflare challenge resolution failed', error);
 					cleanup();
+					if (temporaryTab) temporaryTab.close();
+					restoreOriginalTab();
 					resolve(false);
 				}
 			});

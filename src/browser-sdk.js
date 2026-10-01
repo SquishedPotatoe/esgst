@@ -29,7 +29,7 @@ const browser = {
 				// @ts-ignore
 				self.port.on(`${obj.action}_${obj.uuid}_response`, function onResponse(result) {
 					// @ts-ignore
-					self.port.removeListener(`${obj.action}_${obj.uuid}_response`, 'onResponse');
+					self.port.removeListener(`${obj.action}_${obj.uuid}_response`, onResponse);
 					resolve(result);
 				});
 			});
