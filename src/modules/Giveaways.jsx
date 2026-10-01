@@ -726,7 +726,10 @@ class Giveaways extends Module {
 			if (child.matches('.giveaway__icon.fa-camera[data-lightbox-id]')) {
 				child.setAttribute('data-draggable-id', 'screenshots-videos');
 			}
-			if (child.getAttribute('href') && child.getAttribute('href').match(/\/giveaways\/search/)) {
+			if (
+				child.getAttribute('href')?.includes('/giveaways/search') ||
+				child.querySelector('.fa-search')
+			) {
 				child.setAttribute('data-draggable-id', 'search');
 			}
 		}
