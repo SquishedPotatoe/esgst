@@ -104,14 +104,14 @@ class GiveawaysEnterLeaveGiveawayButton extends Module {
 
 	async elgb_addButtons(giveaways, main, source) {
 		giveaways.forEach((giveaway) => {
-			if (giveaway.quickEntryWrap) {
-				giveaway.quickEntryWrap.classList.add('is-hidden');
-			}
 			if (
 				giveaway.sgTools ||
 				(main && (Settings.get('elgb_p') || this.esgst.createdPath || this.esgst.wonPath))
 			)
 				return;
+			if (giveaway.quickEntryWrap) {
+				giveaway.quickEntryWrap.classList.add('is-hidden');
+			}
 			const elgbButton = giveaway.innerWrap.getElementsByClassName('esgst-elgb-button')[0];
 			if (elgbButton) {
 				if (giveaway.elgbButton) {
