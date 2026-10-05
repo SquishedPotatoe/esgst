@@ -132,7 +132,7 @@ export class FetchRequest {
 					response = await FetchRequest.sendExternal(url, options);
 				}
 			} catch (err: any) {
-				if (!err?.cfBlocked || isUserscript) {
+				if (!err?.cfBlocked) {
 					throw err;
 				}
 
@@ -157,7 +157,7 @@ export class FetchRequest {
 					throw new Error('Cloudflare challenge could not be resolved');
 				}
 
-				if (options.loggedOut) {
+				if (options.loggedOut && !isUserscript) {
 					let res = await browser.runtime.sendMessage({
 						action: 'start_logged_out_fetch',
 						url,
@@ -291,6 +291,10 @@ export class FetchRequest {
 
 		if (Utils.isSet(response.error)) {
 			throw new Error(response.error);
+		}
+
+		if (response.cfBlocked) {
+			throw Object.assign(new Error('CF_BLOCKED'), { cfBlocked: true, url });
 		}
 
 		return {

@@ -63,10 +63,15 @@ import { esgstIcons } from './lib/FontawesomeIcons';
 		});
 
 		// set default values or correct values
-		await browser.runtime.sendMessage({
+		const registerTab = await browser.runtime.sendMessage({
 			action: 'register_tab',
 			url: window.location.href,
 		});
+
+		if (registerTab?.cfChallengeSolved) {
+			window.close();
+			return;
+		}
 		/**
 		 * @property {object} esgst.storage.Emojis
 		 * @property {object} esgst.storage.filterPresets

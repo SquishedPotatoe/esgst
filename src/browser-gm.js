@@ -3,6 +3,7 @@ import { RequestQueue } from './class/Queue';
 import { Shared } from './class/Shared';
 
 let tdsData = [];
+let cfChallengePromise = null;
 
 const browser = {
 	gm: null,
@@ -98,6 +99,33 @@ const browser = {
 									response.responseText = (
 										await Shared.common.readZip(response.responseText)
 									)[0].value;
+								}
+
+								if (response.status === 403 || response.status === 503) {
+									const rawHeaders = response.responseHeaders || '';
+
+									const cfMitigated = rawHeaders
+										.match(/(?:^|\r?\n)cf-mitigated:\s*([^\r\n]+)/i)?.[1]
+										?.trim()
+										.toLowerCase();
+
+									const requestHost = (() => {
+										try {
+											return new URL(obj.url).hostname;
+										} catch {
+											return '';
+										}
+									})();
+
+									const isSgStRequest = /(^|\.)steam(gifts|trades)\.com$/.test(requestHost);
+
+									if (isSgStRequest && cfMitigated === 'challenge') {
+										resolve({
+											cfBlocked: true,
+											url: obj.url,
+										});
+										return;
+									}
 								}
 								resolve({
 									status: response.status,
@@ -197,7 +225,187 @@ const browser = {
 						break;
 					}
 					case 'register_tab': {
+						try {
+							const hostname = (() => {
+								try {
+									return new URL(obj.url)
+										.hostname
+										.replace(/^www\./, '');
+								} catch {
+									return '';
+								}
+							})();
+
+							if (hostname) {
+								const resolvingKey = `esgst_cfResolving_${hostname}`;
+								const resolvedKey = `esgst_cfResolved_${hostname}`;
+
+								const resolvingRaw = await browser.gm.getValue(
+									resolvingKey,
+									''
+								);
+
+								if (resolvingRaw) {
+									const resolving = JSON.parse(resolvingRaw);
+
+									if (
+										resolving?.timestamp &&
+										Date.now() - resolving.timestamp < 130000
+									) {
+										await browser.gm.setValue(
+											resolvedKey,
+											JSON.stringify(Date.now())
+										);
+
+										await browser.gm.setValue(
+											resolvingKey,
+											''
+										);
+
+										resolve({
+											cfChallengeSolved: true,
+										});
+										break;
+									}
+								}
+							}
+						} catch (e) { }
+
 						resolve();
+						break;
+					}
+					case 'resolve_cf_challenge': {
+						if (cfChallengePromise) {
+							resolve(await cfChallengePromise);
+							break;
+						}
+
+						cfChallengePromise = (async () => {
+							try {
+								const urlObj = new URL(
+									obj.url,
+									'https://www.steamgifts.com'
+								);
+								const domain = urlObj.hostname.replace(/^www\./, '');
+								const resolvingKey = `esgst_cfResolving_${domain}`;
+								const resolvedKey = `esgst_cfResolved_${domain}`;
+
+								return await new Promise((resolveInner) => {
+									let tab = null;
+									let timeoutId = null;
+									let listenerId = null;
+
+									const cleanup = async () => {
+										if (timeoutId) {
+											clearTimeout(timeoutId);
+											timeoutId = null;
+										}
+
+										if (
+											listenerId !== null &&
+											browser.gm.removeValueChangeListener
+										) {
+											try {
+												await browser.gm.removeValueChangeListener(
+													listenerId
+												);
+											} catch { }
+											listenerId = null;
+										}
+
+										try {
+											await browser.gm.setValue(
+												resolvingKey,
+												''
+											);
+										} catch { }
+
+										cfChallengePromise = null;
+									};
+
+									(async () => {
+										try {
+											listenerId = await browser.gm.addValueChangeListener(
+												resolvedKey,
+												async (name, oldValue, newValue, remote) => {
+													if (!remote || !newValue) return;
+
+													const tabRef = tab;
+
+													await cleanup();
+
+													if (tabRef) {
+														try {
+															tabRef.close();
+														} catch { }
+													}
+
+													resolveInner({ success: true });
+												}
+											);
+										} catch (e) {
+											console.error(
+												'[ESGST] CF challenge: addValueChangeListener failed',
+												e
+											);
+										}
+
+										try {
+											await browser.gm.setValue(
+												resolvingKey,
+												JSON.stringify({
+													url: obj.url,
+													timestamp: Date.now(),
+												})
+											);
+										} catch (e) {
+											console.error(
+												'[ESGST] CF challenge: setValue(resolvingKey) failed',
+												e
+											);
+										}
+
+										try {
+											tab = browser.gm.openInTab(obj.url, {
+												active: true,
+												insert: true,
+											});
+										} catch (e) {
+											console.error(
+												'[ESGST] CF challenge: openInTab failed',
+												e
+											);
+											await cleanup();
+											resolveInner({ success: false });
+											return;
+										}
+
+										timeoutId = setTimeout(async () => {
+											const tabRef = tab;
+
+											await cleanup();
+
+											if (tabRef) {
+												try {
+													tabRef.close();
+												} catch { }
+											}
+
+											resolveInner({ success: false });
+										}, 120000);
+									})();
+								});
+							} catch (error) {
+								console.error(
+									'[ESGST] Cloudflare challenge resolution failed',
+									error
+								);
+								cfChallengePromise = null;
+								return { success: false };
+							}
+						})();
+
+						resolve(await cfChallengePromise);
 						break;
 					}
 					case 'update_adareqlim': {
