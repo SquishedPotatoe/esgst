@@ -18,6 +18,7 @@ class GiveawaysMoreGiveawaysLink extends Module {
 			),
 			id: 'mgl',
 			name: 'More Giveaways Link',
+			endless: true,
 			options: {
 				title: 'Destination:',
 				values: ['Open', 'Coming Soon', 'Closed', 'Deleted'],
@@ -30,17 +31,23 @@ class GiveawaysMoreGiveawaysLink extends Module {
 		};
 	}
 
-	mgl_updateLinks(context) {
+	mgl_updateLinks(context, main, source) {
 		const suffix = GAME_PAGE_SUFFIXES[Settings.get('mgl_index') || 0];
 		if (
-			!Settings.get('mgl') ||
 			!suffix ||
-			!(this.esgst.giveawaysPath ||
-				this.esgst.giveawayPath ||
-				this.esgst.archivePath ||
-				this.esgst.gamePath ||
-				this.esgst.groupPath ||
-				(this.esgst.userPath && !this.esgst.userWonPath))
+			(!main ||
+				!(
+					Settings.get('mgl') &&
+					(this.esgst.giveawaysPath ||
+						this.esgst.giveawayPath ||
+						this.esgst.archivePath ||
+						this.esgst.gamePath ||
+						this.esgst.groupPath ||
+						this.esgst.userPath)
+				)) &&
+			(main ||
+				((source !== 'gb' && source !== 'ge' && source !== 'ged') ||
+					!Settings.getFull('mgl_sg')?.enabled))
 		) {
 			return;
 		}
