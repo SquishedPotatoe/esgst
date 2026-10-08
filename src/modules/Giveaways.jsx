@@ -578,7 +578,7 @@ class Giveaways extends Module {
 					child.setAttribute('data-draggable-id', 'points');
 				} else if (child.getAttribute('href')?.includes('store.steampowered.com')) {
 					child.setAttribute('data-draggable-id', 'steam');
-				} else if (child.matches('.giveaway__icon.fa-camera[data-lightbox-id]')) {
+				} else if (child.matches('.giveaway__icon.fa-camera[data-lightbox-id], .giveaway__icon[data-lightbox-id]:has(.fa-camera)')) {
 					child.setAttribute('data-draggable-id', 'screenshots-videos');
 				} else if (
 					child.getAttribute('href')?.includes('/giveaways/search') ||
