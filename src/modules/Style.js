@@ -2796,7 +2796,7 @@ function addStyle() {
 		display: flex;
 	}
 
-	.esgst-gv-quick-entry .giveaway__quick-entry-btn {
+	.esgst-gv-quick-entry .giveaway__quick-entry-btn:not(.esgst-elgb-desc-shortcut) {
 		height: 26px;
 		line-height: 26px;
 	}

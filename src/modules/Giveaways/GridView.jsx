@@ -225,7 +225,7 @@ class GiveawaysGridView extends Module {
 				giveaway.outerWrap.style.margin = `${Settings.get('gv_spacing')}px`;
 			}
 			giveaway.innerWrap.classList.add('esgst-gv-box');
-			if (giveaway.quickEntryWrap && !Settings.get('elgb')) {
+			if (giveaway.quickEntryWrap && (!Settings.get('elgb') || Settings.get('elgb_n'))) {
 				giveaway.innerWrap.classList.add('esgst-gv-quick-entry');
 			}
 			const now = Date.now();
@@ -343,7 +343,7 @@ class GiveawaysGridView extends Module {
 					''
 				);
 			}
-			if (giveaway.quickEntryWrap && !Settings.get('elgb')) {
+			if (giveaway.quickEntryWrap && (!Settings.get('elgb') || Settings.get('elgb_n'))) {
 				DOM.insert(temp, 'afterend', (
 					<div className="esgst-qe-panel">
 						{giveaway.quickEntryWrap}

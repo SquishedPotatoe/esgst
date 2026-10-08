@@ -87,6 +87,11 @@ class GiveawaysEnterLeaveGiveawayButton extends Module {
 					name: `Pop up the first page of comments of the giveaway when entering it, if it has any comments.`,
 					sg: true,
 				},
+				elgb_n: {
+					name:
+						'Also show SteamGifts native quick entry buttons',
+					sg: true,
+				},
 			},
 			id: 'elgb',
 			name: 'Enter / Leave Giveaway Button',
@@ -109,7 +114,7 @@ class GiveawaysEnterLeaveGiveawayButton extends Module {
 				(main && (Settings.get('elgb_p') || this.esgst.createdPath || this.esgst.wonPath))
 			)
 				return;
-			if (giveaway.quickEntryWrap) {
+			if (giveaway.quickEntryWrap && !Settings.get('elgb_n')) {
 				giveaway.quickEntryWrap.classList.add('is-hidden');
 			}
 			const elgbButton = giveaway.innerWrap.getElementsByClassName('esgst-elgb-button')[0];
