@@ -723,7 +723,7 @@ class Giveaways extends Module {
 				child.setAttribute('data-draggable-id', 'steam');
 				continue;
 			}
-			if (child.matches('.giveaway__icon.fa-camera[data-lightbox-id]')) {
+			if (child.matches('.giveaway__icon.fa-camera[data-lightbox-id], .giveaway__icon[data-lightbox-id]:has(.fa-camera)')) {
 				child.setAttribute('data-draggable-id', 'screenshots-videos');
 			}
 			if (
