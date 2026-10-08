@@ -493,6 +493,7 @@ class GiveawaysGiveawayExtractor extends Module {
 						ge.bumpLink = '';
 						ge.points = 0;
 						ge.sgToolsCount = 0;
+						ge.callback = null;
 					}
 					ge.flushCache = true;
 					ge.flushCacheHours = 0;
