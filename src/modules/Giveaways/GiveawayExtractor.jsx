@@ -1069,6 +1069,14 @@ class GiveawaysGiveawayExtractor extends Module {
 			ge.progressBar.setInfo();
 			ge.callback = this.ge_extractGiveaway.bind(this, ge, code, callback);
 
+			const children = ge.results.querySelectorAll(`:scope > .esgst-es-page-${ge.endless}`);
+			for (let i = children.length - 1; i >= 0; --i) {
+				if (children[i].firstElementChild?.classList.contains('esgst-hidden')) {
+					ge.pendingScrollDown = true;
+					break;
+				}
+			}
+
 			ge.endless++;
 			await this.ge_saveCache(ge);
 			if (Settings.get('es') && Settings.get('es_ge')) {
