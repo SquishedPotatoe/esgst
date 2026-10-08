@@ -2564,6 +2564,7 @@ function addStyle() {
 	}
 
 	.esgst-gv-icons [data-draggable-id="elgb"]:not(.esgst-button-set):not(.esgst-button-container) {
+		contain: paint;
 		font-size: 12px;
 		line-height: 16px;
 		padding: 0 8px;
@@ -2837,7 +2838,7 @@ function addStyle() {
 		margin: -18px 0 0 !important;
 	}
 
-	.esgst-gv-icons .esgst-gc, .esgst-gv-icons .esgst-gwc, .esgst-gv-icons .esgst-gwr, .esgst-gv-icons .esgst-gptw, .esgst-gv-icons .esgst-ttec, .esgst-gv-time, .esgst-gv-icons .esgst-ged-source, .esgst-gv-icons [data-draggable-id="search"] {
+	.esgst-gv-icons .esgst-gc, .esgst-gv-icons .esgst-gwc, .esgst-gv-icons .esgst-gwr, .esgst-gv-icons .esgst-gptw, .esgst-gv-icons .esgst-ttec, .esgst-gv-time, .esgst-gv-icons .esgst-ged-source, .esgst-gv-icons [data-draggable-id] {
 		background-color: #fff;
 		line-height: 16px !important;
 		padding: 0 2px !important;
