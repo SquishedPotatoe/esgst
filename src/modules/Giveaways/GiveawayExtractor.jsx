@@ -492,6 +492,7 @@ class GiveawaysGiveawayExtractor extends Module {
 						ge.bumpLink = '';
 						ge.points = 0;
 						ge.sgToolsCount = 0;
+						ge.callback = null;
 					}
 					ge.flushCache = true;
 					ge.flushCacheHours = 0;
@@ -1535,7 +1536,7 @@ class GiveawaysGiveawayExtractor extends Module {
 			createElements(ge.results, 'beforeend', items);
 		}
 		ge.extractButton.build(5);
-		ge.reExtract = false;
+		ge.reExtract = true;
 		ge.isComplete = true;
 		this.updatePuzzleBar(ge);
 		await this.ge_saveCache(ge);
