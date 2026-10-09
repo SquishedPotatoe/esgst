@@ -998,7 +998,8 @@ async function sync(syncer) {
 		if (isPermitted) {
 			syncer.progressBar.setMessage('Syncing your followed games...');
 			const response = await FetchRequest.get('https://steamcommunity.com/my/followedgames/');
-			const isLoggedOut = response.html.querySelector('a[href*="/login/home/"]')
+			const isLoggedOut = response.html.querySelector('a[href*="/login/home/"]');
+
 			if (isLoggedOut) {
 				syncer.failed.FollowedGames = true;
 				DOM.insert(
@@ -1006,26 +1007,45 @@ async function sync(syncer) {
 					'beforeend',
 					<div>
 						Unable to sync followed games.
-						Check if you are logged in to Steam on your current browser session. If you are, try again later
+						Check if you are logged in to Steam on your current browser session. If you are, try again later.
 					</div>
 				);
 			} else {
-				const elements = response.html.querySelectorAll('.gameListRow.followed');
-				const savedGames = JSON.parse(Shared.common.getValue('games'));
-				for (const id in savedGames.apps) {
-					if (savedGames.apps.hasOwnProperty(id)) {
-						savedGames.apps[id].followed = null;
+				try {
+					const data = JSON.parse(response.html.querySelector('#valve-ssr-data').textContent);
+					const list = data.loaderData?.find((item) =>
+						item.includes('"mapFollowedUnownedGames"')
+					);
+					const followedIds = new Set(
+						JSON.parse(list).listData?.mapFollowedUnownedGames?.v.map(([appId]) => appId)
+					);
+					const savedGames = JSON.parse(Shared.common.getValue('games'));
+					for (const id in savedGames.apps) {
+						if (savedGames.apps.hasOwnProperty(id)) {
+							savedGames.apps[id].followed = null;
+						}
 					}
-				}
-				for (const element of elements) {
-					const id = parseInt(element.getAttribute('data-appid'));
-					if (!savedGames.apps[id]) {
-						savedGames.apps[id] = {};
+					for (const id of followedIds) {
+						if (!savedGames.apps[id]) {
+							savedGames.apps[id] = {};
+						}
+						savedGames.apps[id].followed = true;
 					}
-					savedGames.apps[id].followed = true;
+					await Shared.common.lockAndSaveGames(savedGames);
+					DOM.insert(
+						syncer.results,
+						'beforeend',
+						<div>{followedIds.size} Followed games synced.</div>
+					);
+				} catch (error) {
+					syncer.failed.FollowedGames = true;
+					console.error('Failed to sync followed games:', error);
+					DOM.insert(
+						syncer.results,
+						'beforeend',
+						<div>Unable to sync followed games. The response data was missing or invalid. Your saved followed-game data was not changed.</div>
+					);
 				}
-				await Shared.common.lockAndSaveGames(savedGames);
-				DOM.insert(syncer.results, 'beforeend', <div>Followed games synced.</div>);
 			}
 		} else {
 			syncer.failed.FollowedGames = true;
