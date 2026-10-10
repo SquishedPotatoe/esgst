@@ -4,6 +4,7 @@ import { Shared } from './class/Shared';
 
 let tdsData = [];
 let cfChallengePromise = null;
+let lastCfResolvedAt = 0;
 
 const browser = {
 	gm: null,
@@ -196,11 +197,21 @@ const browser = {
 										...request,
 										onload: async (response) => {
 											await restoreCookies();
-											request.onload(response);
+											await request.onload(response);
 										},
 										onerror: async (response) => {
 											await restoreCookies();
 											request.onerror(response);
+										},
+										onabort: async (response) => {
+											await restoreCookies();
+											if (request.onabort) request.onabort(response);
+											else resolve({ error: 'Request aborted' });
+										},
+										ontimeout: async (response) => {
+											await restoreCookies();
+											if (request.ontimeout) request.ontimeout(response);
+											else resolve({ error: 'Request timed out' });
 										},
 									};
 
@@ -275,6 +286,11 @@ const browser = {
 						break;
 					}
 					case 'resolve_cf_challenge': {
+						if (Date.now() - lastCfResolvedAt < 70000) {
+							resolve({ success: false });
+							break;
+						}
+
 						if (cfChallengePromise) {
 							resolve(await cfChallengePromise);
 							break;
@@ -287,6 +303,7 @@ const browser = {
 									'https://www.steamgifts.com'
 								);
 								const domain = urlObj.hostname.replace(/^www\./, '');
+								const challengeUrl = `https://${urlObj.hostname}/`;
 								const resolvingKey = `esgst_cfResolving_${domain}`;
 								const resolvedKey = `esgst_cfResolved_${domain}`;
 
@@ -340,6 +357,7 @@ const browser = {
 														} catch { }
 													}
 
+													lastCfResolvedAt = Date.now();
 													resolveInner({ success: true });
 												}
 											);
@@ -354,7 +372,7 @@ const browser = {
 											await browser.gm.setValue(
 												resolvingKey,
 												JSON.stringify({
-													url: obj.url,
+													url: challengeUrl,
 													timestamp: Date.now(),
 												})
 											);
@@ -366,7 +384,7 @@ const browser = {
 										}
 
 										try {
-											tab = browser.gm.openInTab(obj.url, {
+											tab = browser.gm.openInTab(challengeUrl, {
 												active: true,
 												insert: true,
 											});
