@@ -261,7 +261,7 @@ class CloudStorage {
 							return;
 						}
 
-						Shared.esgst.modules.manageData(dm, false, false, false, false, callback);
+						Shared.esgst.modules.manageData(dm, service, false, callback);
 					}
 				);
 			});
