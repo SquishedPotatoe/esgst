@@ -121,7 +121,9 @@ RequestQueue.setLastRequest = (key, lastRequest) => {
 RequestQueue.getRequestThresholds = async () => {
 	const values = await handle_storage(TYPE_GET, { settings: '{}' });
 	const settings = JSON.parse(values.settings);
-	if (settings['useCustomAdaReqLim_sg']?.enabled) {
+	const setting = settings['useCustomAdaReqLim_sg'] ?? settings['useCustomAdaReqLim'];
+	const isEnabled = typeof setting === 'object' ? !!setting?.enabled : !!setting;
+	if (isEnabled) {
 		const thresholds = {};
 		for (const [key, minThreshold] of Object.entries(RequestQueue.queue.sg.minThresholds)) {
 			thresholds[key] = parseFloat(settings[`customAdaReqLim_${key}`] ?? 0.0);

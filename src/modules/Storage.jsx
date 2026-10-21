@@ -11,6 +11,7 @@ import { PageHeading } from '../components/PageHeading';
 import { Utils } from '../lib/jsUtils';
 import { CloudStorage } from './CloudStorage';
 import { settingsModule } from './Settings';
+import { browser } from '../browser';
 
 const STORAGE_TYPES = {
 	TEXT: 0,
@@ -1725,6 +1726,11 @@ async function manageData(dm, storageType, space, callback) {
 								await Shared.common.setValue(optionKey, JSON.stringify(mergedData));
 							} else {
 								await Shared.common.setValue(optionKey, JSON.stringify(newData));
+							}
+							if (optionKey === 'settings') {
+								await browser.runtime.sendMessage({
+									action: 'update_adareqlim',
+								});
 							}
 						}
 					} else if (dm.delete) {
