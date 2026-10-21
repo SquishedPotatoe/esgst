@@ -104,16 +104,20 @@ async function runSilentSync(parameters) {
 		...Shared.esgst.parameters,
 		...Utils.getQueryParams(`?autoSync=true&${parameters.replace(/&$/, '')}`),
 	};
-	const syncer = await setSync(false, true);
-	button.nodes.outer.addEventListener('click', () => syncer.popup.open());
-	Shared.esgst.isSyncing = true;
-	await sync(syncer);
-	Shared.esgst.isSyncing = false;
-
-	button.nodes.outer.classList.remove('nav__button-container--active');
-	button.nodes.outer.classList.add('nav__button-container--inactive');
-	button.nodes.buttonIcon.className = 'fa fa-check';
-	button.nodes.buttonIcon.title = 'ESGST has finished syncing, click here to see the results.';
+	try {
+		const syncer = await setSync(false, true);
+		button.nodes.outer.addEventListener('click', () => syncer.popup.open());
+		Shared.esgst.isSyncing = true;
+		await sync(syncer);
+	} catch (error) {
+		console.error('[ESGST] Automatic sync failed:', error);
+	} finally {
+		Shared.esgst.isSyncing = false;
+		button.nodes.outer.classList.remove('nav__button-container--active');
+		button.nodes.outer.classList.add('nav__button-container--inactive');
+		button.nodes.buttonIcon.className = 'fa fa-check';
+		button.nodes.buttonIcon.title = 'ESGST has finished syncing, click here to see the results.';
+	}
 }
 
 function getDependencies(syncer, feature, id) {
@@ -566,6 +570,7 @@ async function sync(syncer) {
 		let pagination = null;
 		do {
 			let elements, responseHtml;
+			syncer.progressBar.setMessage(`Fetching your Steam groups (page ${nextPage})...`);
 			responseHtml = (
 				await FetchRequest.get(
 					`https://www.steamgifts.com/account/steam/groups/search?page=${nextPage}`
@@ -600,6 +605,7 @@ async function sync(syncer) {
 					avatar = element
 						.getElementsByClassName('table_image_avatar')[0]
 						.style.backgroundImage.match(/url\("(.+)"\)/)[1];
+					syncer.progressBar.setMessage(`Fetching Steam ID for ${name}...`);
 					steamId = (await FetchRequest.get(`/group/${code}/`)).html
 						.getElementsByClassName('sidebar__shortcut-inner-wrap')[0]
 						.firstElementChild.getAttribute('href')
@@ -1348,10 +1354,21 @@ async function sync(syncer) {
 		for (let i = keys.length - 1; i > -1; i--) {
 			let key = keys[i];
 			let id = `sync${key}`;
-			if (
-				!syncer.failed[key] &&
-				((syncer.parameters && syncer.parameters[key]) || (!syncer.parameters && Settings.get(id)))
-			) {
+			const wasRequested =
+				(syncer.parameters && syncer.parameters[key]) || (!syncer.parameters && Settings.get(id));
+			if (wasRequested && syncer.parameters?.autoSync) {
+				let failedAutoSyncs = {};
+				try {
+					failedAutoSyncs = JSON.parse(LocalStorage.get('failedAutoSyncs', '{}'));
+				} catch (e) {}
+				if (syncer.failed[key]) {
+					failedAutoSyncs[key] = now;
+				} else {
+					delete failedAutoSyncs[key];
+				}
+				LocalStorage.set('failedAutoSyncs', JSON.stringify(failedAutoSyncs));
+			}
+			if (wasRequested && !syncer.failed[key]) {
 				Settings.set(`lastSync${key}`, now);
 				toSave[`lastSync${key}`] = now;
 			}
@@ -1359,7 +1376,9 @@ async function sync(syncer) {
 		await Shared.common.lockAndSaveSettings(toSave);
 		toSave = {};
 		syncer.progressBar.setSuccess('Synced!');
-		LocalStorage.delete('isSyncing');
+		if (!Object.keys(syncer.failed).length) {
+			LocalStorage.delete('isSyncing');
+		}
 	}
 	if (!syncer.isSilent) {
 		updateSyncDates(syncer);
