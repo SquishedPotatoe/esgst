@@ -20,7 +20,7 @@ class GiveawaysGiveawaysSorter extends Module {
 					<li>
 						Adds a button (<i className="fa fa-sort"></i>) to the main page heading of any{' '}
 						<a href="https://www.steamgifts.com/giveaways">giveaways</a>/
-						<a href="https://www.steamgifts.com/entered">entered</a>/
+						<a href="https://www.steamgifts.com/giveaways/entered">entered</a>/
 						<a href="https://www.steamgifts.com/group/SJ7Bu/">group</a>/
 						<a href="https://www.steamgifts.com/user/cg">user</a> page that allows you to sort the
 						giveaways in the page by game name, points, rating (if{' '}
