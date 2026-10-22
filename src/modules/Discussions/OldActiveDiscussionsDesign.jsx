@@ -44,13 +44,19 @@ class DiscussionsOldActiveDiscussionsDesign extends Module {
 	}
 
 	async init() {
-		if (!(this.esgst.giveawaysPath || this.esgst.commentsPath || this.esgst.activeDiscussions)) {
+		if (
+			!(this.esgst.giveawaysPath || this.esgst.commentsPath || this.esgst.activeDiscussions) ||
+			!this.esgst.activeDiscussions
+		) {
 			return;
 		}
 		await this.oadd_load();
 	}
 
 	async oadd_load(refresh, callback) {
+		if (!this.esgst.activeDiscussions) {
+			return;
+		}
 		let deals,
 			dealsRows,
 			dealsSwitch,
