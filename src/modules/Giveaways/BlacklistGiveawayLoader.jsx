@@ -81,7 +81,7 @@ class GiveawaysBlacklistGiveawayLoader extends Module {
 				let responseHtml = null;
 				try {
 					const response = await FetchRequest.get(giveaway.url || `/giveaway/${giveaway.code}/`, {
-						loggedOut: true,
+						...(await FetchRequest.getLoggedOutOptions()),
 					});
 					responseHtml = response.html;
 				} catch {}
@@ -173,7 +173,9 @@ class GiveawaysBlacklistGiveawayLoader extends Module {
 		]);
 		let responseHtml;
 		try {
-			const response = await FetchRequest.get(window.location.pathname, { loggedOut: true });
+			const response = await FetchRequest.get(window.location.pathname, {
+				...(await FetchRequest.getLoggedOutOptions()),
+			});
 			responseHtml = response.html;
 		} catch {}
 

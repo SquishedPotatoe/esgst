@@ -38,6 +38,37 @@ export class FetchRequest {
 		From: 'esgst.extension@gmail.com',
 	};
 
+	private static _env: Promise<{
+		isUserscript: boolean;
+		isFirefox: boolean;
+		isTampermonkey: boolean;
+		httpOnlySupport: boolean;
+	}> | null = null;
+
+	private static getEnv() {
+		if (!FetchRequest._env) {
+			FetchRequest._env = (async () => {
+				const [tampermonkeyMajor, tampermonkeyMinor] = (browser.gm?.info?.version || '0.0').split('.').map(Number);
+				const isTampermonkey = browser.gm?.info?.scriptHandler === 'Tampermonkey';
+				const browserInfo = await Shared.common.getBrowserInfo();
+				return {
+					isUserscript: browserInfo.name === 'userscript',
+					isFirefox: browserInfo.name === 'Firefox',
+					isTampermonkey,
+					httpOnlySupport:
+						isTampermonkey &&
+						(tampermonkeyMajor > 5 || (tampermonkeyMajor === 5 && tampermonkeyMinor >= 6)),
+				};
+			})();
+		}
+		return FetchRequest._env;
+	}
+
+	static async getLoggedOutOptions(): Promise<Pick<FetchOptions, 'anon' | 'loggedOut'>> {
+		const { httpOnlySupport } = await FetchRequest.getEnv();
+		return httpOnlySupport ? { loggedOut: true } : { anon: true };
+	}
+
 	static delete(url: string, options: Partial<FetchOptions> = {}): Promise<FetchResponse> {
 		return FetchRequest.send(url, { ...options, method: 'DELETE' });
 	}
@@ -66,7 +97,7 @@ export class FetchRequest {
 		let response = null;
 		let lock = null;
 		let loggedOutRequestId: number | null = null;
-		const isUserscript = (await Shared.common.getBrowserInfo()).name === 'userscript';
+		const { isUserscript, isTampermonkey } = await FetchRequest.getEnv();
 
 		url = url
 			.replace(/^\//, `https://${window.location.hostname}/`)
@@ -134,6 +165,9 @@ export class FetchRequest {
 			} catch (err: any) {
 				if (!err?.cfBlocked) {
 					throw err;
+				}
+				if (isUserscript && (!isTampermonkey || !(await FetchRequest.getEnv()).httpOnlySupport)) {
+					throw new Error('Cloudflare challenge is unavailable');
 				}
 
 				if (loggedOutRequestId !== null) {
@@ -236,7 +270,7 @@ export class FetchRequest {
 
 		const { timeout = 10000 } = options;
 		const timeoutId = window.setTimeout(() => abortController.abort(), timeout);
-
+		const { isUserscript: isscript, isTampermonkey } = await FetchRequest.getEnv();
 		fetchOptions.signal = abortController.signal;
 
 		let response: Response;
@@ -248,10 +282,14 @@ export class FetchRequest {
 		}
 
 		if (response.status === 403 || response.status === 503) {
-			const cfMitigated = response.headers.get('cf-mitigated')?.toLowerCase();
+			if (isscript && (!isTampermonkey || !(await FetchRequest.getEnv()).httpOnlySupport)) {
+				throw new Error(`Request failed with status ${response.status} (Cloudflare challenge unavailable)`);
+			} else {
+				const cfMitigated = response.headers.get('cf-mitigated')?.toLowerCase();
 
-			if (cfMitigated === 'challenge') {
-				throw Object.assign(new Error('CF_BLOCKED'), { cfBlocked: true, url });
+				if (cfMitigated === 'challenge') {
+					throw Object.assign(new Error('CF_BLOCKED'), { cfBlocked: true, url });
+				}
 			}
 		}
 
@@ -270,9 +308,8 @@ export class FetchRequest {
 	}
 
 	static async sendExternal(url: string, options: FetchOptions): Promise<FetchResponse> {
-		const manipulateCookies =
-			(await Shared.common.getBrowserInfo()).name === 'Firefox' &&
-			Settings.get('manipulateCookies');
+		const { isFirefox } = await FetchRequest.getEnv();
+		const manipulateCookies = isFirefox && Settings.get('manipulateCookies');
 
 		const messageOptions = {
 			action: 'fetch',
@@ -310,8 +347,9 @@ export class FetchRequest {
 		let fetchOptions = FetchRequest.getFetchOptions(options);
 		let abortController = null;
 
+		const { isFirefox: isFirefoxEnv } = await FetchRequest.getEnv();
 		if (
-			(await Shared.common.getBrowserInfo()).name === 'Firefox' &&
+			isFirefoxEnv &&
 			'wrappedJSObject' in window &&
 			window.wrappedJSObject
 		) {

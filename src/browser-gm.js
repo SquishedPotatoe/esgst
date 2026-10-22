@@ -120,7 +120,7 @@ const browser = {
 
 									const isSgStRequest = /(^|\.)steam(gifts|trades)\.com$/.test(requestHost);
 
-									if (isSgStRequest && cfMitigated === 'challenge') {
+									if (isSgStRequest && httpOnlySupport && cfMitigated === 'challenge') {
 										resolve({
 											cfBlocked: true,
 											url: obj.url,
@@ -217,9 +217,13 @@ const browser = {
 
 									browser.gm.xmlHttpRequest(vmRequest);
 									break;
-								} else {
-									const cookieString = nonSessionCookies.map((item) => `${item.name}=${item.value}`).join('; ');
-									request.cookie = ['PHPSESSID=', cookieString].filter(Boolean).join('; ');
+								} else if (browser.gm.info.scriptHandler === 'Tampermonkey') {
+									const hasValidValues = nonSessionCookies.every(item => typeof item.value === 'string' && item.value.length > 0);
+
+									if (httpOnlySupport && hasValidValues) {
+										const cookieString = nonSessionCookies.map((item) => `${item.name}=${item.value}`).join('; ');
+										request.cookie = ['PHPSESSID=', cookieString].filter(Boolean).join('; ');
+									}
 								}
 							} catch (error) {
 								resolve({ error: error?.message || String(error) });
@@ -337,6 +341,7 @@ const browser = {
 											);
 										} catch { }
 
+										lastCfResolvedAt = Date.now();
 										cfChallengePromise = null;
 									};
 
@@ -357,7 +362,6 @@ const browser = {
 														} catch { }
 													}
 
-													lastCfResolvedAt = Date.now();
 													resolveInner({ success: true });
 												}
 											);
@@ -477,6 +481,12 @@ const browser = {
 
 browser.gm = GM;
 browser.gm.lastUpdate = 0;
+const [tampermonkeyMajor, tampermonkeyMinor] = (browser.gm.info?.version || '0.0')
+	.split('.')
+	.map(Number);
+const httpOnlySupport =
+	browser.gm.info?.scriptHandler === 'Tampermonkey' &&
+	(tampermonkeyMajor > 5 || (tampermonkeyMajor === 5 && tampermonkeyMinor >= 6));
 
 const lastRequests = {};
 

@@ -1201,7 +1201,9 @@ class GiveawaysGiveawayExtractor extends Module {
 		if (!giveaway && !sgTools && Settings.get('bgl')) {
 			try {
 				if (await permissions.contains([['cookies']])) {
-					const response = await FetchRequest.get(`/giveaway/${currentCode}/`, { loggedOut: true });
+					const response = await FetchRequest.get(`/giveaway/${currentCode}/`, {
+						...(await FetchRequest.getLoggedOutOptions()),
+					});
 					responseHtml = response.html;
 					giveaway = await buildGiveaway(responseHtml, response.url, null, true);
 				}
