@@ -246,7 +246,14 @@ class Common extends Module {
 				await setSync();
 			} else if (this.esgst.parameters.esgst === 'backup') {
 				this.setSidebarActive('backup');
-				loadDataManagement('export');
+				if (
+					this.esgst.parameters.autoBackupIndex !== undefined &&
+					this.esgst.parameters.autoBackupIndex !== null
+				) {
+					this.runSilentBackup();
+				} else {
+					loadDataManagement('export');
+				}
 			} else if (this.esgst.parameters.esgst === 'restore') {
 				this.setSidebarActive('restore');
 				loadDataManagement('import');
