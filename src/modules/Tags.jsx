@@ -158,9 +158,12 @@ class Tags extends Module {
 	async tags_addButtons(items) {
 		items = items.all || items;
 		for (const item of items) {
+			if (!item.container || !item.tagContext || !item.tagPosition) {
+				continue;
+			}
 			const obj = { item, key: this.id, colorSetting: Settings.get(`${this.id}_colors`) };
 			if (!item.container.getElementsByClassName('esgst-tag-button')[0]) {
-				createElements(item.tagContext, item.tagPosition, [
+				const button = createElements(item.tagContext, item.tagPosition, [
 					{
 						attributes: {
 							class: 'esgst-tag-button esgst-faded',
@@ -183,7 +186,8 @@ class Tags extends Module {
 							},
 						],
 					},
-				]).addEventListener('click', this.tags_openPopup.bind(this, obj), true);
+								]);
+				button?.addEventListener('click', this.tags_openPopup.bind(this, obj), true);
 			}
 			if (item.saved && item.saved.tags) {
 				item.tags = item.saved.tags.map((tag) => tag.toLowerCase());
