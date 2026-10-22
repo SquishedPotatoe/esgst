@@ -2078,6 +2078,10 @@ class Common extends Module {
 			await setSync();
 		} else if (!isSyncing || currentDate - isSyncing > 1800000) {
 			let parameters = '';
+			let failedAutoSyncs = {};
+			try {
+				failedAutoSyncs = JSON.parse(LocalStorage.get('failedAutoSyncs', '{}'));
+			} catch (e) {}
 			LocalStorage.set('isSyncing', currentDate);
 			[
 				'Groups',
@@ -2092,9 +2096,13 @@ class Common extends Module {
 				'Giveaways',
 				'WonGiveaways',
 			].forEach((key) => {
+				const interval = Settings.get(`autoSync${key}`);
+				const failedAt = failedAutoSyncs[key];
+				const failedRetryDue = !failedAt || currentDate - failedAt > interval * 86400000;
 				if (
-					Settings.get(`autoSync${key}`) &&
-					currentDate - Settings.get(`lastSync${key}`) > Settings.get(`autoSync${key}`) * 86400000
+					interval &&
+					failedRetryDue &&
+					currentDate - Settings.get(`lastSync${key}`) > interval * 86400000
 				) {
 					parameters += `${key}=1&`;
 				}
