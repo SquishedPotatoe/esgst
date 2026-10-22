@@ -1050,7 +1050,11 @@ function loadDataManagement(type, isPopup, callback) {
 		if (Settings.get(`calculate${Shared.common.capitalizeFirstLetter(type)}`)) {
 			getDataSizes(dm);
 		}
-		if (Shared.esgst.parameters.esgst === 'backup' && Shared.esgst.parameters.autoBackupIndex) {
+		if (
+			Shared.esgst.parameters.esgst === 'backup' &&
+			Shared.esgst.parameters.autoBackupIndex !== undefined &&
+			Shared.esgst.parameters.autoBackupIndex !== null
+		) {
 			switch (parseInt(Shared.esgst.parameters.autoBackupIndex)) {
 				case 0:
 					computerButton.onClick();
