@@ -623,6 +623,7 @@ class _Settings {
 			gas_autoPopup: false,
 			gas_optionPopup: 'sortIndex_asc',
 			gb_hours: 1,
+			gb_amount: 10,
 			gc_categories: [
 				'gc_gi',
 				'gc_r',

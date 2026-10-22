@@ -88,6 +88,26 @@ class GiveawaysGiveawayBookmarks extends Module {
 					name: 'Show the button for entered giveaways.',
 					sg: true,
 				},
+				gb_amt: {
+					description: () => (
+						<ul>
+							<li>
+								Sets the number of bookmarked giveaways to display on load/scroll.
+							</li>
+							<li>
+								Each bookmark counts as two requests towards steamgifts request limits.
+							</li>
+						</ul>
+					),
+					inputItems: [
+						{
+							id: 'gb_amount',
+							prefix: `Amount of bookmarked giveaways to fetch: `,
+						},
+					],
+					name: 'Display Limit',
+					sg: true,
+				},
 			},
 			id: 'gb',
 			name: 'Giveaway Bookmarks',
@@ -317,15 +337,7 @@ class GiveawaysGiveawayBookmarks extends Module {
 			name: 'View Raw List',
 			onClick: this.gb_openList.bind(this, { bookmarked }),
 		}).insert(this.heading.nodes.outer, 'beforeend');
-		const isGridView = Settings.get('gv');
-		const batchSize = isGridView ? 25 : 5;
-
-		if (isGridView) {
-			const gridHeight = (Settings.get('cgb') ? 325 : 310) + (Number(Settings.get('gv_spacing')) || 0) * 7;
-			context.style.maxHeight = `${gridHeight}px`;
-		} else {
-			context.style.maxHeight = '575px';
-		}
+		const batchSize = (Number(Settings.get('gb_amount')) || 10);
 		context.style.overflowY = 'auto';
 		const loadMoreButton = ButtonComponent.create([
 			{
@@ -339,8 +351,6 @@ class GiveawaysGiveawayBookmarks extends Module {
 							i = value;
 							if (i >= n) {
 								loadMoreButton.destroy();
-							} else if (Settings.get('es_gb') && context.scrollHeight <= context.offsetHeight) {
-								loadMoreButton.onClick(true);
 							}
 							resolve();
 						});
@@ -381,11 +391,17 @@ class GiveawaysGiveawayBookmarks extends Module {
 		]);
 		loadMoreButton.onClick();
 		if (Settings.get('es_gb')) {
-			context.addEventListener('scroll', () => {
-				if (
-					context.scrollTop + context.offsetHeight >= context.scrollHeight &&
-					!loadMoreButton.isBusy && i < n
-				) {
+			const isNewTab = Settings.get('gb_t');
+			const scrollElement = isNewTab ? window : context;
+
+			scrollElement.addEventListener('scroll', () => {
+				const isAtBottom = isNewTab
+					? document.documentElement.scrollHeight > window.innerHeight &&
+						window.scrollY + window.innerHeight >= document.documentElement.scrollHeight
+					: context.scrollHeight > context.offsetHeight &&
+						context.scrollTop + context.offsetHeight >= context.scrollHeight;
+
+				if (isAtBottom && !loadMoreButton.isBusy && i < n) {
 					loadMoreButton.onClick();
 				}
 			});
