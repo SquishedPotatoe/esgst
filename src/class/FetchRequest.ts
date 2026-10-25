@@ -217,15 +217,22 @@ export class FetchRequest {
 			}
 
 			if (isInternal) {
+				const requestTimestamp = Date.now();
 				Shared.esgst.requestLog.unshift({
 					url,
-					timestamp: Date.now(),
+					timestamp: requestTimestamp,
 				});
 				if (response.redirected) {
 					Shared.esgst.requestLog.unshift({
 						url: response.url,
-						timestamp: Date.now(),
+						timestamp: requestTimestamp,
 					});
+				}
+				const requestLogCutoff = requestTimestamp - 172800000;
+				while (Shared.esgst.requestLog.length > 0) {
+					const oldestRequest = Shared.esgst.requestLog[Shared.esgst.requestLog.length - 1];
+					if (oldestRequest.timestamp >= requestLogCutoff) break;
+					Shared.esgst.requestLog.pop();
 				}
 				await Shared.common.setValue('requestLog', JSON.stringify(Shared.esgst.requestLog));
 			}

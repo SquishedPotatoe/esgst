@@ -6067,7 +6067,7 @@ class Common extends Module {
 		};
 
 		Shared.esgst.requestLog = Shared.esgst.requestLog.filter(
-			(log) => now - log.timestamp <= 2592000000
+			(log) => now - log.timestamp <= 172800000
 		);
 		for (const log of Shared.esgst.requestLog) {
 			const date = new Date(log.timestamp);

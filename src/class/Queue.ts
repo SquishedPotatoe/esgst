@@ -83,7 +83,7 @@ class _RequestQueue {
 
 	continuouslyCheckLocalRequests = async (): Promise<void> => {
 		await this.checkLocalRequests();
-		setTimeout(this.continuouslyCheckLocalRequests, 15000);
+		setTimeout(this.continuouslyCheckLocalRequests, 5000);
 	};
 
 	checkLocalRequests = async (): Promise<void> => {
@@ -108,8 +108,10 @@ class _RequestQueue {
 		let dayTotal = 0;
 
 		let requestLog = await this.getRequestLog();
-		requestLog = requestLog.filter((log) => now - log.timestamp <= 86400000);
 		for (const log of requestLog) {
+			if (now - log.timestamp > 86400000) {
+				break;
+			}
 			const date = new Date(log.timestamp);
 			const day = date.getDate();
 			const hour = date.getHours();
