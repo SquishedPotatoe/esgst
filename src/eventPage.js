@@ -204,6 +204,8 @@ const StorageManager = (() => {
 		if (area !== "local") return;
 		if (changes.settings) {
 			try {
+				await storageInitialization;
+
 				let full = changes.settings.newValue || {};
 				if (typeof full === 'string') full = JSON.parse(full);
 

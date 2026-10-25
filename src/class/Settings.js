@@ -9,12 +9,45 @@ class _Settings {
 
 		this.defaultValues = {
 			mgl_index: 0,
-			limitSteamStore_sg: true,
+			limitSteamStore_sg: false,
 			customAdaReqLim_default: 0.25,
 			customAdaReqLim_minute50: 0.25,
 			customAdaReqLim_minute75: 0.5,
 			customAdaReqLim_hourly75: 1.0,
 			customAdaReqLim_daily75: 1.5,
+			activateTab_sg: false,
+			activateTab_st: false,
+			hr_a_sg: false,
+			hr_a_st: false,
+			tds_n_sg: false,
+			tds_n_st: false,
+			notifyNewVersion_sg: false,
+			notifyNewVersion_st: false,
+			updateCheckInterval: 7,
+			useCustomAdaReqLim_sg: false,
+			useCustomAdaReqLim_st: false,
+			notifyLogs_sg: false,
+			notifyLogs_st: false,
+			jumpToReplyBox_sg: false,
+			jumpToReplyBox_st: false,
+			removeSidebarInFeaturePages_sg: false,
+			openSettingsInTab_sg: false,
+			openSettingsInTab_st: false,
+			manipulateCookies_sg: false,
+			manipulateCookies_st: false,
+			askFileName_sg: false,
+			askFileName_st: false,
+			openAutoBackupNewTab_sg: false,
+			openAutoBackupNewTab_st: false,
+			autoSync_sg: false,
+			openAutoSyncPopup_sg: false,
+			openAutoSyncNewTab_sg: false,
+			makeSectionsCollapsible_sg: false,
+			makeSectionsCollapsible_st: false,
+			enableByDefault_sg: false,
+			enableByDefault_st: false,
+			fallbackSteamApi_sg: false,
+			fallbackSteamApi_st: false,
 			cgb_levelColors: [],
 			ge_a_sg: true,
 			glwc_mm_sg: false,
@@ -61,8 +94,8 @@ class _Settings {
 			cewgd_w_sl_sg: true,
 			cewgd_w_t_sg: true,
 			cewgd_w_l_sg: true,
-			esgst_st: true,
-			esgst_sgt: true,
+			esgst_st: false,
+			esgst_sgt: false,
 			ge_extractOnward: false,
 			ge_flushCache: false,
 			ge_flushCacheHours: 24,
@@ -515,11 +548,11 @@ class _Settings {
 			gwr_a_b_sg: false,
 			hpg_sg: false,
 			pm_a: false,
-			radb_sg: true,
+			radb_sg: false,
 			adtd_sg: false,
 			activeDiscussions_displayed: 7,
-			showChangelog_sg: true,
-			showChangelog_st: true,
+			showChangelog_sg: false,
+			showChangelog_st: false,
 			vai_i_sg: false,
 			avatar: '',
 			steamId: '',
@@ -550,6 +583,14 @@ class _Settings {
 			as_searchAppId: false,
 			autoBackup_days: 1,
 			autoBackup_index: 0,
+			autoBackup_sg: false,
+			autoBackup_st: false,
+			calculateDelete_sg: false,
+			calculateDelete_st: false,
+			calculateExport_sg: false,
+			calculateExport_st: false,
+			calculateImport_sg: false,
+			calculateImport_st: false,
 			autoSyncGroups: 0,
 			autoSyncWhitelist: 0,
 			autoSyncBlacklist: 0,
@@ -1183,7 +1224,18 @@ class _Settings {
 				let defaultValue = this.defaultValues[id];
 
 				if (typeof defaultValue === 'undefined') {
-					defaultValue = this.enableByDefault || 0;
+					const match = id.match(/(.+?)_(sg|st|sgt)$/);
+					const feature = match && Shared.esgst.featuresById[match[1]];
+					if (feature && feature[match[2]]) {
+						const namespace = match[2] === 'sgt' ? Shared.esgst.name : match[2];
+						const enableByDefault =
+							Shared.esgst.settings[`enableByDefault_${namespace}`];
+						defaultValue = typeof enableByDefault === 'object'
+							? enableByDefault.enabled
+							: enableByDefault;
+					} else {
+						defaultValue = 0;
+					}
 				}
 
 				value = defaultValue;
