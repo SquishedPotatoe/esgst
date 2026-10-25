@@ -402,7 +402,7 @@ class SettingsModule {
 						}
 						await Shared.common.lockAndSaveSettings(this.toSave);
 						const adareqlimChanged = Object.keys(this.toSave).some((key) =>
-							key.startsWith('customAdaReqLim')
+							key.startsWith('useCustomAdaReqLim') || key.startsWith('customAdaReqLim')
 						);
 						if (adareqlimChanged) {
 							await browser.runtime.sendMessage({

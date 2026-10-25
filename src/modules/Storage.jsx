@@ -21,6 +21,69 @@ const STORAGE_TYPES = {
 	ONEDRIVE: 4,
 };
 
+function materializeSettingsDefaults(settings) {
+	const completed = { ...settings };
+	for (const [key, value] of Object.entries(Settings.defaultValues)) {
+		if (!(key in completed)) {
+			completed[key] = value == null ? value : JSON.parse(JSON.stringify(value));
+		}
+	}
+
+	for (const [id, feature] of Object.entries(Shared.esgst.featuresById)) {
+		const featureId = feature.alias ?? id;
+		const inputItems = feature.inputItems == null
+			? []
+			: Array.isArray(feature.inputItems)
+				? feature.inputItems
+				: [feature.inputItems];
+		for (const item of inputItems) {
+			const key = typeof item === 'string' ? item : item?.id;
+			if (key && !(key in completed)) {
+				completed[key] = Settings.defaultValues[key] ?? 0;
+			}
+		}
+
+		const options = feature.options
+			? Array.isArray(feature.options)
+				? feature.options
+				: [feature.options]
+			: [];
+		for (let index = 0; index < options.length; index++) {
+			const key = `${featureId}_index${options.length > 1 ? `_${index}` : ''}`;
+			if (!(key in completed)) {
+				completed[key] = Settings.defaultValues[key] ?? 0;
+			}
+		}
+
+		for (const namespace of ['sg', 'st']) {
+			const key = `${featureId}_${namespace}`;
+			if (!feature[namespace] || key in completed) continue;
+
+			if (typeof Settings.defaultValues[key] !== 'undefined') {
+				completed[key] = Settings.defaultValues[key];
+			} else {
+				const defaultSetting = completed[`enableByDefault_${namespace}`];
+				completed[key] = !!(typeof defaultSetting === 'object'
+					? defaultSetting.enabled
+					: defaultSetting);
+			}
+		}
+	}
+
+	const dismissedOptions = Array.isArray(completed.dismissedOptions)
+		? completed.dismissedOptions
+		: [];
+	completed.dismissedOptions = Array.from(
+		new Set(
+			dismissedOptions.concat(
+				Shared.esgst.toDismiss.flat(Infinity).filter((id) => typeof id === 'string')
+			)
+		)
+	);
+
+	return completed;
+}
+
 function getDataMenu(option, switches, type) {
 	let i, m, menu, n, options, toggleSwitch;
 	menu = document.createElement('div');
@@ -1727,11 +1790,25 @@ async function manageData(dm, storageType, space, callback) {
 										mergedData[newDataKey] = newData[newDataKey];
 									}
 								}
-								await Shared.common.setValue(optionKey, JSON.stringify(mergedData));
 							} else {
-								await Shared.common.setValue(optionKey, JSON.stringify(newData));
+								mergedData = newData;
 							}
 							if (optionKey === 'settings') {
+								mergedData = materializeSettingsDefaults(mergedData);
+							}
+							await Shared.common.setValue(optionKey, JSON.stringify(mergedData));
+							if (optionKey === 'settings') {
+								const useCustomAdaReqLim =
+									mergedData.useCustomAdaReqLim_sg ?? mergedData.useCustomAdaReqLim;
+								if (typeof useCustomAdaReqLim !== 'undefined') {
+									Settings.set('useCustomAdaReqLim', useCustomAdaReqLim);
+								}
+								for (const key of ['default', 'minute50', 'minute75', 'hourly75', 'daily75']) {
+									const threshold = mergedData[`customAdaReqLim_${key}`];
+									if (typeof threshold !== 'undefined') {
+										Settings.set(`customAdaReqLim_${key}`, threshold);
+									}
+								}
 								await browser.runtime.sendMessage({
 									action: 'update_adareqlim',
 								});
