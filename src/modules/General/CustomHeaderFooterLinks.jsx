@@ -31,7 +31,12 @@ class GeneralCustomHeaderFooterLinks extends Module {
 						<li>Account: Whitelist, Blacklist, Games, Groups, Wishlist</li>
 					</ul>
 					<li>
-						If you press the Ctrl key with a dropdown open, the feature adds two buttons ("
+						<strong>Shortcut Key Configuration:</strong> You can set a single key (e.g., <strong>tab</strong>)
+						or a modifier combination using <strong>Ctrl</strong>, <strong>Shift</strong>, or <strong>Alt</strong>
+						(e.g., <strong>ctrlKey + e</strong>, which is the default).
+					</li>
+					<li>
+						If you press the shortcut key with a dropdown open, the feature adds two buttons ("
 						<i className="fa fa-plus-circle"></i> Add Custom Link" and "
 						<i className="fa fa-undo"></i> Reset Links") to the end of the dropdown that allow you
 						to add/reset the custom links. It also adds two other buttons (
@@ -39,7 +44,7 @@ class GeneralCustomHeaderFooterLinks extends Module {
 						each custom link in the dropdown that allow you to edit/remove the custom link.
 					</li>
 					<li>
-						If you press the Ctrl key with no dropdown open, those same buttons will be added to the
+						If you press the shortcut key with no dropdown open, those same buttons will be added to the
 						footer of the page.
 					</li>
 					<li>You can move the custom links by dragging and dropping them.</li>
