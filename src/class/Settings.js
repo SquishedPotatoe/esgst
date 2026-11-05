@@ -1019,7 +1019,7 @@ class _Settings {
 			sk_hideGiveaway: 'altKey + h',
 			sk_giveawayEntry: 'ctrlKey + enter',
 			sk_creator: 'altKey + c',
-			sk_replyBox: 'ctrlKey +  ',
+			sk_replyBox: 'ctrlKey + r',
 			sk_replyUser: 'altKey + u',
 			sk_submitReply: 'ctrlKey + enter',
 			sks_exportKeys: false,
