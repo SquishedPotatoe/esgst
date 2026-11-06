@@ -151,6 +151,7 @@ class _Settings {
 			cgb_g_bgColor: '#d8f3dc',
 			cgb_w_bgColor: '#d8e6f6',
 			cgb_sgt_bgColor: '#d8f3e9',
+			cgb_wl_bgColor: '#3498db',
 			qgs_index: 0,
 			lpv_barColor: '#609f60',
 			lpv_projectedBarColor: `rgba(96, 159, 96, 0.5)`,

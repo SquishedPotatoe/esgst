@@ -10,7 +10,7 @@ class GiveawaysCustomGiveawayBackground extends Module {
 				<ul>
 					<li>
 						Allows you to color the background of giveaways based on their type (public, invite
-						only, region restricted, group or whitelist) and level.
+						only, region restricted, group, whitelist or wishlist) and level.
 					</li>
 				</ul>
 			),
@@ -67,6 +67,11 @@ class GiveawaysCustomGiveawayBackground extends Module {
 				cgb_sgt: {
 					background: true,
 					name: 'Color SGTools giveaways.',
+					sg: true,
+				},
+				cgb_wl: {
+					background: true,
+					name: 'Color wishlisted giveaways.',
 					sg: true,
 				},
 			},
@@ -128,6 +133,9 @@ class GiveawaysCustomGiveawayBackground extends Module {
 			}
 			if (Settings.get('cgb_p') && giveaway.public) {
 				matchedColors.push(Settings.get('cgb_p_bgColor'));
+			}
+			if (Settings.get('cgb_wl') && giveaway.wishlisted) {
+				matchedColors.push(Settings.get('cgb_wl_bgColor'));
 			}
 			if (matchedColors.length >= 2) {
 				const count = matchedColors.length;
