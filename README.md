@@ -101,7 +101,7 @@ To learn more about each feature you have to install ESGST.
 - Grid View
 - Hidden Game Remover
 - Hidden Game's Enter Button Disabler
-- IsThereAnyDeal Info
+- GG.deals Info
 - Multiple Giveaway Creator
 - Next/Previous Train Hotkeys
 - One-Click Hide Giveaway Button
