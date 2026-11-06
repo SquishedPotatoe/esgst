@@ -22,7 +22,7 @@
 // @connect github.com
 // @connect googleapis.com
 // @connect graph.microsoft.com
-// @connect isthereanydeal.com
+// @connect api.gg.deals
 // @connect esgst.rafaelgomes.xyz
 // @connect raw.githubusercontent.com
 // @connect steam-tracker.com

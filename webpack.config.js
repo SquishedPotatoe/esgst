@@ -83,7 +83,7 @@ function getWebExtensionManifest(env, browserName) {
 			'*://*.github.com/*',
 			'*://*.googleapis.com/*',
 			'*://*.graph.microsoft.com/*',
-			'*://*.isthereanydeal.com/*',
+			'*://*.api.gg.deals/*',
 			'*://*.esgst.rafaelgomes.xyz/*',
 			'*://*.raw.githubusercontent.com/*',
 			'*://*.steam-tracker.com/*',
