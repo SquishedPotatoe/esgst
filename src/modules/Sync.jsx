@@ -1,4 +1,4 @@
-import { formatDistanceStrict } from '../lib/date';
+import { format, formatDistanceStrict } from '../lib/date';
 import { Checkbox } from '../class/Checkbox';
 import { DOM } from '../class/DOM';
 import { FetchRequest } from '../class/FetchRequest';
@@ -1090,36 +1090,24 @@ async function sync(syncer) {
 		(syncer.parameters && syncer.parameters.ReducedCvGames) ||
 		(!syncer.parameters && Settings.get('syncReducedCvGames'))
 	) {
-		const isPermitted = await permissions.contains([['server']]);
-		if (isPermitted) {
-			syncer.progressBar.setMessage('Syncing reduced CV games...');
-			try {
-				await syncReducedCvGames();
-				DOM.insert(
-					syncer.results,
-					'beforeend',
-					<div>
-						<i className="fa fa-check"></i> Reduced CV games synced.
-					</div>
-				);
-			} catch (e) {
-				Logger.warning(e.message);
-				syncer.failed.ReducedCvGames = true;
-				DOM.insert(
-					syncer.results,
-					'beforeend',
-					<div>
-						<i className="fa fa-times"></i> Failed to sync reduced CV games.
-					</div>
-				);
-			}
-		} else {
+		syncer.progressBar.setMessage('Syncing reduced CV games...');
+		try {
+			await syncReducedCvGames(syncer);
+			DOM.insert(
+				syncer.results,
+				'beforeend',
+				<div>
+					<i className="fa fa-check"></i> Reduced CV games synced.
+				</div>
+			);
+		} catch (e) {
+			Logger.warning(e.message);
 			syncer.failed.ReducedCvGames = true;
 			DOM.insert(
 				syncer.results,
 				'beforeend',
 				<div>
-					<i className="fa fa-times"></i> {permissions.getMessage([['server']])}
+					<i className="fa fa-times"></i> Failed to sync reduced CV games.
 				</div>
 			);
 		}
@@ -1135,36 +1123,24 @@ async function sync(syncer) {
 		(syncer.parameters && syncer.parameters.NoCvGames) ||
 		(!syncer.parameters && Settings.get('syncNoCvGames'))
 	) {
-		const isPermitted = await permissions.contains([['server']]);
-		if (isPermitted) {
-			syncer.progressBar.setMessage('Syncing no CV games...');
-			try {
-				await syncNoCvGames();
-				DOM.insert(
-					syncer.results,
-					'beforeend',
-					<div>
-						<i className="fa fa-check"></i> No CV games synced.
-					</div>
-				);
-			} catch (e) {
-				Logger.warning(e.message);
-				syncer.failed.NoCvGames = true;
-				DOM.insert(
-					syncer.results,
-					'beforeend',
-					<div>
-						<i className="fa fa-times"></i> Failed to sync no CV games.
-					</div>
-				);
-			}
-		} else {
+		syncer.progressBar.setMessage('Syncing no CV games...');
+		try {
+			await syncNoCvGames(syncer);
+			DOM.insert(
+				syncer.results,
+				'beforeend',
+				<div>
+					<i className="fa fa-check"></i> No CV games synced.
+				</div>
+			);
+		} catch (e) {
+			Logger.warning(e.message);
 			syncer.failed.NoCvGames = true;
 			DOM.insert(
 				syncer.results,
 				'beforeend',
 				<div>
-					<i className="fa fa-times"></i> {permissions.getMessage([['server']])}
+					<i className="fa fa-times"></i> Failed to sync no CV games.
 				</div>
 			);
 		}
@@ -1390,65 +1366,104 @@ async function sync(syncer) {
 	}
 }
 
-async function syncReducedCvGames() {
-	const response = await FetchRequest.get('https://esgst.rafaelgomes.xyz/api/games/rcv');
-	const games = response.json.result.found;
-	for (const id in games.apps) {
-		if (games.apps.hasOwnProperty(id)) {
-			games.apps[id].reducedCV = Shared.common.dateFromServer(games.apps[id].effective_date);
-			delete games.apps[id].effective_date;
+function formatCvDate(timestamp) {
+	if (!timestamp) return null;
+	return format(new Date(timestamp * 1000), 'MMM d, yyyy');
+}
+
+async function CvFromSG(syncer) {
+	if (syncer && syncer.sgCvGames) return syncer.sgCvGames;
+	let page = 1;
+	let hasMore = true;
+	const games = { apps: {}, subs: {} };
+	while (hasMore) {
+		if (syncer && syncer.canceled) break;
+		if (syncer && syncer.progressBar) {
+			syncer.progressBar.setMessage(`Syncing CV games from SteamGifts (page ${page})...`);
+		}
+		const response = await FetchRequest.get(`https://www.steamgifts.com/bundle-games?page=${page}&format=json`);
+		const data = response.json || {};
+		const results = data.results || [];
+		for (const item of results) {
+			const type = item.app_id ? 'apps' : item.package_id ? 'subs' : null;
+			const id = item.app_id || item.package_id;
+			if (!type || !id) continue;
+			if (!games[type][id]) games[type][id] = {};
+			if (item.reduced_value_timestamp) games[type][id].reducedCV = formatCvDate(item.reduced_value_timestamp);
+			if (item.no_value_timestamp) games[type][id].noCV = formatCvDate(item.no_value_timestamp);
+		}
+		hasMore = results.length > 0 && results.length === data.per_page;
+		page += 1;
+	}
+	if (syncer) syncer.sgCvGames = games;
+	return games;
+}
+
+async function syncReducedCvGames(syncer) {
+	let games;
+	if (await permissions.contains([['server']])) {
+		try {
+			const response = await FetchRequest.get('https://esgst.rafaelgomes.xyz/api/games/rcv');
+			games = response.json.result.found;
+			for (const type of ['apps', 'subs']) {
+				for (const id in games[type]) {
+					if (games[type].hasOwnProperty(id)) {
+						games[type][id].reducedCV = Shared.common.dateFromServer(games[type][id].effective_date);
+						delete games[type][id].effective_date;
+					}
+				}
+			}
+		} catch (err) {
+			Logger.warning(`Failed to sync reduced CV games from server (${err.message}). Falling back to SteamGifts...`);
 		}
 	}
-	for (const id in games.subs) {
-		if (games.subs.hasOwnProperty(id)) {
-			games.subs[id].reducedCV = Shared.common.dateFromServer(games.subs[id].effective_date);
-			delete games.subs[id].effective_date;
+	if (!games) {
+		const source = await CvFromSG(syncer);
+		games = { apps: {}, subs: {} };
+		for (const type of ['apps', 'subs']) {
+			for (const id in source[type]) {
+				if (source[type][id].reducedCV) games[type][id] = { reducedCV: source[type][id].reducedCV };
+			}
 		}
 	}
-	for (const id in Shared.esgst.games.apps) {
-		if (Shared.esgst.games.apps.hasOwnProperty(id) && !games.apps[id]) {
-			games.apps[id] = {
-				reducedCV: null,
-			};
-		}
-	}
-	for (const id in Shared.esgst.games.subs) {
-		if (Shared.esgst.games.subs.hasOwnProperty(id) && !games.subs[id]) {
-			games.subs[id] = {
-				reducedCV: null,
-			};
+	for (const type of ['apps', 'subs']) {
+		for (const id in Shared.esgst.games[type]) {
+			if (Shared.esgst.games[type].hasOwnProperty(id) && !games[type][id]) games[type][id] = { reducedCV: null };
 		}
 	}
 	await Shared.common.lockAndSaveGames(games);
 }
 
-async function syncNoCvGames() {
-	const response = await FetchRequest.get('https://esgst.rafaelgomes.xyz/api/games/ncv');
-	const games = response.json.result.found;
-	for (const id in games.apps) {
-		if (games.apps.hasOwnProperty(id)) {
-			games.apps[id].noCV = Shared.common.dateFromServer(games.apps[id].effective_date);
-			delete games.apps[id].effective_date;
+async function syncNoCvGames(syncer) {
+	let games;
+	if (await permissions.contains([['server']])) {
+		try {
+			const response = await FetchRequest.get('https://esgst.rafaelgomes.xyz/api/games/ncv');
+			games = response.json.result.found;
+			for (const type of ['apps', 'subs']) {
+				for (const id in games[type]) {
+					if (games[type].hasOwnProperty(id)) {
+						games[type][id].noCV = Shared.common.dateFromServer(games[type][id].effective_date);
+						delete games[type][id].effective_date;
+					}
+				}
+			}
+		} catch (err) {
+			Logger.warning(`Failed to sync no CV games from server (${err.message}). Falling back to SteamGifts...`);
 		}
 	}
-	for (const id in games.subs) {
-		if (games.subs.hasOwnProperty(id)) {
-			games.subs[id].noCV = Shared.common.dateFromServer(games.subs[id].effective_date);
-			delete games.subs[id].effective_date;
+	if (!games) {
+		const source = await CvFromSG(syncer);
+		games = { apps: {}, subs: {} };
+		for (const type of ['apps', 'subs']) {
+			for (const id in source[type]) {
+				if (source[type][id].noCV) games[type][id] = { noCV: source[type][id].noCV };
+			}
 		}
 	}
-	for (const id in Shared.esgst.games.apps) {
-		if (Shared.esgst.games.apps.hasOwnProperty(id) && !games.apps[id]) {
-			games.apps[id] = {
-				noCV: null,
-			};
-		}
-	}
-	for (const id in Shared.esgst.games.subs) {
-		if (Shared.esgst.games.subs.hasOwnProperty(id) && !games.subs[id]) {
-			games.subs[id] = {
-				noCV: null,
-			};
+	for (const type of ['apps', 'subs']) {
+		for (const id in Shared.esgst.games[type]) {
+			if (Shared.esgst.games[type].hasOwnProperty(id) && !games[type][id]) games[type][id] = { noCV: null };
 		}
 	}
 	await Shared.common.lockAndSaveGames(games);
