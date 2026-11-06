@@ -2013,13 +2013,13 @@ class SettingsModule {
 			}
 		} else if (Feature.inputItems) {
 			let containerr = <div className="esgst-sm-additional-option"></div>;
-			if (ID.match(/^(chfl|sk_)/)) {
+			if (ID.match(/^(chfl|sk_)/) && !Array.isArray(Feature.inputItems)) {
 				Feature.inputItems = [
 					{
 						event: 'keydown',
 						id: Feature.inputItems,
 						shortcutKey: true,
-						prefix: `Enter the key combo you want to use for this task: `,
+						prefix: `Enter the key or key combination you want to use for this task: `,
 					},
 				];
 			} else if (ID.match(/^hr_.+_s$/)) {
@@ -2031,6 +2031,9 @@ class SettingsModule {
 				];
 			}
 			Feature.inputItems.forEach((item) => {
+				if (ID === 'chfl' && item.id === 'chfl_key' && typeof Settings.get(item.id) === 'undefined') {
+					Settings.set(item.id, Settings.defaultValues[item.id]);
+				}
 				const children = [];
 				const attributes = item.attributes || {};
 				if (item.play) {
