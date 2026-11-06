@@ -6258,7 +6258,7 @@ class Common extends Module {
 					description: 'Visit the discussion page.',
 					icon: 'fa fa-fw fa-comments icon-green green',
 					name: 'Discussion',
-					url: 'https://www.steamgifts.com/discussion/TDyzv/',
+					url: 'https://www.steamgifts.com/discussion/7buEd/',
 				},
 				{
 					description: 'Visit / join the Steam group.',
