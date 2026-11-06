@@ -125,7 +125,7 @@ import { usersUserStats } from './Users/UserStats';
 import { groupsGroupHighlighter } from './Groups/GroupHighlighter';
 import { giveawaysGiveawayPopup } from './Giveaways/GiveawayPopup';
 import { giveawaysEnterLeaveGiveawayButton } from './Giveaways/EnterLeaveGiveawayButton';
-import { giveawaysIsThereAnyDealInfo } from './Giveaways/IsThereAnyDealInfo';
+import { giveawaysGGDealsInfo } from './Giveaways/GGDealsInfo';
 import { giveawaysUnhideGiveawayButton } from './Giveaways/UnhideGiveawayButton';
 import { gamesHideInTableButton } from './Games/HideInTableButton';
 import { giveawaysOneClickHideGiveawayButton } from './Giveaways/OneClickHideGiveawayButton';
@@ -295,7 +295,7 @@ const modules = {
 	groupsGroupHighlighter,
 	giveawaysGiveawayPopup,
 	giveawaysEnterLeaveGiveawayButton,
-	giveawaysIsThereAnyDealInfo,
+	giveawaysGGDealsInfo,
 	giveawaysUnhideGiveawayButton,
 	gamesHideInTableButton,
 	giveawaysOneClickHideGiveawayButton,

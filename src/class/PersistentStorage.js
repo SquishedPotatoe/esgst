@@ -8,7 +8,7 @@ import { browser } from '../browser';
 
 class PersistentStorage {
 	constructor() {
-		this.currentVersion = 18;
+		this.currentVersion = 19;
 
 		this.defaultValues = {
 			decryptedGiveaways: '{}',
@@ -956,6 +956,30 @@ class PersistentStorage {
 			if (settingsChanged) {
 				toSet.settings = JSON.stringify(settings);
 				storage.settings = toSet.settings;
+			}
+		}
+
+		if (version < 19) {
+			window.console.log('Upgrading storage to version 19...');
+
+			const games = JSON.parse(storage.games || this.defaultValues.games);
+			let gamesChanged = false;
+			for (const gameType of ['apps', 'subs']) {
+				for (const game of Object.values(games[gameType] || {})) {
+					if (!game.itadi) {
+						continue;
+					}
+					if (game.itadi.version === 3 && !game.ggDeals) {
+						game.ggDeals = game.itadi;
+					}
+					delete game.itadi;
+					gamesChanged = true;
+				}
+			}
+
+			if (gamesChanged) {
+				toSet.games = JSON.stringify(games);
+				storage.games = toSet.games;
 			}
 		}
 

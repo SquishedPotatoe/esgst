@@ -518,8 +518,8 @@ function loadDataManagement(type, isPopup, callback) {
 					name: 'Game Tags',
 				},
 				{
-					key: 'games_itadi',
-					name: 'IsThereAnyDeal Info',
+					key: 'games_ggdi',
+					name: 'GG.deals Info',
 				},
 			],
 		},
@@ -1409,8 +1409,8 @@ function loadDataCleaner(isPopup) {
 								name: 'Game Tags',
 							},
 							{
-								key: 'games_itadi',
-								name: 'IsThereAnyDeal Info',
+								key: 'games_ggdi',
+								name: 'GG.deals Info',
 							},
 						],
 					},
@@ -2175,7 +2175,7 @@ async function manageData(dm, storageType, space, callback) {
 					],
 					gt: ['tags'],
 					egh: ['entered'],
-					itadi: ['itadi'],
+					ggdi: ['ggDeals'],
 				};
 				data.games = {
 					apps: {},
@@ -2185,7 +2185,7 @@ async function manageData(dm, storageType, space, callback) {
 				sizes = {
 					egh: 0,
 					gt: 0,
-					itadi: 0,
+					ggdi: 0,
 					main: 0,
 					total: 0,
 				};
@@ -2358,17 +2358,15 @@ async function manageData(dm, storageType, space, callback) {
 															case 'entered':
 																mergedDataValue.entered = true;
 																break;
-															case 'itadi':
-																if (mergedDataValue.itadi) {
-																	if (
-																		newDataValue.itadi.lastCheck > mergedDataValue.itadi.lastCheck
-																	) {
-																		mergedDataValue.itadi = newDataValue.itadi;
+															case 'ggDeals':
+																if (mergedDataValue.ggDeals) {
+																	if (newDataValue.ggDeals.lastCheck > mergedDataValue.ggDeals.lastCheck) {
+																		mergedDataValue.ggDeals = newDataValue.ggDeals;
 																	}
-																} else {
-																	mergedDataValue.itadi = newDataValue.itadi;
-																}
-																break;
+															} else {
+																mergedDataValue.ggDeals = newDataValue.ggDeals;
+															}
+															break;
 															case 'tags':
 																if (mergedDataValue.tags) {
 																	let tags = newDataValue.tags;
@@ -2412,17 +2410,15 @@ async function manageData(dm, storageType, space, callback) {
 															case 'entered':
 																mergedDataValue.entered = true;
 																break;
-															case 'itadi':
-																if (mergedDataValue.itadi) {
-																	if (
-																		newDataValue.itadi.lastCheck > mergedDataValue.itadi.lastCheck
-																	) {
-																		mergedDataValue.itadi = newDataValue.itadi;
+															case 'ggDeals':
+																if (mergedDataValue.ggDeals) {
+																	if (newDataValue.ggDeals.lastCheck > mergedDataValue.ggDeals.lastCheck) {
+																		mergedDataValue.ggDeals = newDataValue.ggDeals;
 																	}
-																} else {
-																	mergedDataValue.itadi = newDataValue.itadi;
-																}
-																break;
+															} else {
+																mergedDataValue.ggDeals = newDataValue.ggDeals;
+															}
+															break;
 															case 'tags':
 																if (mergedDataValue.tags) {
 																	let tags = newDataValue.tags;

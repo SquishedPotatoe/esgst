@@ -54,12 +54,12 @@ class Permissions {
 				},
 				values: ['*://*.api.imgur.com/*'],
 			},
-			isThereAnyDeal: {
+			ggDeals: {
 				isOrigin: true,
 				messages: {
-					itadi: 'Required by IsThereAnyDeal Info to retrieve the deals.',
+					ggdi: 'Required by GG.deals Info to retrieve game prices.',
 				},
-				values: ['*://*.isthereanydeal.com/*'],
+				values: ['*://api.gg.deals/*'],
 			},
 			oneDrive: {
 				isOrigin: true,
